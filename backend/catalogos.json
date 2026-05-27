@@ -1,0 +1,798 @@
+{
+  "catalogo amenazas": [
+    {
+      "__EMPTY": "CATALOGO DE AMENAZAS TÍPICAS\r\nFuente: ISO/IEC 27005:2022"
+    },
+    {
+      "__EMPTY": "CATEGORIA",
+      "__EMPTY_1": "AMENAZA",
+      "__EMPTY_2": "TIPO DE FUENTE DE RIESGO"
+    },
+    {
+      "__EMPTY_1": "Amenazas físicas"
+    },
+    {
+      "__EMPTY": "Amenazas físicas",
+      "__EMPTY_1": "Fuego",
+      "__EMPTY_2": "A, D,E"
+    },
+    {
+      "__EMPTY_1": "Agua",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Contaminación, radiaciones nocivas",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Accidente grave",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Explosión",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Polvo, corrosión, congelación ",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Amenazas naturales"
+    },
+    {
+      "__EMPTY": "Amenazas naturales",
+      "__EMPTY_1": "Fenómeno climático",
+      "__EMPTY_2": "E"
+    },
+    {
+      "__EMPTY_1": "Fenómeno sísmico",
+      "__EMPTY_2": "E"
+    },
+    {
+      "__EMPTY_1": "Fenómeno volcánico",
+      "__EMPTY_2": "E"
+    },
+    {
+      "__EMPTY_1": "Fenómeno meteorológico",
+      "__EMPTY_2": "E"
+    },
+    {
+      "__EMPTY_1": "Inundación",
+      "__EMPTY_2": "E"
+    },
+    {
+      "__EMPTY_1": "Pandemia/fenómeno epidémico ",
+      "__EMPTY_2": "E"
+    },
+    {
+      "__EMPTY_1": "Fallas en infraestructura"
+    },
+    {
+      "__EMPTY": "Fallas en infraestructura",
+      "__EMPTY_1": "Fallo de un sistema de suministro",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Fallo del sistema de refrigeración o ventilación",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Pérdida de suministro eléctrico",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Fallo de una red de telecomunicaciones",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Radiación electromagnética",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Fallo de equipos de telecomunicaciones",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Radiación térmica",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Pulsos electromagnéticos",
+      "__EMPTY_2": "A, D, E"
+    },
+    {
+      "__EMPTY_1": "Fallos técnicos"
+    },
+    {
+      "__EMPTY": "Fallos técnicos",
+      "__EMPTY_1": "Fallo del dispositivo o sistema",
+      "__EMPTY_2": "A"
+    },
+    {
+      "__EMPTY_1": "Saturación del sistema de información ",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Violación de la mantenibilidad del sistema de información",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Acciones humanas "
+    },
+    {
+      "__EMPTY": "Acciones humanas ",
+      "__EMPTY_1": "Terrorismo, Ataque, sabotaje",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Ingeniería Social ",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Interceptación de radiación de un dispositivo",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Espionaje remoto",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Interceptación de comunicaciones privadas",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Robo de soportes o documentos",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Robo de equipos",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Robo de identidad o credenciales digitales",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Recuperación de medios reciclados o desechados.",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Divulgación de información",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Entrada de datos de fuentes no confiables",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Manipulación de hardware",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Manipulación de software",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "\"Drive-by ­exploits\" utilizando comunicación basada en web",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Ataque de repetición (ataque de playback), ataque de hombre en el medio",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Tratamiento no autorizado de datos personales ",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Entrada no autorizada a las instalaciones",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Uso no autorizado de dispositivos",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Uso incorrecto de los dispositivos",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Dispositivos o medios dañinos ",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Copia fraudulenta de software",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Uso de software falsificado o copiado",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Corrupción de datos",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Tratamiento ilegal de datos",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Envío o distribución de malware",
+      "__EMPTY_2": "A, D, R"
+    },
+    {
+      "__EMPTY_1": "Detección de posición/ubicación",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Comprometimiento de funciones o servicios"
+    },
+    {
+      "__EMPTY": "Comprometimiento de funciones o servicios",
+      "__EMPTY_1": "Error en uso",
+      "__EMPTY_2": "A"
+    },
+    {
+      "__EMPTY_1": "Abuso de derechos o permisos",
+      "__EMPTY_2": "A, D"
+    },
+    {
+      "__EMPTY_1": "Falsificación de derechos o permisos",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Denegación de acciones",
+      "__EMPTY_2": "D"
+    },
+    {
+      "__EMPTY_1": "Amenazas organizativas"
+    },
+    {
+      "__EMPTY": "Amenazas organizativas\r\n",
+      "__EMPTY_1": "Falta de personal",
+      "__EMPTY_2": "A, E"
+    },
+    {
+      "__EMPTY_1": "Falta de recursos",
+      "__EMPTY_2": "A, E"
+    },
+    {
+      "__EMPTY_1": "Fallo de los proveedores de servicios",
+      "__EMPTY_2": "A, E"
+    },
+    {
+      "__EMPTY_1": "Violación de leyes o reglamentos",
+      "__EMPTY_2": "A, D"
+    }
+  ],
+  "catalogo de impacto": [
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Valoración del impacto en términos de la perdida de la confidencialidad",
+      "__EMPTY": "Criterio"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Alto (3)",
+      "__EMPTY": "La divulgación no autorizada de la información tiene un efecto critico para la institución Ej. Divulgación de información confidencial o sensible."
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Medio (2)",
+      "__EMPTY": "La divulgación no autorizada de la información tiene un efecto limitado para la institución  Ej. Divulgación de información de uso interno"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Bajo (1)",
+      "__EMPTY": "La divulgación de la información no tiene ningún efecto para la institución  Ej. Divulgación de información pública."
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Valoración del impacto en términos de la perdida de la integridad",
+      "__EMPTY": "Criterio"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Alto (3)",
+      "__EMPTY": "La destrucción o modificación no autorizada de la información tiene un efecto severo para la institución"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Medio (2)",
+      "__EMPTY": "La destrucción o modificación no autorizada de la información tiene un efecto considerable para la institución"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Bajo (1)",
+      "__EMPTY": "La destrucción o modificación de la información tiene un efecto leve para la institución"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Valoración del impacto en términos de la perdida de disponibilidad",
+      "__EMPTY": "Criterio"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Alto (3)",
+      "__EMPTY": "La interrupción al acceso de la información o los sistemas tienen un efecto severo para la institución"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Medio (2)",
+      "__EMPTY": "La interrupción al acceso de la información o los sistemas tienen un efecto considerable para la institución"
+    },
+    {
+      "Tabla de valoración de Impacto en los activos de la información": "Bajo (1)",
+      "__EMPTY": "La interrupción al acceso de la información o los sistemas tienen un efecto mínimo para la institución"
+    }
+  ],
+  "catalogo de vulnerabilidades": [
+    {
+      "CATÁLOGO DE VULNERABILIDADES TÍPICAS\r\nFuente: ISO/IEC 27005:2022": "CATEGORIA",
+      "__EMPTY": "VULNERABILIDAD"
+    },
+    {
+      "__EMPTY": "Hardware"
+    },
+    {
+      "CATÁLOGO DE VULNERABILIDADES TÍPICAS\r\nFuente: ISO/IEC 27005:2022": "Hardware",
+      "__EMPTY": "Mantenimiento insuficiente/instalación defectuosa de los medios de almacenamiento"
+    },
+    {
+      "__EMPTY": "Susceptibilidad a la humedad, al polvo y a la suciedad"
+    },
+    {
+      "__EMPTY": "Esquemas de reemplazo periódico insuficientes de equipos"
+    },
+    {
+      "__EMPTY": "Sensibilidad a la radiación electromagnética"
+    },
+    {
+      "__EMPTY": "Control de cambios de configuración, insuficiente"
+    },
+    {
+      "__EMPTY": "Susceptibilidad a las variaciones de tensión"
+    },
+    {
+      "__EMPTY": "Susceptibilidad a las variaciones de temperatura"
+    },
+    {
+      "__EMPTY": "Almacenamiento sin protección"
+    },
+    {
+      "__EMPTY": "Falta de cuidado a disposición"
+    },
+    {
+      "__EMPTY": "Copia incontrolada"
+    },
+    {
+      "__EMPTY": "Software"
+    },
+    {
+      "CATÁLOGO DE VULNERABILIDADES TÍPICAS\r\nFuente: ISO/IEC 27005:2022": "Software",
+      "__EMPTY": "Pruebas de software inexistentes o insuficientes"
+    },
+    {
+      "__EMPTY": "Defectos conocidos en el software"
+    },
+    {
+      "__EMPTY": "No “cerrar sesión” al salir de la estación de trabajo"
+    },
+    {
+      "__EMPTY": "Eliminación o reutilización de medios de almacenamiento sin un borrado adecuado"
+    },
+    {
+      "__EMPTY": "Configuración insuficiente de los registros para fines de seguimiento de auditoría"
+    },
+    {
+      "__EMPTY": "Asignación incorrecta de derechos de acceso"
+    },
+    {
+      "__EMPTY": "Software ampliamente distribuido"
+    },
+    {
+      "__EMPTY": "Interfaz de usuario complicada"
+    },
+    {
+      "__EMPTY": "Aplicar programas de aplicación a datos incorrectos en términos de tiempo"
+    },
+    {
+      "__EMPTY": "Documentación insuficiente o faltante"
+    },
+    {
+      "__EMPTY": "Configuración de parámetros incorrecta"
+    },
+    {
+      "__EMPTY": "Fechas incorrectas"
+    },
+    {
+      "__EMPTY": "Mecanismos de identificación y autenticación insuficientes (por ejemplo, para la autenticación de usuarios)"
+    },
+    {
+      "__EMPTY": "Tablas de contraseñas desprotegidas"
+    },
+    {
+      "__EMPTY": "Mala gestión de contraseñas"
+    },
+    {
+      "__EMPTY": "Servicios innecesarios habilitados"
+    },
+    {
+      "__EMPTY": "Software nuevo o inmaduro"
+    },
+    {
+      "__EMPTY": "Especificaciones poco claras o incompletas para desarrolladores"
+    },
+    {
+      "__EMPTY": "Control de cambios ineficaz"
+    },
+    {
+      "__EMPTY": "Descarga y uso incontrolado de software"
+    },
+    {
+      "__EMPTY": "Falta de copias de seguridad o copias de seguridad incompletas"
+    },
+    {
+      "__EMPTY": "No producir informes de gestión"
+    },
+    {
+      "__EMPTY": "Red"
+    },
+    {
+      "CATÁLOGO DE VULNERABILIDADES TÍPICAS\r\nFuente: ISO/IEC 27005:2022": "Red",
+      "__EMPTY": "Mecanismos insuficientes para la prueba de envío o recepción de un mensaje"
+    },
+    {
+      "__EMPTY": "Líneas de comunicación no protegidas"
+    },
+    {
+      "__EMPTY": "Tráfico sensible no protegido"
+    },
+    {
+      "__EMPTY": "Cableado de unión deficiente"
+    },
+    {
+      "__EMPTY": "Punto único de falla"
+    },
+    {
+      "__EMPTY": "Mecanismos ineficaces o falta de identificación y autenticación del remitente y receptor"
+    },
+    {
+      "__EMPTY": "Arquitectura de red insegura"
+    },
+    {
+      "__EMPTY": "Transferencia de contraseñas en claro"
+    },
+    {
+      "__EMPTY": "Gestión inadecuada de la red (resiliencia del enrutamiento)"
+    },
+    {
+      "__EMPTY": "Conexiones de red pública no protegidas"
+    },
+    {
+      "__EMPTY": "Personal"
+    },
+    {
+      "CATÁLOGO DE VULNERABILIDADES TÍPICAS\r\nFuente: ISO/IEC 27005:2022": "Personal",
+      "__EMPTY": "Ausencia de personal"
+    },
+    {
+      "__EMPTY": "Procedimientos de contratación inadecuados "
+    },
+    {
+      "__EMPTY": "Formación en seguridad insuficiente"
+    },
+    {
+      "__EMPTY": "Uso incorrecto de software y hardware"
+    },
+    {
+      "__EMPTY": "Poca conciencia de seguridad"
+    },
+    {
+      "__EMPTY": "Mecanismos de seguimiento insuficientes o faltantes"
+    },
+    {
+      "__EMPTY": "Trabajo no supervisado por personal externo o de limpieza"
+    },
+    {
+      "__EMPTY": "Ineficaces o falta de políticas para el correcto uso de los medios de telecomunicaciones y mensajería"
+    },
+    {
+      "__EMPTY": "Sitio"
+    },
+    {
+      "CATÁLOGO DE VULNERABILIDADES TÍPICAS\r\nFuente: ISO/IEC 27005:2022": "Sitio",
+      "__EMPTY": "Uso inadecuado o descuidado del control de acceso físico a edificios y habitaciones"
+    },
+    {
+      "__EMPTY": "Ubicación en zona susceptible a inundaciones"
+    },
+    {
+      "__EMPTY": "Red eléctrica inestable"
+    },
+    {
+      "__EMPTY": "Protección física insuficiente del edificio, puertas y ventanas"
+    },
+    {
+      "__EMPTY": "Organización"
+    },
+    {
+      "CATÁLOGO DE VULNERABILIDADES TÍPICAS\r\nFuente: ISO/IEC 27005:2022": "Organización",
+      "__EMPTY": "Procedimiento formal de alta y baja de usuarios no desarrollado o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Proceso formal para la revisión (supervisión) del derecho de acceso no desarrollado, o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Disposiciones insuficientes (en materia de seguridad) en contratos con clientes y/o terceros"
+    },
+    {
+      "__EMPTY": "Procedimiento de monitoreo de las instalaciones de procesamiento de información no desarrollado o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Auditorías (supervisión) no realizadas de forma regular"
+    },
+    {
+      "__EMPTY": "Procedimientos de identicación y evaluación de riesgos no desarrollados, o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Insuficientes o falta de informes de fallas registrados en los registros del administrador y del operador "
+    },
+    {
+      "__EMPTY": "Respuesta inadecuada del servicio de mantenimiento"
+    },
+    {
+      "__EMPTY": "Acuerdo de Nivel de Servicio insuficiente o faltante"
+    },
+    {
+      "__EMPTY": "Procedimiento de control de cambios no desarrollado, o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Procedimiento formal para el control de la documentación del SGSI no desarrollado o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "No se ha desarrollado un procedimiento formal para la supervisión de registros del SGSI o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Proceso formal de autorización de información disponible públicamente no desarrollado, o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Asignación inadecuada de responsabilidades de seguridad de la información "
+    },
+    {
+      "__EMPTY": "No existen planes de continuidad, o están incompletos, o están desactualizados"
+    },
+    {
+      "__EMPTY": "Política de uso del correo electrónico, no desarrollada o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Procedimientos para introducir software en sistemas operativos no desarrollados o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Procedimientos para el manejo de información clasificada no desarrollados o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Las responsabilidades de seguridad de la información no están presentes en las descripciones de trabajo"
+    },
+    {
+      "__EMPTY": "Insuficientes o inexistentes disposiciones (relativas a la seguridad de la información) en los contratos con empleados"
+    },
+    {
+      "__EMPTY": "Proceso disciplinario en caso de incidente de seguridad de la información no definido, o no funcionando correctamente"
+    },
+    {
+      "__EMPTY": "Política formal sobre el uso de computadoras móviles no desarrollada, o su implementación está ineficaz"
+    },
+    {
+      "__EMPTY": "Control insuficiente de los activos fuera de las instalaciones"
+    },
+    {
+      "__EMPTY": "Insuficiente o falta de política de “escritorio y pantalla despejados”"
+    },
+    {
+      "__EMPTY": "La autorización de las instalaciones de procesamiento de información no está implementada o no funciona correctamente"
+    },
+    {
+      "__EMPTY": "Mecanismos de seguimiento de violaciones de seguridad no implementados adecuadamente"
+    },
+    {
+      "__EMPTY": "Procedimientos para informar debilidades de seguridad no desarrollados o su implementación es ineficaz"
+    },
+    {
+      "__EMPTY": "Procedimientos de cumplimiento de disposiciones sobre derechos intelectuales no desarrollados, o su implementación es ineficaz"
+    }
+  ],
+  "catalogo formato": [
+    {
+      "Formato": "Físico"
+    },
+    {
+      "Formato": "Digital"
+    },
+    {
+      "Formato": "Físico y Digital"
+    },
+    {
+      "Formato": "No aplica"
+    }
+  ],
+  "catalogo sunprocesos": [
+    {
+      "Subproceso": "(GODPT) Gestión de Desarrollo de Productos Sostenibles"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Desarrollo de Productos Sostenibles/Gestión de Operación e Investigación"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Desarrollo de Productos Sostenibles/Gestión de Bienestar Turístico"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Promoción del Destino Turístico"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Promoción del Destino Turístico/Gestión de Marketing"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Promoción del Destino Turístico/Gestión de Promoción"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Turismo de Negocios y Atracción de Eventos"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Servicios para la Industria Turística"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Servicios para la Industria Turística/Gestión de Licencias Turísticas"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Servicios para la Industria Turística/Gestión de Mejora de la Calidad Turística"
+    },
+    {
+      "Subproceso": "(GODPT) Gestión de Comercialización"
+    },
+    {
+      "Subproceso": "(GAJ) Gestión de Procesos Legales y Administrativos"
+    },
+    {
+      "Subproceso": "(GAJ)  Gestión de Patrocinio y Coactivas"
+    },
+    {
+      "Subproceso": "(GPEI) Gestión de Planificación, Seguimiento y Procesos"
+    },
+    {
+      "Subproceso": "(GPEI) Gestión de Tecnologías de la Información y Comunicación"
+    },
+    {
+      "Subproceso": "(GPEI) Gestión de Estadística"
+    },
+    {
+      "Subproceso": "(GC) Gestión de Comunicación"
+    },
+    {
+      "Subproceso": "(ADF) Gestión Administrativa/Servicios Institucionales"
+    },
+    {
+      "Subproceso": "(ADF) Gestión Administrativa/Control de Bienes, Inventarios y Seguros"
+    },
+    {
+      "Subproceso": "(ADF) Gestión Administrativa/Compras Públicas"
+    },
+    {
+      "Subproceso": "(ADF) Gestión Administrativa/Gestión Documental"
+    },
+    {
+      "Subproceso": "(ADF) Gestión Financiera"
+    },
+    {
+      "Subproceso": "(ADF) Gestión Financiera/Presupuesto"
+    },
+    {
+      "Subproceso": "(ADF) Gestión Financiera/Contabilidad"
+    },
+    {
+      "Subproceso": "(ADF) Gestión Financiera/Tesorería"
+    },
+    {
+      "Subproceso": "(ADF) Gestión de Talento Humano / Seguridad y Salud Ocupacional"
+    },
+    {
+      "Subproceso": "(ADF) Gestión de Talento Humano / Riesgos y Desastres"
+    },
+    {
+      "Subproceso": "(ADF) Gestión de Talento Humano / Talento Humano"
+    },
+    {
+      "Subproceso": "Gerencia General"
+    },
+    {
+      "Subproceso": "No aplica"
+    }
+  ],
+  "catalogo macroProceso": [
+    {
+      "Proceso Macro": "Gestión de Operación y Desarrollo de Productos Turísticos (GODPT)"
+    },
+    {
+      "Proceso Macro": "Gestión de Asesoría Jurídica (GAJ)"
+    },
+    {
+      "Proceso Macro": "Gestión de Planificación Estratégica e Información (GPEI)"
+    },
+    {
+      "Proceso Macro": "Gestión de Comunicación (GC)"
+    },
+    {
+      "Proceso Macro": "Gestión Administrativa Financiera (ADF)"
+    },
+    {
+      "Proceso Macro": "Gerencia General"
+    }
+  ],
+  "catalogo tipo deactivo": [
+    {
+      "detalle": "[I] Información (Datos Procesados)",
+      "tipo de activo": "informacion"
+    },
+    {
+      "detalle": "[D] Datos (Datos sin Procesar)",
+      "tipo de activo": "datos (daoa"
+    },
+    {
+      "detalle": "[SW] Aplicaciones (software)",
+      "tipo de activo": "software"
+    },
+    {
+      "detalle": "[HW] Equipos informáticos (hardware)",
+      "tipo de activo": "hardware"
+    },
+    {
+      "detalle": "[COM] Redes de comunicaciones y soporte de información",
+      "tipo de activo": "redes de comunicaiones."
+    },
+    {
+      "detalle": "[P ] Persona, son activos de la Estructura Organizacional (Personal involucrado con procesos y sistemas de información)",
+      "tipo de activo": "organizacional"
+    },
+    {
+      "detalle": "[U] Ubicación, son activos de la Estructura Organizacional (La ubicación es el lugar donde se encuentra la infraestructura tecnológica, archivo, etc) ",
+      "tipo de activo": "ubicación"
+    }
+  ],
+  "catalogo de valoracion": [
+    {
+      "valoracion": "confidencialidad"
+    },
+    {
+      "valoracion": "integridad"
+    },
+    {
+      "valoracion": "disponibilidad"
+    }
+  ],
+  "Catalogo de Riesgo": [
+    {
+      "Tabla de evaluacion del Riesgo": "Evaluacion de Amenaza"
+    },
+    {
+      "Tabla de evaluacion del Riesgo": "Alto (3)"
+    },
+    {
+      "Tabla de evaluacion del Riesgo": "Medio (2)"
+    },
+    {
+      "Tabla de evaluacion del Riesgo": "Bajo (1)"
+    },
+    {
+      "Tabla de evaluacion del Riesgo": "Evaluacion de Vulnerabilidad"
+    },
+    {
+      "Tabla de evaluacion del Riesgo": "Alto (3)"
+    },
+    {
+      "Tabla de evaluacion del Riesgo": "Medio (2)"
+    },
+    {
+      "Tabla de evaluacion del Riesgo": "Bajo (1)"
+    }
+  ],
+  "Catalo Tipo de Control": [
+    {
+      "Tipo de Control": "Control Correctivo"
+    },
+    {
+      "Tipo de Control": "Control Preventivo"
+    },
+    {
+      "Tipo de Control": "Monitoreo y Control"
+    }
+  ]
+}

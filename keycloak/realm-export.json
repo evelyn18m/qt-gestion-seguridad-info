@@ -1,0 +1,86 @@
+{
+  "realm": "quito-turismo",
+  "enabled": true,
+  "roles": {
+    "client": {
+      "sgsi-app": [
+        {
+          "name": "administradoregsi",
+          "description": "Administrator role for SGSI App"
+        },
+        {
+          "name": "usuarioegsi",
+          "description": "Regular user role for SGSI App"
+        }
+      ]
+    }
+  },
+  "clients": [
+    {
+      "clientId": "sgsi-app",
+      "name": "gestión de seguridad de información",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "2AbmJS1ok5t52CKqUqUwoovk2wQDGWPC",
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3000"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "sgsi-app": [
+          "administradoregsi"
+        ]
+      }
+    },
+    {
+      "username": "user",
+      "enabled": true,
+      "email": "user@example.com",
+      "firstName": "Regular",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "user123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "sgsi-app": [
+          "usuarioegsi"
+        ]
+      }
+    }
+  ]
+}

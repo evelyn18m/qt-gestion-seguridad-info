@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  adminer:
+    image: adminer
+    container_name: sgsi-adminer
+    restart: always
+    ports:
+      - "8082:8080"
+    networks:
+      - sgsi-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: sgsi-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - sgsi-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    container_name: sgsi-keycloak
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=superadmin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KEYCLOAK_ADMIN=superadmin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=mysql
+      - KC_DB_URL=jdbc:mysql://mysql:3306/keycloak_db?useSSL=false&allowPublicKeyRetrieval=true
+      - KC_DB_USERNAME=keycloak_user
+      - KC_DB_PASSWORD=keycloak_password
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_ENABLED=true
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    command:
+      - start-dev
+      - --import-realm
+    depends_on:
+      - mysql
+    networks:
+      - sgsi-network
+
+  backend:
+    image: node:22-alpine
+    container_name: sgsi-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=mysql://sgsi_user:sgsi_password@mysql:3306/sgsi_db?allowPublicKeyRetrieval=true
+      - PORT=3001
+    ports:
+      - "3001:3001"
+    command: npm run start:dev
+    depends_on:
+      - mysql
+    networks:
+      - sgsi-network
+
+  frontend:
+    image: node:22-alpine
+    container_name: sgsi-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - HOST=0.0.0.0
+      - NUXT_OIDC_PROVIDERS_KEYCLOAK_BASE_URL=http://localhost:8080
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - keycloak
+    networks:
+      - sgsi-network
+
+networks:
+  sgsi-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
