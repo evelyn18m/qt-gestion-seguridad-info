@@ -56,6 +56,19 @@ const tratamientoForm = ref({
   nivelVulnerabilidadControl: '',
 })
 
+// Sincronizar Pestaña 1 → Pestaña 2 (macroproceso y nombre activo)
+watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([macro, nombre]) => {
+  analisisForm.value.macroProceso = macro
+  analisisForm.value.nombreActivo = nombre
+}, { immediate: true })
+
+const macroProcesoName = computed(() => {
+  const id = analisisForm.value.macroProceso
+  if (!id) return 'No seleccionado en Pestaña 1'
+  const found = valMacroprocesos.value.find((m: any) => m.id === Number(id))
+  return found ? found.nombre : `ID #${id}`
+})
+
 const amenazaCategoria = ref('')
 const vulnerabilidadCategoria = ref('')
 const amenazaSeleccionada = ref('')
@@ -138,11 +151,12 @@ function getCatalogoLabel(tipo: string, catalogoId: number) {
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
 }
 
-function calcularEvaluacionRiesgo(riesgoId: string | number) {
+function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilidadRiesgoId: string | number) {
   const impacto = ciaAverage.value
-  const valor = getValorRiesgo(riesgoId)
-  if (impacto === 0 || !valor) return 0
-  return Math.round(impacto * valor * 100) / 100
+  const amenaza = getValorRiesgo(amenazaRiesgoId)
+  const vulnerabilidad = getValorRiesgo(vulnerabilidadRiesgoId)
+  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
+  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
 }
 
 function calcularNivelRiesgo(evaluacion: number) {
@@ -199,19 +213,30 @@ function rebuildDetalles() {
   detallesRiesgo.value = nuevos
 }
 
-function updateEvaluacionDetalle(idx: number) {
-  const d = detallesRiesgo.value[idx]
-  if (!d) return
-  d.evaluacionRiesgo = calcularEvaluacionRiesgo(d.riesgoId)
-  d.nivelRiesgo = calcularNivelRiesgo(d.evaluacionRiesgo)
+function recalcAllEvaluaciones() {
+  const globalAmenazaId = evaluacionForm.value.amenazaRiesgoId
+  const globalVulnerabilidadId = evaluacionForm.value.vulnerabilidadRiesgoId
+  detallesRiesgo.value.forEach(d => {
+    if (d.tipo === 'amenaza') {
+      d.evaluacionRiesgo = calcularEvaluacionRiesgo(d.riesgoId, globalVulnerabilidadId)
+    } else {
+      d.evaluacionRiesgo = calcularEvaluacionRiesgo(globalAmenazaId, d.riesgoId)
+    }
+    d.nivelRiesgo = calcularNivelRiesgo(d.evaluacionRiesgo)
+  })
 }
 
-function updateControlDetalle(idx: number) {
-  const d = detallesRiesgo.value[idx]
-  if (!d) return
+function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
+  recalcAllEvaluaciones()
+}
+
+function updateControlDetalle(d: DetalleRiesgo) {
   d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
 }
+
+const detallesAmenazas = computed(() => detallesRiesgo.value.filter(d => d.tipo === 'amenaza'))
+const detallesVulnerabilidades = computed(() => detallesRiesgo.value.filter(d => d.tipo === 'vulnerabilidad'))
 
 const loadValoracionData = async () => {
   valLoading.value = true
@@ -365,6 +390,8 @@ async function submitValoracion() {
       controlesImplementacion: a.controlesImplementacion || null,
       impacto: ciaAverage.value || null,
       controlesArea: e.controlesArea || null,
+      amenazaRiesgoId: e.amenazaRiesgoId ? Number(e.amenazaRiesgoId) : null,
+      vulnerabilidadRiesgoId: e.vulnerabilidadRiesgoId ? Number(e.vulnerabilidadRiesgoId) : null,
       detallesRiesgo: detallesPayload,
     }
 
@@ -425,6 +452,8 @@ function editValoracion(item: any) {
     }
     evaluacionForm.value = {
       probabilidadId: String(item.probabilidadId || ''),
+      amenazaRiesgoId: String(item.amenazaRiesgoId || ''),
+      vulnerabilidadRiesgoId: String(item.vulnerabilidadRiesgoId || ''),
       controlesArea: item.controlesArea || '',
     }
   }
@@ -482,6 +511,8 @@ function resetForm() {
   }
   evaluacionForm.value = {
     probabilidadId: '',
+    amenazaRiesgoId: '',
+    vulnerabilidadRiesgoId: '',
     controlesArea: '',
   }
   detallesRiesgo.value = []
@@ -870,15 +901,12 @@ onMounted(() => {
                   <div class="val-card" style="border:none; padding:0; background:transparent;">
                     <h3 class="val-card-title">Análisis de Riesgos</h3>
                     <div class="form-group">
-                      <label>MacroProceso</label>
-                      <select v-model="analisisForm.macroProceso">
-                        <option value="">Seleccionar...</option>
-                        <option v-for="m in valMacroprocesos" :key="m.id" :value="m.id">{{ m.nombre }}</option>
-                      </select>
+                      <label>MacroProceso (Pestaña 1)</label>
+                      <input :value="macroProcesoName" type="text" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" />
                     </div>
                     <div class="form-group">
-                      <label>Nombre Activo</label>
-                      <input v-model="analisisForm.nombreActivo" type="text" placeholder="Nombre del activo" />
+                      <label>Nombre Activo (Pestaña 1)</label>
+                      <input :value="analisisForm.nombreActivo || 'No especificado en Pestaña 1'" type="text" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" />
                     </div>
                     <div class="form-group">
                       <label>Categoría de Amenaza</label>
@@ -963,6 +991,22 @@ onMounted(() => {
                     <label>Controles de Área</label>
                     <textarea v-model="evaluacionForm.controlesArea" placeholder="Describa los controles de área" rows="2"></textarea>
                   </div>
+                  <div class="val-grid" style="grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                    <div class="form-group">
+                      <label>Nivel de Amenaza</label>
+                      <select v-model="evaluacionForm.amenazaRiesgoId" @change="updateEvaluacionDetalle()">
+                        <option value="">Seleccionar...</option>
+                        <option v-for="r in riesgosAmenaza" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Nivel de Vulnerabilidad</label>
+                      <select v-model="evaluacionForm.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle()">
+                        <option value="">Seleccionar...</option>
+                        <option v-for="r in riesgosVulnerabilidad" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                      </select>
+                    </div>
+                  </div>
                   <div v-if="detallesRiesgo.length === 0" class="chip-empty">No hay amenazas ni vulnerabilidades seleccionadas en la Pestaña 2.</div>
                   <table v-else class="val-table" style="margin-top:1rem;">
                     <thead>
@@ -975,11 +1019,11 @@ onMounted(() => {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="(d, idx) in detallesRiesgo" :key="idx">
+                      <tr v-for="d in detallesRiesgo" :key="d.tipo + d.catalogoId">
                         <td><span class="tag-count">{{ d.tipo === 'amenaza' ? 'A' : 'V' }}</span></td>
                         <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
                         <td>
-                          <select v-model="d.riesgoId" @change="updateEvaluacionDetalle(idx)">
+                          <select v-model="d.riesgoId" @change="updateEvaluacionDetalle(d)" style="min-width:130px;">
                             <option value="">Seleccionar...</option>
                             <option v-for="r in valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
                           </select>
@@ -1005,46 +1049,99 @@ onMounted(() => {
                 <div class="val-card" style="border:none; padding:0; background:transparent;">
                   <h3 class="val-card-title">Tratamiento de Riesgo por Item</h3>
                   <div v-if="detallesRiesgo.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y evalúe en la Pestaña 3.</div>
-                  <table v-else class="val-table" style="margin-top:1rem;">
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Método</th>
-                        <th>Tipo Control</th>
-                        <th>Riesgo (Ctrl)</th>
-                        <th>Eval. (Ctrl)</th>
-                        <th>Nivel (Ctrl)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(d, idx) in detallesRiesgo" :key="idx">
-                        <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
-                        <td><input v-model="d.metodoTratamiento" type="text" placeholder="Método" style="min-width:140px;" /></td>
-                        <td>
-                          <select v-model="d.tipoControlId">
-                            <option value="">Seleccionar...</option>
-                            <option v-for="tc in valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
-                          </select>
-                        </td>
-                        <td>
-                          <select v-model="d.riesgoControlId" @change="updateControlDetalle(idx)">
-                            <option value="">Seleccionar...</option>
-                            <option v-for="r in valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                          </select>
-                        </td>
-                        <td>
-                          <span v-if="d.evaluacionRiesgoControl > 0">{{ d.evaluacionRiesgoControl.toFixed(2) }}</span>
-                          <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                        </td>
-                        <td>
-                          <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
-                            {{ getNivelStyle(d.nivelRiesgoControl).label }}
-                          </span>
-                          <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div v-else class="val-grid" style="grid-template-columns: 1fr 1fr; gap:1.5rem; margin-top:1rem;">
+                    <!-- COLUMNA: Amenazas -->
+                    <div>
+                      <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; color:var(--text-muted);">Amenazas</h4>
+                      <table class="val-table" v-if="detallesAmenazas.length > 0">
+                        <thead>
+                          <tr>
+                            <th>Item</th>
+                            <th>Método</th>
+                            <th>Tipo Control</th>
+                            <th>Riesgo (Ctrl)</th>
+                            <th>Eval. (Ctrl)</th>
+                            <th>Nivel (Ctrl)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="d in detallesAmenazas" :key="d.catalogoId">
+                            <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
+                            <td><input v-model="d.metodoTratamiento" type="text" placeholder="Método" style="min-width:100px;" /></td>
+                            <td>
+                              <select v-model="d.tipoControlId" style="min-width:110px;">
+                                <option value="">Seleccionar...</option>
+                                <option v-for="tc in valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
+                              </select>
+                            </td>
+                            <td>
+                              <select v-model="d.riesgoControlId" @change="updateControlDetalle(d)" style="min-width:110px;">
+                                <option value="">Seleccionar...</option>
+                                <option v-for="r in valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                              </select>
+                            </td>
+                            <td>
+                              <span v-if="d.evaluacionRiesgoControl > 0">{{ d.evaluacionRiesgoControl.toFixed(2) }}</span>
+                              <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                            </td>
+                            <td>
+                              <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
+                                {{ getNivelStyle(d.nivelRiesgoControl).label }}
+                              </span>
+                              <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div v-else class="chip-empty" style="margin-top:0.5rem;">Sin amenazas</div>
+                    </div>
+
+                    <!-- COLUMNA: Vulnerabilidades -->
+                    <div>
+                      <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; color:var(--text-muted);">Vulnerabilidades</h4>
+                      <table class="val-table" v-if="detallesVulnerabilidades.length > 0">
+                        <thead>
+                          <tr>
+                            <th>Item</th>
+                            <th>Método</th>
+                            <th>Tipo Control</th>
+                            <th>Riesgo (Ctrl)</th>
+                            <th>Eval. (Ctrl)</th>
+                            <th>Nivel (Ctrl)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="d in detallesVulnerabilidades" :key="d.catalogoId">
+                            <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
+                            <td><input v-model="d.metodoTratamiento" type="text" placeholder="Método" style="min-width:100px;" /></td>
+                            <td>
+                              <select v-model="d.tipoControlId" style="min-width:110px;">
+                                <option value="">Seleccionar...</option>
+                                <option v-for="tc in valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
+                              </select>
+                            </td>
+                            <td>
+                              <select v-model="d.riesgoControlId" @change="updateControlDetalle(d)" style="min-width:110px;">
+                                <option value="">Seleccionar...</option>
+                                <option v-for="r in valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                              </select>
+                            </td>
+                            <td>
+                              <span v-if="d.evaluacionRiesgoControl > 0">{{ d.evaluacionRiesgoControl.toFixed(2) }}</span>
+                              <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                            </td>
+                            <td>
+                              <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
+                                {{ getNivelStyle(d.nivelRiesgoControl).label }}
+                              </span>
+                              <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div v-else class="chip-empty" style="margin-top:0.5rem;">Sin vulnerabilidades</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

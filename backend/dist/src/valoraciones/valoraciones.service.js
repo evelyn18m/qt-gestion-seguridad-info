@@ -32,7 +32,11 @@ let ValoracionesService = class ValoracionesService {
             }),
             this.prisma.impacto.findUnique({ where: { id: item.integridadId } }),
             this.prisma.impacto.findUnique({ where: { id: item.disponibilidadId } }),
-            this.prisma.tipoControl.findUnique({ where: { id: item.tipoControl } }),
+            item.tipoControl != null
+                ? this.prisma.tipoControl.findUnique({
+                    where: { id: item.tipoControl },
+                })
+                : null,
         ]);
         const detallesRiesgo = await this.prisma.detalleRiesgo.findMany({
             where: { valoracionActivoId: item.id },
