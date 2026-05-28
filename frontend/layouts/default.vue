@@ -1,26 +1,31 @@
 <script setup lang="ts">
 const isSidebarOpen = ref(false)
 const catalogosOpen = ref(false)
+const route = useRoute()
 const { userData, logout } = useAuth()
 
 function closeSidebar() {
   isSidebarOpen.value = false
 }
 
+function isCatalogActive(catalogPath: string): boolean {
+  return route.path === '/catalogos' && route.query.tipo === catalogPath.split('?tipo=')[1]
+}
+
 const catalogos = [
-  { path: '/catalogos/amenazas', label: 'Amenazas' },
-  { path: '/catalogos/vulnerabilidades', label: 'Vulnerabilidades' },
-  { path: '/catalogos/impactos', label: 'Impactos' },
-  { path: '/catalogos/formatos', label: 'Formatos' },
-  { path: '/catalogos/subprocesos', label: 'Subprocesos' },
-  { path: '/catalogos/macroprocesos', label: 'Macroprocesos' },
-  { path: '/catalogos/tipos-activo', label: 'Tipos de Activo' },
-  { path: '/catalogos/valoraciones', label: 'Valoraciones' },
-  { path: '/catalogos/funcionarios', label: 'Funcionarios' },
-  { path: '/catalogos/areas', label: '&Aacute;reas' },
-  { path: '/catalogos/tipos-control', label: 'Tipos de Control' },
-  { path: '/catalogos/riesgos', label: 'Riesgos' },
-  { path: '/catalogos/probabilidades', label: 'Probabilidad' },
+  { path: '/catalogos?tipo=amenazas', label: 'Amenazas' },
+  { path: '/catalogos?tipo=vulnerabilidades', label: 'Vulnerabilidades' },
+  { path: '/catalogos?tipo=impactos', label: 'Impactos' },
+  { path: '/catalogos?tipo=formatos', label: 'Formatos' },
+  { path: '/catalogos?tipo=subprocesos', label: 'Subprocesos' },
+  { path: '/catalogos?tipo=macroprocesos', label: 'Macroprocesos' },
+  { path: '/catalogos?tipo=tipos-activo', label: 'Tipos de Activo' },
+  { path: '/catalogos?tipo=valoraciones', label: 'Valoraciones' },
+  { path: '/catalogos?tipo=funcionarios', label: 'Funcionarios' },
+  { path: '/catalogos?tipo=areas', label: '&Aacute;reas' },
+  { path: '/catalogos?tipo=tipos-control', label: 'Tipos de Control' },
+  { path: '/catalogos?tipo=riesgos', label: 'Riesgos' },
+  { path: '/catalogos?tipo=probabilidades', label: 'Probabilidad' },
 ]
 </script>
 
@@ -72,7 +77,7 @@ const catalogos = [
               </svg>
             </div>
             <div v-show="catalogosOpen" class="nav-submenu">
-              <NuxtLink v-for="c in catalogos" :key="c.path" :to="c.path" class="nav-subitem" active-class="active" @click="closeSidebar">
+              <NuxtLink v-for="c in catalogos" :key="c.path" :to="c.path" class="nav-subitem" :class="{ active: isCatalogActive(c.path) }" @click="closeSidebar">
                 {{ c.label }}
               </NuxtLink>
             </div>
