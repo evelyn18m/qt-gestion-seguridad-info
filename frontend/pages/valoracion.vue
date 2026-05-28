@@ -151,6 +151,10 @@ interface DetalleRiesgo {
   riesgoControlId: string | number
   evaluacionRiesgoControl: number
   nivelRiesgoControl: string
+  // New per-row fields (Tab 2 row-based model)
+  amenazaIds?: string[]
+  vulnerabilidadIds?: string[]
+  controlesImplementados?: string
 }
 
 const detallesRiesgo = ref<DetalleRiesgo[]>([])
@@ -199,6 +203,9 @@ function rebuildDetalles() {
         riesgoControlId: '',
         evaluacionRiesgoControl: 0,
         nivelRiesgoControl: '',
+        amenazaIds: [String(catalogoId)],
+        vulnerabilidadIds: [],
+        controlesImplementados: '',
       })
     }
   })
@@ -219,6 +226,9 @@ function rebuildDetalles() {
         riesgoControlId: '',
         evaluacionRiesgoControl: 0,
         nivelRiesgoControl: '',
+        amenazaIds: [],
+        vulnerabilidadIds: [String(catalogoId)],
+        controlesImplementados: '',
       })
     }
   })
@@ -398,6 +408,10 @@ async function submitValoracion() {
       riesgoControlId: d.riesgoControlId ? Number(d.riesgoControlId) : null,
       evaluacionRiesgoControl: d.evaluacionRiesgoControl > 0 ? d.evaluacionRiesgoControl : null,
       nivelRiesgoControl: d.nivelRiesgoControl || null,
+      // New per-row fields (Tab 2 row-based model)
+      amenazaIds: d.amenazaIds && d.amenazaIds.length > 0 ? JSON.stringify(d.amenazaIds) : null,
+      vulnerabilidadIds: d.vulnerabilidadIds && d.vulnerabilidadIds.length > 0 ? JSON.stringify(d.vulnerabilidadIds) : null,
+      controlesImplementados: d.controlesImplementados || null,
     }))
 
     const body = {
@@ -501,6 +515,10 @@ function editValoracion(item: any) {
       riesgoControlId: d.riesgoControlId ? String(d.riesgoControlId) : '',
       evaluacionRiesgoControl: d.evaluacionRiesgoControl || 0,
       nivelRiesgoControl: d.nivelRiesgoControl || '',
+      // New per-row fields (Tab 2 row-based model)
+      amenazaIds: safeJsonParse(d.amenazaIds, []),
+      vulnerabilidadIds: safeJsonParse(d.vulnerabilidadIds, []),
+      controlesImplementados: d.controlesImplementados || '',
     }))
   } else {
     detallesRiesgo.value = []

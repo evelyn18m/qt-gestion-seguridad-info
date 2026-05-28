@@ -134,6 +134,152 @@ const vulnerabilidadCategoria = ref('')
 const amenazaSeleccionada = ref('')
 const vulnerabilidadSeleccionada = ref('')
 
+// ── Tab 2 Row State ─────────────────────────────────────────────────────────
+// Each row: { amenazaIds: string[], vulnerabilidadIds: string[], controlesImplementados: string }
+export interface RiskRow {
+  amenazaIds: string[]
+  vulnerabilidadIds: string[]
+  controlesImplementados: string
+  tempId?: number
+}
+
+const riskRows = ref<RiskRow[]>([])
+let rowCounter = 0
+
+function agregarFila() {
+  riskRows.value.push({
+    amenazaIds: [],
+    vulnerabilidadIds: [],
+    controlesImplementados: '',
+    tempId: ++rowCounter,
+  })
+}
+
+function eliminarFila(index: number) {
+  riskRows.value.splice(index, 1)
+  syncRowsToDetalles()
+}
+
+function removeAmenaza(row: RiskRow, idToRemove: string) {
+  row.amenazaIds = row.amenazaIds.filter(id => id !== idToRemove)
+  syncRowsToDetalles()
+}
+
+function removeVulnerabilidad(row: RiskRow, idToRemove: string) {
+  row.vulnerabilidadIds = row.vulnerabilidadIds.filter(id => id !== idToRemove)
+  syncRowsToDetalles()
+}
+
+function toggleAmenazaInRow(row: RiskRow, amenazaId: string) {
+  const idx = row.amenazaIds.indexOf(amenazaId)
+  if (idx >= 0) row.amenazaIds.splice(idx, 1)
+  else row.amenazaIds.push(amenazaId)
+  syncRowsToDetalles()
+}
+
+function toggleVulnerabilidadInRow(row: RiskRow, vulnerabilidadId: string) {
+  const idx = row.vulnerabilidadIds.indexOf(vulnerabilidadId)
+  if (idx >= 0) row.vulnerabilidadIds.splice(idx, 1)
+  else row.vulnerabilidadIds.push(vulnerabilidadId)
+  syncRowsToDetalles()
+}
+
+function hasAtLeastOne(row: RiskRow): boolean {
+  return row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0
+}
+
+function getAmenazaLabel(id: string) {
+  const a = props.catalogData.valAmenazas.find((x: any) => x.id === Number(id))
+  return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
+}
+
+function getVulnerabilidadLabel(id: string) {
+  const v = props.catalogData.valVulnerabilidades.find((x: any) => x.id === Number(id))
+  return v ? `${v.categoria} — ${v.descripcion}` : `V#${id}`
+}
+
+function parseIds(jsonStr: string | null | undefined): string[] {
+  if (!jsonStr) return []
+  try {
+    const parsed = JSON.parse(jsonStr)
+    return Array.isArray(parsed) ? parsed.map(String) : []
+  } catch {
+    return []
+  }
+}
+
+// Sync riskRows to detallesRiesgo (for Tabs 3/4 backward compat)
+function syncRowsToDetalles() {
+  const entries: DetalleRiesgo[] = []
+  riskRows.value.forEach(row => {
+    row.amenazaIds.forEach(aId => {
+      entries.push({
+        tipo: 'amenaza' as const,
+        catalogoId: Number(aId),
+        riesgoId: '',
+        evaluacionRiesgo: 0,
+        nivelRiesgo: '',
+        metodoTratamiento: '',
+        tipoControlId: '',
+        riesgoControlId: '',
+        evaluacionRiesgoControl: 0,
+        nivelRiesgoControl: '',
+        amenazaIds: [...row.amenazaIds],
+        vulnerabilidadIds: [...row.vulnerabilidadIds],
+        controlesImplementados: row.controlesImplementados,
+      })
+    })
+    row.vulnerabilidadIds.forEach(vId => {
+      entries.push({
+        tipo: 'vulnerabilidad' as const,
+        catalogoId: Number(vId),
+        riesgoId: '',
+        evaluacionRiesgo: 0,
+        nivelRiesgo: '',
+        metodoTratamiento: '',
+        tipoControlId: '',
+        riesgoControlId: '',
+        evaluacionRiesgoControl: 0,
+        nivelRiesgoControl: '',
+        amenazaIds: [...row.amenazaIds],
+        vulnerabilidadIds: [...row.vulnerabilidadIds],
+        controlesImplementados: row.controlesImplementados,
+      })
+    })
+  })
+  // Preserve entries with legacy fields only (from Tab 3/4 edits — no new row fields)
+  const legacyEntries = props.detallesRiesgo.filter(d => !d.amenazaIds && !d.vulnerabilidadIds)
+  props.detallesRiesgo.length = 0
+  props.detallesRiesgo.push(...entries, ...legacyEntries)
+}
+
+// Load existing rows from detallesRiesgo (edit mode)
+function loadExistingRows() {
+  riskRows.value = []
+  const seen = new Set<string>()
+  props.detallesRiesgo.forEach(d => {
+    const aIds = d.amenazaIds ?? parseIds((d as any).amenazaIdsStr ?? null)
+    const vIds = d.vulnerabilidadIds ?? parseIds((d as any).vulnerabilidadIdsStr ?? null)
+    const key = JSON.stringify([...aIds, ...vIds].sort())
+    if (!seen.has(key) && (aIds.length > 0 || vIds.length > 0)) {
+      seen.add(key)
+      riskRows.value.push({
+        amenazaIds: aIds,
+        vulnerabilidadIds: vIds,
+        controlesImplementados: d.controlesImplementados || '',
+        tempId: ++rowCounter,
+      })
+    }
+  })
+}
+
+// Watch for modal open to load rows
+watch(() => props.modelValue, (isOpen) => {
+  if (isOpen) {
+    loadExistingRows()
+  }
+})
+
 // ── Helper Functions ─────────────────────────────────────────────────────────
 function getNivelesImpacto(tipo: string) {
   return props.catalogData.valImpactos.filter((i: any) => i.tipo === tipo)
@@ -183,12 +329,12 @@ function getCatalogoLabel(tipo: string, catalogoId: number) {
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
 }
 
-function getAmenazaLabel(id: number) {
+function getAmenazaLabelNum(id: number) {
   const a = props.catalogData.valAmenazas.find((x: any) => x.id === id)
   return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
 }
 
-function getVulnerabilidadLabel(id: number) {
+function getVulnerabilidadLabelNum(id: number) {
   const v = props.catalogData.valVulnerabilidades.find((x: any) => x.id === id)
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${id}`
 }
@@ -238,8 +384,8 @@ function quitarVulnerabilidad(id: number) {
 }
 
 function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
-  // Trigger recalculation in parent via reset-form event
-  emit('reset-form')
+  // No longer emit reset-form — Tab 2 manages its own riskRows which syncs to detallesRiesgo
+  // Tab 3 riesgo changes are tracked directly in detallesRiesgo entries
 }
 
 function updateControlDetalle(d: DetalleRiesgo) {
@@ -387,88 +533,108 @@ const tabs = [
             </div>
           </div>
 
-          <!-- TAB 2: Análisis de Riesgos -->
+          <!-- TAB 2: Análisis de Riesgos (row-based) -->
           <div v-show="activeTab === 1" class="val-tab-panel">
-            <div class="val-grid" style="grid-template-columns: 1fr 1fr;">
-              <!-- LEFT COLUMN: Inputs -->
-              <div class="val-card" style="border:none; padding:0; background:transparent;">
-                <h3 class="val-card-title">Análisis de Riesgos</h3>
-                <div class="form-group">
-                  <label>MacroProceso (Pestaña 1)</label>
-                  <input :value="macroProcesoName" type="text" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" />
-                </div>
-                <div class="form-group">
-                  <label>Nombre Activo (Pestaña 1)</label>
-                  <input :value="analisisForm.nombreActivo || 'No especificado en Pestaña 1'" type="text" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" />
-                </div>
-                <div class="form-group">
-                  <label>Categoría de Amenaza</label>
-                  <select v-model="amenazaCategoria" @change="amenazaSeleccionada = ''">
-                    <option value="">Seleccionar categoría...</option>
-                    <option v-for="cat in amenazaCategorias" :key="cat" :value="cat">{{ cat }}</option>
-                  </select>
-                </div>
-                <div class="form-group" style="display:flex; gap:0.5rem; align-items:flex-end;">
-                  <div style="flex:1;">
-                    <label>Amenaza</label>
-                    <select v-model="amenazaSeleccionada" :disabled="!amenazaCategoria">
-                      <option value="">Seleccionar amenaza...</option>
-                      <option v-for="a in amenazasFiltradas" :key="a.id" :value="a.id">{{ a.nombre }}</option>
-                    </select>
-                  </div>
-                  <button type="button" class="btn-primary" @click="agregarAmenaza" :disabled="!amenazaSeleccionada" style="padding:0.6rem 1rem; height:fit-content; margin-bottom:0.25rem;">Agregar</button>
-                </div>
-                <div class="form-group">
-                  <label>Categoría de Vulnerabilidad</label>
-                  <select v-model="vulnerabilidadCategoria" @change="vulnerabilidadSeleccionada = ''">
-                    <option value="">Seleccionar categoría...</option>
-                    <option v-for="cat in vulnerabilidadCategorias" :key="cat" :value="cat">{{ cat }}</option>
-                  </select>
-                </div>
-                <div class="form-group" style="display:flex; gap:0.5rem; align-items:flex-end;">
-                  <div style="flex:1;">
-                    <label>Vulnerabilidad</label>
-                    <select v-model="vulnerabilidadSeleccionada" :disabled="!vulnerabilidadCategoria">
-                      <option value="">Seleccionar vulnerabilidad...</option>
-                      <option v-for="vul in vulnerabilidadesFiltradas" :key="vul.id" :value="vul.id">{{ vul.descripcion }}</option>
-                    </select>
-                  </div>
-                  <button type="button" class="btn-primary" @click="agregarVulnerabilidad" :disabled="!vulnerabilidadSeleccionada" style="padding:0.6rem 1rem; height:fit-content; margin-bottom:0.25rem;">Agregar</button>
-                </div>
-                <div class="form-group">
-                  <label>Controles de Implementación</label>
-                  <textarea v-model="analisisForm.controlesImplementacion" placeholder="Describa los controles implementados" rows="3"></textarea>
-                </div>
+            <div class="val-card" style="border:none; padding:0; background:transparent;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+                <h3 class="val-card-title" style="margin:0; border:none; padding:0;">Análisis de Riesgos — Filas de Riesgo</h3>
+                <button type="button" class="btn-primary" @click="agregarFila" style="padding:0.5rem 1rem; font-size:0.85rem;">+ Agregar fila</button>
               </div>
 
-              <!-- RIGHT COLUMN: Selected items -->
-              <div class="val-card" style="border:none; padding:0; background:transparent;">
-                <h3 class="val-card-title">Seleccionados</h3>
-                <div class="form-group">
-                  <label>Amenazas seleccionadas</label>
-                  <div class="chip-list" v-if="analisisForm.amenazas.length > 0">
-                    <span v-for="id in analisisForm.amenazas" :key="id" class="chip selected" style="display:flex; align-items:center; gap:0.4rem; cursor:default;">
-                      {{ getAmenazaLabel(id) }}
-                      <button type="button" class="btn-icon" @click="quitarAmenaza(id)" style="width:18px; height:18px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width:12px; height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    </span>
-                  </div>
-                  <div v-else class="chip-empty">Ninguna amenaza seleccionada.</div>
-                </div>
-                <div class="form-group">
-                  <label>Vulnerabilidades seleccionadas</label>
-                  <div class="chip-list" v-if="analisisForm.vulnerabilidades.length > 0">
-                    <span v-for="id in analisisForm.vulnerabilidades" :key="id" class="chip selected" style="display:flex; align-items:center; gap:0.4rem; cursor:default;">
-                      {{ getVulnerabilidadLabel(id) }}
-                      <button type="button" class="btn-icon" @click="quitarVulnerabilidad(id)" style="width:18px; height:18px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width:12px; height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    </span>
-                  </div>
-                  <div v-else class="chip-empty">Ninguna vulnerabilidad seleccionada.</div>
-                </div>
+              <div v-if="riskRows.length === 0" class="chip-empty" style="text-align:center; padding:2rem 0;">
+                Sin filas de riesgo. Haga clic en "+ Agregar fila" para comenzar.
               </div>
+
+              <table v-else class="val-table">
+                <thead>
+                  <tr>
+                    <th style="min-width:220px;">Amenazas</th>
+                    <th style="min-width:220px;">Vulnerabilidades</th>
+                    <th>Controles Implementados</th>
+                    <th style="width:48px;"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, index) in riskRows" :key="row.tempId">
+                    <!-- Amenaza cell -->
+                    <td>
+                      <!-- Category + select for adding threats -->
+                      <select
+                        v-model="amenazaCategoria"
+                        class="row-select"
+                        style="margin-bottom:0.4rem;"
+                      >
+                        <option value="">+ Agregar amenaza...</option>
+                        <option v-for="cat in amenazaCategorias" :key="cat" :value="cat">{{ cat }}</option>
+                      </select>
+                      <select
+                        v-if="amenazaCategoria"
+                        class="row-select"
+                        @change="(e) => { const s = (e.target as HTMLSelectElement).value; if (s) { toggleAmenazaInRow(row, s); amenazaCategoria = ''; (e.target as HTMLSelectElement).value = '' } }"
+                        style="margin-bottom:0.4rem;"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option v-for="a in amenazasFiltradas" :key="a.id" :value="String(a.id)">{{ a.nombre }}</option>
+                      </select>
+                      <!-- Selected amenaza chips -->
+                      <div class="chip-list" style="max-height:140px;">
+                        <span v-for="aId in row.amenazaIds" :key="aId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; cursor:default;">
+                          {{ getAmenazaLabel(aId) }}
+                          <button type="button" @click="removeAmenaza(row, aId)" style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width:10px; height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </span>
+                      </div>
+                    </td>
+
+                    <!-- Vulnerabilidad cell -->
+                    <td>
+                      <!-- Category + select for adding vulnerabilities -->
+                      <select
+                        v-model="vulnerabilidadCategoria"
+                        class="row-select"
+                        style="margin-bottom:0.4rem;"
+                      >
+                        <option value="">+ Agregar vulnerabilidad...</option>
+                        <option v-for="cat in vulnerabilidadCategorias" :key="cat" :value="cat">{{ cat }}</option>
+                      </select>
+                      <select
+                        v-if="vulnerabilidadCategoria"
+                        class="row-select"
+                        @change="(e) => { const s = (e.target as HTMLSelectElement).value; if (s) { toggleVulnerabilidadInRow(row, s); vulnerabilidadCategoria = ''; (e.target as HTMLSelectElement).value = '' } }"
+                        style="margin-bottom:0.4rem;"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option v-for="v in vulnerabilidadesFiltradas" :key="v.id" :value="String(v.id)">{{ v.descripcion }}</option>
+                      </select>
+                      <!-- Selected vulnerabilidad chips -->
+                      <div class="chip-list" style="max-height:140px;">
+                        <span v-for="vId in row.vulnerabilidadIds" :key="vId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; cursor:default;">
+                          {{ getVulnerabilidadLabel(vId) }}
+                          <button type="button" @click="removeVulnerabilidad(row, vId)" style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width:10px; height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </span>
+                      </div>
+                    </td>
+
+                    <!-- Controles Implementados cell -->
+                    <td>
+                      <textarea
+                        v-model="row.controlesImplementados"
+                        placeholder="Controles implementados para esta combinación..."
+                        rows="3"
+                        style="resize:vertical; min-width:180px;"
+                      ></textarea>
+                    </td>
+
+                    <!-- Remove row -->
+                    <td>
+                      <button type="button" @click="eliminarFila(index)" style="background:transparent; border:none; color:#dc2626; cursor:pointer; font-size:1.2rem; padding:0.25rem; line-height:1;" title="Eliminar fila">×</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -753,6 +919,34 @@ const tabs = [
 }
 
 .val-card select option {
+  background: #1e293b;
+  color: white;
+}
+
+.row-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: white;
+  font-family: inherit;
+  font-size: 0.8rem;
+  box-sizing: border-box;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
+
+.row-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.row-select option {
   background: #1e293b;
   color: white;
 }
