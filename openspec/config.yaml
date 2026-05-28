@@ -57,6 +57,13 @@ testing:
       available: false
       note: No Prettier config found in frontend
 
+session_preflight:
+  execution_mode: interactive
+  artifact_store: both
+  delivery_strategy: ask-always
+  review_budget_lines: 400
+  decided: 2026-05-28
+
 phase_rules:
   proposal:
     required: true
