@@ -34,24 +34,37 @@ async function main() {
     }
   }
 
-  // --- Subprocesos ---
+  // --- MacroProcesos ---
+  console.log('Seeding MacroProceso...');
+  const macroProcesos = data['catalogo macroProceso'];
+  const codigoToIdMap = new Map<string, number>();
+  for (const m of macroProcesos) {
+    if (m['Proceso Macro']) {
+      const codigoMatch = m['Proceso Macro'].match(/\((\w+)\)$/);
+      const codigo = codigoMatch ? codigoMatch[1] : '';
+      const created = await prisma.macroProceso.create({
+        data: { nombre: m['Proceso Macro'], codigo },
+      });
+      codigoToIdMap.set(codigo, created.id);
+    }
+  }
+
+  // --- Subprocesos (depends on MacroProceso being seeded first) ---
   console.log('Seeding Subproceso...');
   const subprocesos = data['catalogo sunprocesos'];
   for (const s of subprocesos) {
     if (s['Subproceso']) {
+      const codeMatch = s['Subproceso'].match(/^\((\w+)\)/);
+      const codigo = codeMatch ? codeMatch[1] : '';
+      const macroProcesoId = codigoToIdMap.get(codigo);
+      if (!macroProcesoId) {
+        console.warn(
+          `[seed] WARNING: MacroProceso not found for code "${codigo}" in "${s['Subproceso']}" — skipping row`,
+        );
+        continue;
+      }
       await prisma.subproceso.create({
-        data: { nombre: s['Subproceso'] },
-      });
-    }
-  }
-
-  // --- MacroProcesos ---
-  console.log('Seeding MacroProceso...');
-  const macroProcesos = data['catalogo macroProceso'];
-  for (const m of macroProcesos) {
-    if (m['Proceso Macro']) {
-      await prisma.macroProceso.create({
-        data: { nombre: m['Proceso Macro'] },
+        data: { nombre: s['Subproceso'], macroProcesoId },
       });
     }
   }
@@ -229,7 +242,7 @@ async function main() {
   // --- Funcionarios & Areas (from Excel) ---
   console.log('Seeding Funcionarios & Areas from Excel...');
   const wb = XLSX.readFile(process.argv[2] || './documentos/funcionarios.xlsx');
-  const rows = XLSX.utils.sheet_to_json(wb.Sheets['Hoja1']);
+  const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets['Hoja1']);
 
   const seenFunc = new Set();
   const seenArea = new Set();

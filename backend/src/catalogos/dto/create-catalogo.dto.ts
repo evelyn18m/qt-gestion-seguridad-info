@@ -8,4 +8,6 @@ export class CreateCatalogoDto {
   valor?: number;
   criterio?: string;
   tipoFuente?: string;
+  macroProcesoId?: number;
+  codigo?: string;
 }
