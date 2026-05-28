@@ -2,7 +2,7 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 
-const filePath = 'c:\\Users\\pasantetic\\Desktop\\qt-gestionseguridadinformacion\\documentos\\catalogos.xlsx';
+const filePath = './documentos/catalogos.xlsx';
 
 if (!fs.existsSync(filePath)) {
     console.error('File not found:', filePath);
