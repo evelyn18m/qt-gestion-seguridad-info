@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { CatalogoItem } from '~/types/api'
+
 interface Props {
   tipo: string
   titulo: string
@@ -7,23 +9,22 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const items = ref<any[]>([])
+const { apiFetch } = useApi()
+const items = ref<CatalogoItem[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 
 const formVisible = ref(false)
 const formData = ref<Record<string, any>>({})
-const editingItem = ref<any>(null)
-const confirmDeleteItem = ref<any>(null)
+const editingItem = ref<CatalogoItem | null>(null)
+const confirmDeleteItem = ref<CatalogoItem | null>(null)
 
 async function loadItems() {
   loading.value = true
   error.value = ''
   try {
-    const res = await fetch(`http://localhost:3001/catalogos/${props.tipo}`)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    items.value = await res.json()
+    items.value = await apiFetch<CatalogoItem[]>(`/catalogos/${props.tipo}`)
   } catch (e: any) {
     error.value = `Error al cargar: ${e.message}`
   } finally {
@@ -40,7 +41,7 @@ function openCreate() {
   formVisible.value = true
 }
 
-function openEdit(item: any) {
+function openEdit(item: CatalogoItem) {
   editingItem.value = item
   const data: Record<string, any> = {}
   for (const f of props.campos) data[f] = item[f] ?? ''
@@ -58,15 +59,10 @@ async function saveItem() {
   saving.value = true
   try {
     const url = editingItem.value
-      ? `http://localhost:3001/catalogos/${props.tipo}/${editingItem.value.id}`
-      : `http://localhost:3001/catalogos/${props.tipo}`
+      ? `/catalogos/${props.tipo}/${editingItem.value.id}`
+      : `/catalogos/${props.tipo}`
     const method = editingItem.value ? 'PATCH' : 'POST'
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData.value),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    await apiFetch(url, { method, body: JSON.stringify(formData.value) })
     closeForm()
     await loadItems()
   } catch (e: any) {
@@ -76,7 +72,7 @@ async function saveItem() {
   }
 }
 
-function confirmDelete(item: any) {
+function confirmDelete(item: CatalogoItem) {
   confirmDeleteItem.value = item
 }
 
@@ -84,8 +80,7 @@ async function deleteItem() {
   const item = confirmDeleteItem.value
   if (!item) return
   try {
-    const res = await fetch(`http://localhost:3001/catalogos/${props.tipo}/${item.id}`, { method: 'DELETE' })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    await apiFetch(`/catalogos/${props.tipo}/${item.id}`, { method: 'DELETE' })
     confirmDeleteItem.value = null
     await loadItems()
   } catch (e: any) {
@@ -169,7 +164,7 @@ onMounted(() => {
         </div>
         <div class="modal-body">
           <p>&iquest;Eliminar este registro permanentemente?</p>
-          <p class="confirm-detail">#{{ confirmDeleteItem.id }} &mdash; {{ campos.map(f => confirmDeleteItem[f]).filter(Boolean).join(' &mdash; ') }}</p>
+          <p class="confirm-detail">#{{ confirmDeleteItem.id }} &mdash; {{ campos.map(f => confirmDeleteItem && confirmDeleteItem[f]).filter(Boolean).join(' &mdash; ') }}</p>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" @click="confirmDeleteItem = null">Cancelar</button>
