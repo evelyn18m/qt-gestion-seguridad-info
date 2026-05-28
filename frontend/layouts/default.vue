@@ -2,7 +2,7 @@
 const isSidebarOpen = ref(false)
 const catalogosOpen = ref(false)
 const route = useRoute()
-const { userData, logout } = useAuth()
+const { user, logout } = useAuth()
 
 function closeSidebar() {
   isSidebarOpen.value = false
@@ -41,11 +41,11 @@ const catalogos = [
       <div class="header-right">
         <div class="user-info">
           <div class="user-details">
-            <span class="user-name">{{ userData?.name || userData?.preferred_username }}</span>
-            <span class="user-role">{{ userData?.resource_access?.['sgsi-app']?.roles?.[0] || 'Usuario' }}</span>
+            <span class="user-name">{{ user?.name || user?.preferred_username }}</span>
+            <span class="user-role">{{ user?.realm_access?.roles?.[0] || 'Usuario' }}</span>
           </div>
           <div class="user-avatar">
-            {{ (userData?.name || userData?.preferred_username || 'U').charAt(0).toUpperCase() }}
+            {{ (user?.name || user?.preferred_username || 'U').charAt(0).toUpperCase() }}
           </div>
         </div>
         <button class="logout-mini-btn" title="Cerrar Sesión" @click="logout">
