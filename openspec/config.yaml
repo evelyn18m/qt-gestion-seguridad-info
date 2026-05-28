@@ -64,6 +64,12 @@ session_preflight:
   review_budget_lines: 400
   decided: 2026-05-28
 
+workflow:
+  commit_strategy: feature-branch
+  note: Always create feature branch before committing; never commit directly to main
+  pr_required: true
+  openspec_commit: separate
+
 phase_rules:
   proposal:
     required: true
