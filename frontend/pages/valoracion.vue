@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CatalogoItem, ValoracionActivo } from '~/types/api'
+const valTipoActivo = ref<CatalogoItem[]>([])
 const valFormatos = ref<CatalogoItem[]>([])
 const valMacroprocesos = ref<CatalogoItem[]>([])
 const valSubprocesos = ref<CatalogoItem[]>([])
@@ -67,6 +68,17 @@ const macroProcesoName = computed(() => {
   if (!id) return 'No seleccionado en Pestaña 1'
   const found = valMacroprocesos.value.find((m: any) => m.id === Number(id))
   return found ? found.nombre : `ID #${id}`
+})
+
+const subprocesosFiltrados = computed(() => {
+  const mpId = valForm.value.macroProceso
+  if (!mpId) return []
+  return valSubprocesos.value.filter((s: any) => s.macroProcesoId === Number(mpId))
+})
+
+// Limpiar subprocess cuando cambia macroproceso
+watch(() => valForm.value.macroProceso, () => {
+  valForm.value.subProceso = ''
 })
 
 const amenazaCategoria = ref('')
@@ -231,7 +243,7 @@ function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
 }
 
 function updateControlDetalle(d: DetalleRiesgo) {
-  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId)
+  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId, evaluacionForm.value.vulnerabilidadRiesgoId)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
 }
 
@@ -394,6 +406,9 @@ async function submitValoracion() {
       controlesArea: e.controlesArea || null,
       amenazaRiesgoId: e.amenazaRiesgoId ? Number(e.amenazaRiesgoId) : null,
       vulnerabilidadRiesgoId: e.vulnerabilidadRiesgoId ? Number(e.vulnerabilidadRiesgoId) : null,
+      metodoTratamiento: t.metodoTratamiento || null,
+      tipoControl: t.tipoControl ? Number(t.tipoControl) : null,
+      controlesImplementar: t.controlesImplementar || null,
       detallesRiesgo: detallesPayload,
     }
 
@@ -475,8 +490,10 @@ function editValoracion(item: any) {
   }
 }
 
-function viewValoracion(item: any) {
-  viewItem.value = item
+async function viewValoracion(item: any) {
+  const { apiFetch } = useApi()
+  const enriched = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
+  viewItem.value = enriched
   showViewModal.value = true
 }
 
@@ -819,7 +836,7 @@ onMounted(() => {
                       <label>Sub Proceso</label>
                       <select v-model="valForm.subProceso" required>
                         <option value="">Seleccionar...</option>
-                        <option v-for="s in valSubprocesos" :key="s.id" :value="s.id">{{ s.nombre }}</option>
+                        <option v-for="s in subprocesosFiltrados" :key="s.id" :value="s.id">{{ s.nombre }}</option>
                       </select>
                     </div>
                     <div class="form-group">
@@ -1192,6 +1209,79 @@ onMounted(() => {
                 <div class="view-field"><span class="view-label">Observaciones:</span> <span class="view-value">{{ viewItem.observaciones || 'N/A' }}</span></div>
               </div>
             </div>
+
+            <!-- Tab 2: Análisis de Riesgos -->
+            <div v-if="viewItem.amenazas || viewItem.vulnerabilidades" class="val-card" style="border:none; padding:0; background:transparent; margin-top:1.5rem;">
+              <h3 class="val-card-title">Análisis de Riesgos</h3>
+              <div class="view-field"><span class="view-label">Amenazas:</span> <span class="view-value">{{ safeJsonParse(viewItem.amenazas ?? null, []).length }} seleccionadas</span></div>
+              <div class="view-field"><span class="view-label">Vulnerabilidades:</span> <span class="view-value">{{ safeJsonParse(viewItem.vulnerabilidades ?? null, []).length }} seleccionadas</span></div>
+              <div class="view-field" v-if="viewItem.controlesImplementacion"><span class="view-label">Controles de Implementación:</span> <span class="view-value">{{ viewItem.controlesImplementacion }}</span></div>
+            </div>
+
+            <!-- Tab 3: Evaluación de Riesgo -->
+            <div v-if="viewItem.detallesRiesgo && viewItem.detallesRiesgo.length > 0" class="val-card" style="border:none; padding:0; background:transparent; margin-top:1.5rem;">
+              <h3 class="val-card-title">Evaluación de Riesgos</h3>
+              <table class="val-table" style="margin-top:0.75rem;">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Item</th>
+                    <th>Evaluación</th>
+                    <th>Nivel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="d in viewItem.detallesRiesgo" :key="d.id">
+                    <td><span class="tag-count">{{ d.tipo === 'amenaza' ? 'A' : 'V' }}</span></td>
+                    <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
+                    <td>{{ (d.evaluacionRiesgo ?? 0) > 0 ? (d.evaluacionRiesgo ?? 0).toFixed(2) : '—' }}</td>
+                    <td>
+                      <span v-if="d.nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgo).color, background: getNivelStyle(d.nivelRiesgo).bg }">
+                        {{ getNivelStyle(d.nivelRiesgo).label }}
+                      </span>
+                      <span v-else>—</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Tab 4: Tratamiento de Riesgo -->
+            <div v-if="viewItem.metodoTratamiento || viewItem.tipoControl || (viewItem.detallesRiesgo && viewItem.detallesRiesgo.some(d => d.metodoTratamiento || d.tipoControlId))" class="val-card" style="border:none; padding:0; background:transparent; margin-top:1.5rem;">
+              <h3 class="val-card-title">Tratamiento de Riesgo</h3>
+              <div v-if="viewItem.metodoTratamiento" class="view-field"><span class="view-label">Método:</span> <span class="view-value">{{ viewItem.metodoTratamiento }}</span></div>
+              <div v-if="viewItem.tipoControl" class="view-field"><span class="view-label">Tipo de Control:</span> <span class="view-value">{{ viewItem.tipoControl?.nombre || getTipoControlName(viewItem.tipoControl) }}</span></div>
+              <div v-if="viewItem.controlesImplementar" class="view-field"><span class="view-label">Controles a Implementar:</span> <span class="view-value">{{ viewItem.controlesImplementar }}</span></div>
+              <div v-if="viewItem.detallesRiesgo && viewItem.detallesRiesgo.some(d => d.metodoTratamiento || d.tipoControlId)" style="margin-top:1rem;">
+                <h4 style="font-size:0.9rem; color:var(--text-muted); margin:0 0 0.75rem 0;">Controles por Item</h4>
+                <table class="val-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Método</th>
+                      <th>Tipo Control</th>
+                      <th>Eval. Control</th>
+                      <th>Nivel Control</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="d in viewItem.detallesRiesgo.filter(d => d.metodoTratamiento || d.tipoControlId)" :key="d.id">
+                      <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
+                      <td>{{ d.metodoTratamiento || '—' }}</td>
+                      <td>{{ d.tipoControlId ? getTipoControlName(d.tipoControlId) : '—' }}</td>
+                      <td>{{ (d.evaluacionRiesgoControl ?? 0) > 0 ? (d.evaluacionRiesgoControl ?? 0).toFixed(2) : '—' }}</td>
+                      <td>
+                        <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
+                          {{ getNivelStyle(d.nivelRiesgoControl).label }}
+                        </span>
+                        <span v-else>—</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div class="val-actions" style="margin-top:1.5rem;">
               <button type="button" class="btn-cancel" @click="showViewModal = false">Cerrar</button>
             </div>
