@@ -1,28 +1,36 @@
 <script setup lang="ts">
+import type { CatalogoItem } from '~/types/api'
+
 const route = useRoute()
-const catalogoTipos = ref<any[]>([])
-const selectedCatalogo = ref<any>(null)
-const catalogoItems = ref<any[]>([])
+const catalogoTipos = ref<CatalogoItem[]>([])
+const selectedCatalogo = ref<CatalogoItem | null>(null)
+const catalogoItems = ref<CatalogoItem[]>([])
 const catalogoLoading = ref(false)
 const catalogosError = ref('')
+
+const { fetchCatalog } = useCatalog()
 
 const loadCatalogoTipos = async () => {
   catalogosError.value = ''
   try {
-    const res = await fetch('http://localhost:3001/catalogos')
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    catalogoTipos.value = await res.json()
+    // fetchCatalog with comma-separated would hit /catalogos/tipos-activo,formatos,... which is wrong
+    // Load tipos individually in parallel
+    const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
+    await Promise.all(tipos.map(t => fetchCatalog(t)))
+    // Also load the tipo list itself
+    const { apiFetch } = useApi()
+    catalogoTipos.value = await apiFetch<CatalogoItem[]>('/catalogos')
   } catch (e: any) {
     catalogosError.value = `Error al cargar catálogos: ${e.message}`
   }
 }
 
-const selectCatalogo = async (tipo: any) => {
-  selectedCatalogo.value = tipo
+const selectCatalogo = async (tipoItem: CatalogoItem) => {
+  selectedCatalogo.value = tipoItem
   catalogoLoading.value = true
   try {
-    const res = await fetch(`http://localhost:3001/catalogos/${tipo.tipo}`)
-    catalogoItems.value = await res.json()
+    const tipoStr = (tipoItem as any).tipo || ''
+    catalogoItems.value = await fetchCatalog(tipoStr)
   } catch (e) {
     console.error('Error cargando items', e)
     catalogoItems.value = []
@@ -49,13 +57,14 @@ const FIELD_MAP: Record<string, string[]> = {
 
 const catalogoFormVisible = ref(false)
 const catalogoFormData = ref<Record<string, any>>({})
-const catalogoEditingItem = ref<any>(null)
+const catalogoEditingItem = ref<CatalogoItem | null>(null)
 const catalogoSaving = ref(false)
-const catalogoConfirmDelete = ref<any>(null)
+const catalogoConfirmDelete = ref<CatalogoItem | null>(null)
 
 function getFormFields() {
   if (!selectedCatalogo.value) return []
-  return FIELD_MAP[selectedCatalogo.value.tipo] || []
+  const tipo = (selectedCatalogo.value as any).tipo || selectedCatalogo.value
+  return FIELD_MAP[tipo] || []
 }
 
 function openCreateForm() {
@@ -63,14 +72,14 @@ function openCreateForm() {
   const fields = getFormFields()
   const data: Record<string, any> = {}
   for (const f of fields) data[f] = ''
-  if (selectedCatalogo.value?.tipo === 'impactos') {
+  if ((selectedCatalogo.value as any)?.tipo === 'impactos') {
     data.valor = 1
   }
   catalogoFormData.value = data
   catalogoFormVisible.value = true
 }
 
-function openEditForm(item: any) {
+function openEditForm(item: CatalogoItem) {
   catalogoEditingItem.value = item
   const fields = getFormFields()
   const data: Record<string, any> = {}
@@ -88,19 +97,15 @@ function closeCatalogoForm() {
 async function saveCatalogoItem() {
   catalogoSaving.value = true
   try {
-    const tipo = selectedCatalogo.value.tipo
+    const { apiFetch } = useApi()
+    const tipo = (selectedCatalogo.value as any).tipo || selectedCatalogo.value
     const url = catalogoEditingItem.value
-      ? `http://localhost:3001/catalogos/${tipo}/${catalogoEditingItem.value.id}`
-      : `http://localhost:3001/catalogos/${tipo}`
+      ? `/catalogos/${tipo}/${catalogoEditingItem.value.id}`
+      : `/catalogos/${tipo}`
     const method = catalogoEditingItem.value ? 'PATCH' : 'POST'
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(catalogoFormData.value),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    await apiFetch(url, { method, body: JSON.stringify(catalogoFormData.value) })
     closeCatalogoForm()
-    await selectCatalogo(selectedCatalogo.value)
+    await selectCatalogo(selectedCatalogo.value!)
   } catch (e: any) {
     alert(`Error al guardar: ${e.message}`)
   } finally {
@@ -108,17 +113,17 @@ async function saveCatalogoItem() {
   }
 }
 
-function confirmDelete(item: any) {
+function confirmDelete(item: CatalogoItem) {
   catalogoConfirmDelete.value = item
 }
 
 async function deleteCatalogoItem() {
   const item = catalogoConfirmDelete.value
-  if (!item) return
+  if (!item || !selectedCatalogo.value) return
   try {
-    const tipo = selectedCatalogo.value.tipo
-    const res = await fetch(`http://localhost:3001/catalogos/${tipo}/${item.id}`, { method: 'DELETE' })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const tipo = (selectedCatalogo.value as any).tipo || selectedCatalogo.value
+    const { apiFetch } = useApi()
+    await apiFetch(`/catalogos/${tipo}/${item.id}`, { method: 'DELETE' })
     catalogoConfirmDelete.value = null
     await selectCatalogo(selectedCatalogo.value)
   } catch (e: any) {
@@ -238,7 +243,7 @@ function checkTipoFromRoute() {
         </div>
         <div class="modal-body">
           <p>¿Eliminar este registro de <strong>{{ selectedCatalogo?.tipo }}</strong>?</p>
-          <p class="confirm-detail">#{{ catalogoConfirmDelete.id }} — {{ getFormFields().map(f => catalogoConfirmDelete[f]).filter(Boolean).join(' — ') }}</p>
+          <p class="confirm-detail">#{{ catalogoConfirmDelete.id }} — {{ getFormFields().map(f => catalogoConfirmDelete && catalogoConfirmDelete[f]).filter(Boolean).join(' — ') }}</p>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" @click="catalogoConfirmDelete = null">Cancelar</button>

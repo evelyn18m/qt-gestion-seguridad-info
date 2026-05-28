@@ -1,16 +1,16 @@
 <script setup lang="ts">
-const valTipoActivo = ref<any[]>([])
-const valFormatos = ref<any[]>([])
-const valMacroprocesos = ref<any[]>([])
-const valSubprocesos = ref<any[]>([])
-const valAmenazas = ref<any[]>([])
-const valVulnerabilidades = ref<any[]>([])
-const valImpactos = ref<any[]>([])
-const valFuncionarios = ref<any[]>([])
-const valAreas = ref<any[]>([])
-const valRiesgos = ref<any[]>([])
-const valProbabilidades = ref<any[]>([])
-const valTiposControl = ref<any[]>([])
+import type { CatalogoItem, ValoracionActivo } from '~/types/api'
+const valFormatos = ref<CatalogoItem[]>([])
+const valMacroprocesos = ref<CatalogoItem[]>([])
+const valSubprocesos = ref<CatalogoItem[]>([])
+const valAmenazas = ref<CatalogoItem[]>([])
+const valVulnerabilidades = ref<CatalogoItem[]>([])
+const valImpactos = ref<CatalogoItem[]>([])
+const valFuncionarios = ref<CatalogoItem[]>([])
+const valAreas = ref<CatalogoItem[]>([])
+const valRiesgos = ref<CatalogoItem[]>([])
+const valProbabilidades = ref<CatalogoItem[]>([])
+const valTiposControl = ref<CatalogoItem[]>([])
 const valLoading = ref(false)
 
 const valForm = ref({
@@ -238,11 +238,13 @@ function updateControlDetalle(d: DetalleRiesgo) {
 const detallesAmenazas = computed(() => detallesRiesgo.value.filter(d => d.tipo === 'amenaza'))
 const detallesVulnerabilidades = computed(() => detallesRiesgo.value.filter(d => d.tipo === 'vulnerabilidad'))
 
+const { fetchCatalog } = useCatalog()
+
 const loadValoracionData = async () => {
   valLoading.value = true
   const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
   try {
-    const results = await Promise.all(tipos.map(t => fetch(`http://localhost:3001/catalogos/${t}`).then(r => r.json())))
+    const results = await Promise.all(tipos.map(t => fetchCatalog(t)))
     valTipoActivo.value = results[0]
     valFormatos.value = results[1]
     valMacroprocesos.value = results[2]
@@ -318,13 +320,13 @@ const riesgosVulnerabilidad = computed(() => {
   return valRiesgos.value.filter((r: any) => r.valor && r.evaluacion?.toLowerCase().includes('vulnerabilidad'))
 })
 
-const valSaved = ref<any[]>([])
+const valSaved = ref<ValoracionActivo[]>([])
 const valSaving = ref(false)
 const valSuccess = ref('')
 const valEditId = ref<number | null>(null)
 const showModalVal = ref(false)
 const showViewModal = ref(false)
-const viewItem = ref<any>(null)
+const viewItem = ref<ValoracionActivo | null>(null)
 const activeTab = ref(0)
 
 const tabs = [
@@ -336,8 +338,8 @@ const tabs = [
 
 async function loadValoraciones() {
   try {
-    const res = await fetch('http://localhost:3001/valoraciones')
-    valSaved.value = await res.json()
+    const { apiFetch } = useApi()
+    valSaved.value = await apiFetch<ValoracionActivo[]>('/valoraciones')
   } catch { /* ignore */ }
 }
 
@@ -395,16 +397,12 @@ async function submitValoracion() {
       detallesRiesgo: detallesPayload,
     }
 
+    const { apiFetch } = useApi()
     const url = valEditId.value
-      ? 'http://localhost:3001/valoraciones/' + valEditId.value
-      : 'http://localhost:3001/valoraciones'
+      ? `/valoraciones/${valEditId.value}`
+      : '/valoraciones'
     const method = valEditId.value ? 'PATCH' : 'POST'
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) throw new Error('HTTP ' + res.status + ' guardando valoracion')
+    await apiFetch(url, { method, body: JSON.stringify(body) })
 
     valSuccess.value = valEditId.value ? 'Valoracion actualizada' : 'Valoracion guardada'
     showModalVal.value = false
@@ -485,7 +483,8 @@ function viewValoracion(item: any) {
 async function deleteValoracion(id: number) {
   if (!confirm('¿Eliminar esta valoración?')) return
   try {
-    await fetch(`http://localhost:3001/valoraciones/${id}`, { method: 'DELETE' })
+    const { apiFetch } = useApi()
+    await apiFetch(`/valoraciones/${id}`, { method: 'DELETE' })
     await loadValoraciones()
   } catch { /* ignore */ }
 }
