@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import type { CatalogoItem, ValoracionActivo } from '~/types/api'
+import { useRiskCalculations } from '~/composables/useRiskCalculations'
+import { getCatalogoLabel as getCatalogoLabelFromUtils } from '~/utils/riskCalculations'
+import ValoracionTab4 from '~/components/valoracion/ValoracionTab4.vue'
+
+const valTipoActivo = ref<CatalogoItem[]>([])
 const valFormatos = ref<CatalogoItem[]>([])
 const valMacroprocesos = ref<CatalogoItem[]>([])
 const valSubprocesos = ref<CatalogoItem[]>([])
@@ -56,6 +61,14 @@ const tratamientoForm = ref({
   nivelVulnerabilidadControl: '',
 })
 
+const {
+  ciaAverage, getNivelesImpacto, getValorImpacto, calculateRowCiaAverage,
+  getCiaLevel, getValorRiesgo, evaluacionRiesgo, nivelRiesgo,
+  evaluacionRiesgoControl, nivelRiesgoControl,
+  calcularEvaluacionRiesgo, calcularNivelRiesgo,
+  getNivelStyle, getMaxNivelIndex, getNivelFromIndex
+} = useRiskCalculations(valImpactos, valRiesgos, valForm, evaluacionForm, tratamientoForm)
+
 // Sincronizar Pestaña 1 → Pestaña 2 (macroproceso y nombre activo)
 watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([macro, nombre]) => {
   analisisForm.value.macroProceso = macro
@@ -94,38 +107,6 @@ const vulnerabilidadesFiltradas = computed(() => {
   return valVulnerabilidades.value.filter((v: any) => v.categoria === vulnerabilidadCategoria.value)
 })
 
-const evaluacionRiesgo = computed(() => {
-  const impacto = ciaAverage.value
-  const amenaza = getValorRiesgo(evaluacionForm.value.amenazaRiesgoId)
-  const vulnerabilidad = getValorRiesgo(evaluacionForm.value.vulnerabilidadRiesgoId)
-  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
-  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
-})
-
-const nivelRiesgo = computed(() => {
-  const er = evaluacionRiesgo.value
-  if (er >= 18) return 'Crítico'
-  if (er >= 9) return 'Alto'
-  if (er >= 3) return 'Medio'
-  return 'Bajo'
-})
-
-const evaluacionRiesgoControl = computed(() => {
-  const impacto = ciaAverage.value
-  const amenaza = getValorRiesgo(tratamientoForm.value.nivelAmenazaControl)
-  const vulnerabilidad = getValorRiesgo(tratamientoForm.value.nivelVulnerabilidadControl)
-  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
-  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
-})
-
-const nivelRiesgoControl = computed(() => {
-  const er = evaluacionRiesgoControl.value
-  if (er >= 18) return 'Crítico'
-  if (er >= 9) return 'Alto'
-  if (er >= 3) return 'Medio'
-  return 'Bajo'
-})
-
 interface DetalleRiesgo {
   id?: number
   tipo: string
@@ -143,27 +124,7 @@ interface DetalleRiesgo {
 const detallesRiesgo = ref<DetalleRiesgo[]>([])
 
 function getCatalogoLabel(tipo: string, catalogoId: number) {
-  if (tipo === 'amenaza') {
-    const a = valAmenazas.value.find((x: any) => x.id === catalogoId)
-    return a ? `${a.categoria} — ${a.nombre}` : `A#${catalogoId}`
-  }
-  const v = valVulnerabilidades.value.find((x: any) => x.id === catalogoId)
-  return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
-}
-
-function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilidadRiesgoId: string | number) {
-  const impacto = ciaAverage.value
-  const amenaza = getValorRiesgo(amenazaRiesgoId)
-  const vulnerabilidad = getValorRiesgo(vulnerabilidadRiesgoId)
-  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
-  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
-}
-
-function calcularNivelRiesgo(evaluacion: number) {
-  if (evaluacion >= 18) return 'Crítico'
-  if (evaluacion >= 9) return 'Alto'
-  if (evaluacion >= 3) return 'Medio'
-  return 'Bajo'
+  return getCatalogoLabelFromUtils(tipo, catalogoId, valAmenazas.value, valVulnerabilidades.value)
 }
 
 function rebuildDetalles() {
@@ -230,11 +191,20 @@ function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
   recalcAllEvaluaciones()
 }
 
+<<<<<<< Updated upstream
 function updateControlDetalle(d: DetalleRiesgo) {
   d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
 }
 
+||||||| Stash base
+function updateControlDetalle(d: DetalleRiesgo) {
+  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId, evaluacionForm.value.vulnerabilidadRiesgoId)
+  d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
+}
+
+=======
+>>>>>>> Stashed changes
 const detallesAmenazas = computed(() => detallesRiesgo.value.filter(d => d.tipo === 'amenaza'))
 const detallesVulnerabilidades = computed(() => detallesRiesgo.value.filter(d => d.tipo === 'vulnerabilidad'))
 
@@ -262,54 +232,6 @@ const loadValoracionData = async () => {
   } finally {
     valLoading.value = false
   }
-}
-
-function getNivelesImpacto(tipo: string) {
-  return valImpactos.value.filter((i: any) => i.tipo === tipo)
-}
-
-function getValorImpacto(id: string | number) {
-  if (!id) return 0
-  const found = valImpactos.value.find((i: any) => i.id === Number(id))
-  return found ? found.valor : 0
-}
-
-const ciaAverage = computed(() => {
-  const c = getValorImpacto(valForm.value.confidencialidad)
-  const i = getValorImpacto(valForm.value.integridad)
-  const d = getValorImpacto(valForm.value.disponibilidad)
-  const selected = [c, i, d].filter(v => v > 0)
-  if (selected.length === 0) return 0
-  return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
-})
-
-function calculateRowCiaAverage(v: any) {
-  const c = getValorImpacto(v.confidencialidadId)
-  const i = getValorImpacto(v.integridadId)
-  const d = getValorImpacto(v.disponibilidadId)
-  const selected = [c, i, d].filter(val => val > 0)
-  if (selected.length === 0) return 0
-  return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
-}
-
-function getCiaLevel(avg: number) {
-  if (avg >= 2.5) return 'Alto'
-  if (avg >= 1.5) return 'Medio'
-  return 'Bajo'
-}
-
-function getValorRiesgo(id: string | number) {
-  if (!id) return 0
-  const found = valRiesgos.value.find((r: any) => r.id === Number(id))
-  return found ? (found.valor || 0) : 0
-}
-
-function calculateEvaluacionRiesgo(v: any) {
-  const impacto = calculateRowCiaAverage(v)
-  const amenaza = getValorRiesgo(v.amenazaRiesgoId)
-  const vulnerabilidad = getValorRiesgo(v.vulnerabilidadRiesgoId)
-  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
-  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
 }
 
 const riesgosAmenaza = computed(() => {
@@ -588,29 +510,6 @@ function getRiesgoEvaluacion(id: number | string) {
   if (!id) return '—'
   const found = valRiesgos.value.find((r: any) => r.id === Number(id))
   return found ? found.evaluacion : `R#${id}`
-}
-
-function getNivelStyle(nivel: string) {
-  const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return { label: 'Critico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)' }
-  if (n.includes('alto')) return { label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)' }
-  if (n.includes('medio')) return { label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)' }
-  return { label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)' }
-}
-
-function getMaxNivelIndex(nivel: string) {
-  const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return 4
-  if (n.includes('alto')) return 3
-  if (n.includes('medio')) return 2
-  return 1
-}
-
-function getNivelFromIndex(idx: number) {
-  if (idx >= 4) return 'Crítico'
-  if (idx >= 3) return 'Alto'
-  if (idx >= 2) return 'Medio'
-  return 'Bajo'
 }
 
 function resumenEvaluacionRiesgo(v: any) {
@@ -1044,105 +943,16 @@ onMounted(() => {
               </div>
 
               <!-- TAB 4: Tratamiento de Riesgo -->
-              <div v-show="activeTab === 3" class="val-tab-panel">
-                <div class="val-card" style="border:none; padding:0; background:transparent;">
-                  <h3 class="val-card-title">Tratamiento de Riesgo por Item</h3>
-                  <div v-if="detallesRiesgo.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y evalúe en la Pestaña 3.</div>
-                  <div v-else class="val-grid" style="grid-template-columns: 1fr 1fr; gap:1.5rem; margin-top:1rem;">
-                    <!-- COLUMNA: Amenazas -->
-                    <div>
-                      <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; color:var(--text-muted);">Amenazas</h4>
-                      <table class="val-table" v-if="detallesAmenazas.length > 0">
-                        <thead>
-                          <tr>
-                            <th>Item</th>
-                            <th>Método</th>
-                            <th>Tipo Control</th>
-                            <th>Riesgo (Ctrl)</th>
-                            <th>Eval. (Ctrl)</th>
-                            <th>Nivel (Ctrl)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="d in detallesAmenazas" :key="d.catalogoId">
-                            <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
-                            <td><input v-model="d.metodoTratamiento" type="text" placeholder="Método" style="min-width:100px;" /></td>
-                            <td>
-                              <select v-model="d.tipoControlId" style="min-width:110px;">
-                                <option value="">Seleccionar...</option>
-                                <option v-for="tc in valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
-                              </select>
-                            </td>
-                            <td>
-                              <select v-model="d.riesgoControlId" @change="updateControlDetalle(d)" style="min-width:110px;">
-                                <option value="">Seleccionar...</option>
-                                <option v-for="r in valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                              </select>
-                            </td>
-                            <td>
-                              <span v-if="d.evaluacionRiesgoControl > 0">{{ d.evaluacionRiesgoControl.toFixed(2) }}</span>
-                              <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                            </td>
-                            <td>
-                              <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
-                                {{ getNivelStyle(d.nivelRiesgoControl).label }}
-                              </span>
-                              <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <div v-else class="chip-empty" style="margin-top:0.5rem;">Sin amenazas</div>
-                    </div>
-
-                    <!-- COLUMNA: Vulnerabilidades -->
-                    <div>
-                      <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; color:var(--text-muted);">Vulnerabilidades</h4>
-                      <table class="val-table" v-if="detallesVulnerabilidades.length > 0">
-                        <thead>
-                          <tr>
-                            <th>Item</th>
-                            <th>Método</th>
-                            <th>Tipo Control</th>
-                            <th>Riesgo (Ctrl)</th>
-                            <th>Eval. (Ctrl)</th>
-                            <th>Nivel (Ctrl)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="d in detallesVulnerabilidades" :key="d.catalogoId">
-                            <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
-                            <td><input v-model="d.metodoTratamiento" type="text" placeholder="Método" style="min-width:100px;" /></td>
-                            <td>
-                              <select v-model="d.tipoControlId" style="min-width:110px;">
-                                <option value="">Seleccionar...</option>
-                                <option v-for="tc in valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
-                              </select>
-                            </td>
-                            <td>
-                              <select v-model="d.riesgoControlId" @change="updateControlDetalle(d)" style="min-width:110px;">
-                                <option value="">Seleccionar...</option>
-                                <option v-for="r in valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                              </select>
-                            </td>
-                            <td>
-                              <span v-if="d.evaluacionRiesgoControl > 0">{{ d.evaluacionRiesgoControl.toFixed(2) }}</span>
-                              <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                            </td>
-                            <td>
-                              <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
-                                {{ getNivelStyle(d.nivelRiesgoControl).label }}
-                              </span>
-                              <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <div v-else class="chip-empty" style="margin-top:0.5rem;">Sin vulnerabilidades</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ValoracionTab4
+                v-show="activeTab === 3"
+                :detallesRiesgo="detallesRiesgo"
+                :valRiesgos="valRiesgos"
+                :valTiposControl="valTiposControl"
+                :valAmenazas="valAmenazas"
+                :valVulnerabilidades="valVulnerabilidades"
+                :evaluacionVulnerabilidadRiesgoId="evaluacionForm.vulnerabilidadRiesgoId"
+                :ciaAverage="ciaAverage"
+              />
 
               <div class="val-actions">
                 <button type="button" class="btn-cancel" @click="showModalVal = false" style="margin-right:1rem;">Cancelar</button>
