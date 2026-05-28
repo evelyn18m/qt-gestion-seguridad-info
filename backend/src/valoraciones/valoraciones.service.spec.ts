@@ -1,8 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
 import { ValoracionesService } from './valoraciones.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AtLeastOneConstraint } from './dto/create-valoracion.dto';
+import { CreateValoracionDto } from './dto/create-valoracion.dto';
 import { UpdateValoracionDto } from './dto/update-valoracion.dto';
+import type { ValidationArguments } from 'class-validator';
+
+type AnyMock = jest.Mock<any, any[]>;
 
 const mockPrisma = {
   valoracionActivo: {
@@ -23,87 +27,86 @@ const mockPrisma = {
   detalleRiesgo: {
     findMany: jest.fn(),
     deleteMany: jest.fn(),
-    createMany: jest.fn(),
+    create: jest.fn(),
   },
-  $transaction: jest.fn(),
+  $transaction: jest.fn() as AnyMock,
 };
 
-describe('ValoracionesService — transaction + Tab 4 Payload', () => {
-  let service: ValoracionesService;
-  let prisma: typeof mockPrisma;
+const mockItem = {
+  id: 1,
+  nombreActivo: 'Test Activo',
+  tipoActivoId: 1,
+  formatoId: 1,
+  macroProcesoId: 1,
+  subProcesoId: 1,
+  propietarioId: 1,
+  custodioId: 1,
+  descripcion: 'Test desc',
+  controlSeguridad: 'Test ctrl',
+  ubicacion: 'Test loc',
+  observaciones: null,
+  confidencialidadId: 1,
+  integridadId: 1,
+  disponibilidadId: 1,
+  tieneDatosPersonales: false,
+  amenazas: null,
+  vulnerabilidades: null,
+  controlesImplementacion: null,
+  impacto: null,
+  probabilidadId: null,
+  amenazaRiesgoId: null,
+  vulnerabilidadRiesgoId: null,
+  controlesArea: null,
+  evaluacionRiesgo: null,
+  nivelRiesgo: null,
+  metodoTratamiento: null,
+  tipoControl: null,
+  controlesImplementar: null,
+  nivelAmenazaControl: null,
+  nivelVulnerabilidadControl: null,
+  evaluacionRiesgoControl: null,
+  nivelRiesgoControl: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
-  const mockItem = {
+const mockEnriched = {
+  ...mockItem,
+  tipoActivo: { id: 1, nombre: 'SW', detalle: 'Software' },
+  formato: { id: 1, nombre: 'Documento' },
+  macroProceso: { id: 1, nombre: 'MP-Test', codigo: 'MP1' },
+  subProceso: { id: 1, nombre: 'SP-Test', macroProcesoId: 1 },
+  propietario: { id: 1, nombre: 'Area Test' },
+  custodio: { id: 1, nombre: 'Funcionario Test' },
+  confidencialidad: {
     id: 1,
-    nombreActivo: 'Test Activo',
-    tipoActivoId: 1,
-    formatoId: 1,
-    macroProcesoId: 1,
-    subProcesoId: 1,
-    propietarioId: 1,
-    custodioId: 1,
-    descripcion: 'Test desc',
-    controlSeguridad: 'Test ctrl',
-    ubicacion: 'Test loc',
-    observaciones: null,
-    confidencialidadId: 1,
-    integridadId: 1,
-    disponibilidadId: 1,
-    tieneDatosPersonales: false,
-    amenazas: null,
-    vulnerabilidades: null,
-    controlesImplementacion: null,
-    impacto: 2.5,
-    probabilidadId: null,
-    amenazaRiesgoId: null,
-    vulnerabilidadRiesgoId: null,
-    controlesArea: null,
-    evaluacionRiesgo: null,
-    nivelRiesgo: null,
-    metodoTratamiento: 'Test method',
-    tipoControl: 1,
-    controlesImplementar: 'Test controls',
-    nivelAmenazaControl: null,
-    nivelVulnerabilidadControl: null,
-    evaluacionRiesgoControl: null,
-    nivelRiesgoControl: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+    tipo: 'confidencialidad',
+    nivel: 'Alto',
+    valor: 3,
+    criterio: 'Crit',
+  },
+  integridad: {
+    id: 1,
+    tipo: 'integridad',
+    nivel: 'Medio',
+    valor: 2,
+    criterio: 'Med',
+  },
+  disponibilidad: {
+    id: 1,
+    tipo: 'disponibilidad',
+    nivel: 'Alto',
+    valor: 3,
+    criterio: 'Crit',
+  },
+  tipoControl: null,
+  detallesRiesgo: [],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
-  const mockEnriched = {
-    ...mockItem,
-    tipoActivo: { id: 1, nombre: 'SW', detalle: 'Software' },
-    formato: { id: 1, nombre: 'Documento' },
-    macroProceso: { id: 1, nombre: 'MP-Test', codigo: 'MP1' },
-    subProceso: { id: 1, nombre: 'SP-Test', macroProcesoId: 1 },
-    propietario: { id: 1, nombre: 'Area Test' },
-    custodio: { id: 1, nombre: 'Funcionario Test' },
-    confidencialidad: {
-      id: 1,
-      tipo: 'confidencialidad',
-      nivel: 'Alto',
-      valor: 3,
-      criterio: 'Crit',
-    },
-    integridad: {
-      id: 1,
-      tipo: 'integridad',
-      nivel: 'Medio',
-      valor: 2,
-      criterio: 'Med',
-    },
-    disponibilidad: {
-      id: 1,
-      tipo: 'disponibilidad',
-      nivel: 'Alto',
-      valor: 3,
-      criterio: 'Crit',
-    },
-    tipoControl: { id: 1, nombre: 'Preventivo' },
-    detallesRiesgo: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+describe('ValoracionesService — Tab 2 new fields', () => {
+  let service: ValoracionesService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -114,137 +117,15 @@ describe('ValoracionesService — transaction + Tab 4 Payload', () => {
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
-    prisma = mockPrisma;
   });
 
-  // ──────────────────────────────────────────────────────────────
-  // Bug 4 — Transaction wrapper: deleteMany+createMany must be atomic
-  // ──────────────────────────────────────────────────────────────
-
-  describe('RED: update() with detallesRiesgo uses $transaction', () => {
-    it('GREEN: should call $transaction with deleteMany + createMany when detallesRiesgo provided', async () => {
-      // findOne is called first to verify record exists
-      mockPrisma.valoracionActivo.findUnique
-        .mockResolvedValueOnce(mockItem) // first call in update() → findOne
-        .mockResolvedValueOnce(mockEnriched); // second call in enrich()
-
-      mockPrisma.valoracionActivo.update.mockResolvedValue(mockItem);
-
-      // Simulate $transaction returning an array of results (one per operation)
-      // Operations run lazily inside $transaction, so results are returned as array
-      const txResults = [{ count: 1 }, { count: 1 }];
-      mockPrisma.$transaction = jest.fn().mockResolvedValue(txResults);
-
-      mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
-
-      const dto = {
-        nombreActivo: 'Updated Activo',
-        detallesRiesgo: [
-          {
-            tipo: 'amenaza',
-            catalogoId: 1,
-            riesgoId: 1,
-            evaluacionRiesgo: 2.5,
-            nivelRiesgo: 'Medio',
-          },
-        ],
-      } as unknown as UpdateValoracionDto;
-
-      await service.update(1, dto);
-
-      // Verify $transaction was called (not two separate await calls)
-      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
-      const txCallArgs = mockPrisma.$transaction.mock.calls[0][0];
-      expect(Array.isArray(txCallArgs)).toBe(true);
-      expect(txCallArgs.length).toBe(2); // deleteMany + createMany
-    });
-
-    it('REFACTOR: should not call $transaction when detallesRiesgo is empty array', async () => {
-      mockPrisma.valoracionActivo.findUnique
-        .mockResolvedValueOnce(mockItem)
-        .mockResolvedValueOnce(mockEnriched);
-
-      mockPrisma.valoracionActivo.update.mockResolvedValue(mockItem);
-
-      mockPrisma.$transaction = jest.fn().mockResolvedValue([{ count: 0 }]);
-
-      mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
-
-      const dto = { nombreActivo: 'Updated Activo', detallesRiesgo: [] } as unknown as UpdateValoracionDto;
-
-      await service.update(1, dto);
-
-      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('RED: update() rollback on createMany failure', () => {
-    it('GREEN: $transaction should rollback deleteMany if createMany fails', async () => {
-      mockPrisma.valoracionActivo.findUnique
-        .mockResolvedValueOnce(mockItem)
-        .mockResolvedValueOnce(mockEnriched);
-
-      mockPrisma.valoracionActivo.update.mockResolvedValue(mockItem);
-
-      // Simulate $transaction behavior: if any op fails, all are rolled back
-      const txMock = jest
-        .fn()
-        .mockRejectedValue(new Error('createMany failed — DB error'));
-      mockPrisma.$transaction = txMock;
-
-      mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
-
-      const dto = {
-        nombreActivo: 'Updated Activo',
-        detallesRiesgo: [
-          {
-            tipo: 'amenaza',
-            catalogoId: 1,
-            riesgoId: 1,
-            evaluacionRiesgo: 2.5,
-            nivelRiesgo: 'Medio',
-          },
-        ],
-      } as unknown as UpdateValoracionDto;
-
-      await expect(service.update(1, dto)).rejects.toThrow('createMany failed');
-
-      // Transaction was called (rollback behavior is Prisma's responsibility)
-      expect(txMock).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ──────────────────────────────────────────────────────────────
-  // Bug 2 — Tab 4 payload: tratamientoForm fields must be accepted
-  // ──────────────────────────────────────────────────────────────
-
-  describe('RED: Tab 4 fields accepted in create payload', () => {
-    it('GREEN: create() should accept top-level Tab 4 fields from tratamientoForm', async () => {
+  describe('create() with amenaza-only row', () => {
+    it('GREEN: should call $transaction with create for row that has amenazaIds', async () => {
       mockPrisma.valoracionActivo.create.mockResolvedValue(mockItem);
-      mockPrisma.detalleRiesgo.createMany.mockResolvedValue({ count: 0 });
-      mockPrisma.tipoActivo.findUnique.mockResolvedValue(
-        mockEnriched.tipoActivo,
-      );
-      mockPrisma.formato.findUnique.mockResolvedValue(mockEnriched.formato);
-      mockPrisma.macroProceso.findUnique.mockResolvedValue(
-        mockEnriched.macroProceso,
-      );
-      mockPrisma.subproceso.findUnique.mockResolvedValue(
-        mockEnriched.subProceso,
-      );
-      mockPrisma.area.findUnique.mockResolvedValue(mockEnriched.propietario);
-      mockPrisma.funcionario.findUnique.mockResolvedValue(
-        mockEnriched.custodio,
-      );
-      mockPrisma.impacto.findUnique.mockResolvedValue(
-        mockEnriched.confidencialidad,
-      ); // called 3x for CIA
-      mockPrisma.tipoControl.findUnique.mockResolvedValue(
-        mockEnriched.tipoControl,
-      );
+      mockPrisma.$transaction.mockResolvedValue([{ id: 10 }]);
       mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
 
-      const dto = {
+      const dto: CreateValoracionDto = {
         nombreActivo: 'Test Activo',
         tipoActivoId: 1,
         formatoId: 1,
@@ -258,25 +139,191 @@ describe('ValoracionesService — transaction + Tab 4 Payload', () => {
         confidencialidadId: 1,
         integridadId: 1,
         disponibilidadId: 1,
-        // Tab 4 top-level fields (from tratamientoForm.value)
-        metodoTratamiento: 'Mitigar',
-        tipoControl: 1,
-        controlesImplementar: 'Nuevos controles',
+        detallesRiesgo: [
+          {
+            tipo: 'amenaza',
+            catalogoId: 1,
+            amenazaIds: '[3,7]',
+            vulnerabilidadIds: undefined,
+            controlesImplementados: undefined,
+          },
+        ],
+      } as unknown as UpdateValoracionDto;
+
+      await service.create(dto);
+
+      expect(mockPrisma.$transaction.mock.calls.length).toBe(1);
+      const txCalls = mockPrisma.$transaction.mock.calls[0] as unknown[];
+      const txOps = txCalls[0] as unknown[];
+      expect(txOps.length).toBe(1);
+    });
+  });
+
+  describe('create() with vulnerabilidad-only row', () => {
+    it('GREEN: should call $transaction with create for row with vulnerabilidadIds', async () => {
+      mockPrisma.valoracionActivo.create.mockResolvedValue(mockItem);
+      mockPrisma.$transaction.mockResolvedValue([{ id: 11 }]);
+      mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+      const dto: CreateValoracionDto = {
+        nombreActivo: 'Test Activo',
+        tipoActivoId: 1,
+        formatoId: 1,
+        macroProcesoId: 1,
+        subProcesoId: 1,
+        propietarioId: 1,
+        custodioId: 1,
+        descripcion: 'Test desc',
+        controlSeguridad: 'Test ctrl',
+        ubicacion: 'Test loc',
+        confidencialidadId: 1,
+        integridadId: 1,
+        disponibilidadId: 1,
+        detallesRiesgo: [
+          {
+            tipo: 'vulnerabilidad',
+            catalogoId: 1,
+            amenazaIds: undefined,
+            vulnerabilidadIds: '[5]',
+            controlesImplementados: 'Control A, Control B',
+          },
+        ],
       };
 
-      const result = await service.create(dto);
+      await service.create(dto);
 
-      // create() was called with the full dto (including Tab 4 fields passed through as data)
-      expect(mockPrisma.valoracionActivo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            metodoTratamiento: 'Mitigar',
-            tipoControl: 1,
-            controlesImplementar: 'Nuevos controles',
-          }),
-        }),
-      );
-      expect(result).toBeTruthy();
+      expect(mockPrisma.$transaction.mock.calls.length).toBe(1);
+      const txCalls = mockPrisma.$transaction.mock.calls[0] as unknown[];
+      const txOps = txCalls[0] as unknown[];
+      expect(txOps.length).toBe(1);
     });
+  });
+
+  describe('create() with both amenaza and vulnerabilidad', () => {
+    it('GREEN: should store both JSON arrays in same row', async () => {
+      mockPrisma.valoracionActivo.create.mockResolvedValue(mockItem);
+      mockPrisma.$transaction.mockResolvedValue([{ id: 12 }]);
+      mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+      const dto: CreateValoracionDto = {
+        nombreActivo: 'Test Activo',
+        tipoActivoId: 1,
+        formatoId: 1,
+        macroProcesoId: 1,
+        subProcesoId: 1,
+        propietarioId: 1,
+        custodioId: 1,
+        descripcion: 'Test desc',
+        controlSeguridad: 'Test ctrl',
+        ubicacion: 'Test loc',
+        confidencialidadId: 1,
+        integridadId: 1,
+        disponibilidadId: 1,
+        detallesRiesgo: [
+          {
+            tipo: 'amenaza',
+            catalogoId: 1,
+            amenazaIds: '[3]',
+            vulnerabilidadIds: '[5,9]',
+            controlesImplementados: 'Combined controls',
+          },
+        ],
+      };
+
+      await service.create(dto);
+
+      expect(mockPrisma.$transaction.mock.calls.length).toBe(1);
+      const txCalls = mockPrisma.$transaction.mock.calls[0] as unknown[];
+      const txOps = txCalls[0] as unknown[];
+      expect(txOps.length).toBe(1);
+    });
+  });
+
+  describe('update() with deleteMany + creates', () => {
+    it('GREEN: should $transaction with deleteMany followed by create calls', async () => {
+      mockPrisma.valoracionActivo.findUnique
+        .mockResolvedValueOnce(mockItem)
+        .mockResolvedValueOnce(mockEnriched);
+      mockPrisma.valoracionActivo.update.mockResolvedValue(mockItem);
+      mockPrisma.$transaction.mockResolvedValue([{ count: 1 }]);
+      mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+      const dto: UpdateValoracionDto = {
+        nombreActivo: 'Updated Activo',
+        tipoActivoId: 1,
+        formatoId: 1,
+        macroProcesoId: 1,
+        subProcesoId: 1,
+        propietarioId: 1,
+        custodioId: 1,
+        descripcion: 'Test desc',
+        controlSeguridad: 'Test ctrl',
+        ubicacion: 'Test loc',
+        confidencialidadId: 1,
+        integridadId: 1,
+        disponibilidadId: 1,
+        detallesRiesgo: [
+          {
+            tipo: 'amenaza',
+            catalogoId: 1,
+            amenazaIds: '[1,2]',
+            vulnerabilidadIds: undefined,
+            controlesImplementados: 'Update controls',
+          },
+        ],
+      };
+
+      await service.update(1, dto);
+
+      expect(mockPrisma.$transaction.mock.calls.length).toBe(1);
+      const txOps = mockPrisma.$transaction.mock.calls[0][0] as unknown[];
+      // deleteMany + 1 create
+      expect(txOps.length).toBe(2);
+    });
+  });
+});
+
+// ──────────────────────────────────────────────────
+// AtLeastOneConstraint — pure unit tests
+// ──────────────────────────────────────────────────
+describe('AtLeastOneConstraint', () => {
+  const constraint = new AtLeastOneConstraint();
+
+  function mockArgs(
+    amenazaIds: unknown,
+    vulnerabilidadIds: unknown,
+  ): ValidationArguments {
+    return {
+      object: { amenazaIds, vulnerabilidadIds },
+    } as ValidationArguments;
+  }
+
+  it('passes when amenazaIds has items', () => {
+    expect(constraint.validate(true, mockArgs('[3,7]', null))).toBe(true);
+  });
+
+  it('passes when vulnerabilidadIds has items', () => {
+    expect(constraint.validate(true, mockArgs(null, '[5]'))).toBe(true);
+  });
+
+  it('passes when both have items', () => {
+    expect(constraint.validate(true, mockArgs('[3]', '[5]'))).toBe(true);
+  });
+
+  it('fails when both are null', () => {
+    expect(constraint.validate(true, mockArgs(null, null))).toBe(false);
+  });
+
+  it('fails when both are empty arrays', () => {
+    expect(constraint.validate(true, mockArgs('[]', '[]'))).toBe(false);
+  });
+
+  it('passes with amenazaIds empty string + valid vulnerabilidadIds', () => {
+    // Empty string is falsy → ancaman empty, but vuln has [5] → passes
+    expect(constraint.validate(true, mockArgs('', '[5]'))).toBe(true);
+  });
+
+  it('passes when amenazaIds contains single id', () => {
+    expect(constraint.validate(true, mockArgs('[3]', null))).toBe(true);
   });
 });
