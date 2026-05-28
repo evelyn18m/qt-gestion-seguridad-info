@@ -382,7 +382,6 @@ const tabs = [
                 <div class="cia-average" v-if="ciaAverage > 0">
                   <span class="cia-average-label">Promedio CIA</span>
                   <span class="cia-average-value">{{ ciaAverage.toFixed(2) }}</span>
-                  <span class="cia-average-level">{{ ciaAverage >= 2.5 ? 'Alto' : ciaAverage >= 1.5 ? 'Medio' : 'Bajo' }}</span>
                 </div>
               </div>
             </div>
