@@ -1,0 +1,80 @@
+project: qt-gestion-seguridad-info
+description: SGSI (Sistema de Gestión de Seguridad de la Información) — monorepo with NestJS backend and Nuxt 4 frontend
+initialized: 2026-05-27
+mode: hybrid
+
+context:
+  backend: NestJS 11, TypeScript 5.7, Prisma 7.8, @prisma/adapter-mariadb, MySQL 8.0, port 3001
+  frontend: Nuxt 4.4, Vue 3.5, nuxt-oidc-auth (Keycloak), port 3000
+  infra: Docker Compose — services mysql, keycloak, backend, frontend, adminer
+  auth: Keycloak 24 (OIDC provider, port 8080)
+  commands: all via "docker compose exec <service> <command>"
+  db: sgsi_db on MySQL container, user sgsi_user/sgsi_password
+
+strict_tdd: true
+
+testing:
+  backend:
+    runner: jest
+    framework: Jest 30 + ts-jest + @nestjs/testing
+    unit:
+      available: true
+      command: "docker compose exec backend npm run test"
+      pattern: "src/**/*.spec.ts"
+    e2e:
+      available: true
+      command: "docker compose exec backend npm run test:e2e"
+      pattern: "test/**/*.e2e-spec.ts"
+      config: "test/jest-e2e.json"
+      tool: supertest
+    coverage:
+      available: true
+      command: "docker compose exec backend npm run test:cov"
+    linter:
+      available: true
+      command: "docker compose exec backend npm run lint"
+      tool: ESLint 9 + eslint-config-prettier
+    formatter:
+      available: true
+      command: "docker compose exec backend npm run format"
+      tool: Prettier 3 (singleQuote, trailingComma all)
+    type_checker:
+      available: true
+      command: "docker compose exec backend npx tsc --noEmit"
+      tool: TypeScript 5.7
+  frontend:
+    runner: none
+    unit:
+      available: false
+      note: No test runner detected in frontend/package.json
+    e2e:
+      available: false
+      note: No Playwright or Cypress detected
+    linter:
+      available: false
+      note: No ESLint config found in frontend
+    formatter:
+      available: false
+      note: No Prettier config found in frontend
+
+phase_rules:
+  proposal:
+    required: true
+    file_pattern: "openspec/changes/{id}-{slug}/proposal.md"
+  spec:
+    required: true
+    file_pattern: "openspec/changes/{id}-{slug}/spec.md"
+  design:
+    required: true
+    file_pattern: "openspec/changes/{id}-{slug}/design.md"
+  tasks:
+    required: true
+    file_pattern: "openspec/changes/{id}-{slug}/tasks.md"
+  apply:
+    strict_tdd: true
+    note: Write tests first; implementation must make tests pass
+  verify:
+    required: true
+    note: Run backend test suite; confirm coverage; manual smoke test on frontend
+  archive:
+    target: "openspec/changes/archive/{id}-{slug}/"
