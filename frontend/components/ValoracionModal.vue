@@ -136,8 +136,8 @@ const detallesVulnerabilidades = computed(() => props.detallesRiesgo.filter(d =>
 
 // ── Tab 3 Preview ──────────────────────────────────────────────────────────
 const previewRiesgo = computed<PreviewRiesgo>(() => {
-  const amenazaNivel = getValorRiesgo(evaluacionForm.amenazaRiesgoId)
-  const vulnerabilidadNivel = getValorRiesgo(evaluacionForm.vulnerabilidadRiesgoId)
+  const amenazaNivel = getValorRiesgo(props.evaluacionForm.amenazaRiesgoId)
+  const vulnerabilidadNivel = getValorRiesgo(props.evaluacionForm.vulnerabilidadRiesgoId)
   if (ciaAverage.value === 0 || !amenazaNivel || !vulnerabilidadNivel) {
     return { evaluacionRiesgo: 0, nivelRiesgo: '' }
   }
