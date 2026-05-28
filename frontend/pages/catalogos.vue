@@ -44,8 +44,8 @@ const FIELD_MAP: Record<string, string[]> = {
   vulnerabilidades: ['categoria', 'descripcion'],
   impactos: ['tipo', 'nivel', 'valor', 'criterio'],
   formatos: ['nombre'],
-  subprocesos: ['nombre'],
-  macroprocesos: ['nombre'],
+  subprocesos: ['nombre', 'macroProcesoId'],
+  macroprocesos: ['nombre', 'codigo'],
   'tipos-activo': ['nombre', 'detalle'],
   valoraciones: ['nombre'],
   funcionarios: ['nombre'],
@@ -60,6 +60,7 @@ const catalogoFormData = ref<Record<string, any>>({})
 const catalogoEditingItem = ref<CatalogoItem | null>(null)
 const catalogoSaving = ref(false)
 const catalogoConfirmDelete = ref<CatalogoItem | null>(null)
+const macroprocesos = ref<CatalogoItem[]>([])
 
 function getFormFields() {
   if (!selectedCatalogo.value) return []
@@ -77,6 +78,10 @@ function openCreateForm() {
   }
   catalogoFormData.value = data
   catalogoFormVisible.value = true
+  // Load macroprocesos for subprocess dropdown
+  if ((selectedCatalogo.value as any)?.tipo === 'subprocesos') {
+    loadMacroprocesos()
+  }
 }
 
 function openEditForm(item: CatalogoItem) {
@@ -86,6 +91,15 @@ function openEditForm(item: CatalogoItem) {
   for (const f of fields) data[f] = item[f] ?? ''
   catalogoFormData.value = data
   catalogoFormVisible.value = true
+  // Load macroprocesos for subprocess dropdown
+  if ((selectedCatalogo.value as any)?.tipo === 'subprocesos') {
+    loadMacroprocesos()
+  }
+}
+
+async function loadMacroprocesos() {
+  const { fetchCatalog } = useCatalog()
+  macroprocesos.value = await fetchCatalog('macroprocesos')
 }
 
 function closeCatalogoForm() {
@@ -210,8 +224,19 @@ function checkTipoFromRoute() {
         <div class="modal-body">
           <div v-for="field in getFormFields()" :key="field" class="form-group">
             <label :for="'f-' + field">{{ field }}</label>
+            <select
+              v-if="field === 'macroProcesoId'"
+              :id="'f-' + field"
+              v-model="catalogoFormData[field]"
+              required
+            >
+              <option value="">Seleccionar MacroProceso...</option>
+              <option v-for="mp in macroprocesos" :key="mp.id" :value="mp.id">
+                {{ (mp as any).codigo }} - {{ mp.nombre }}
+              </option>
+            </select>
             <input
-              v-if="field !== 'criterio' && field !== 'descripcion' && field !== 'detalle'"
+              v-else-if="field !== 'criterio' && field !== 'descripcion' && field !== 'detalle'"
               :id="'f-' + field"
               v-model="catalogoFormData[field]"
               :type="field === 'valor' ? 'number' : 'text'"
