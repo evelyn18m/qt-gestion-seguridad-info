@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CatalogosService } from './catalogos.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -22,7 +21,6 @@ const mockPrisma = {
 
 describe('CatalogosService', () => {
   let service: CatalogosService;
-  let prisma: typeof mockPrisma;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -33,7 +31,6 @@ describe('CatalogosService', () => {
       ],
     }).compile();
     service = module.get<CatalogosService>(CatalogosService);
-    prisma = mockPrisma;
   });
 
   // ──────────────────────────────────────────────────────────────
@@ -120,7 +117,10 @@ describe('CatalogosService', () => {
         codigo: 'TEST',
       });
 
-      service.create('macroprocesos', { nombre: 'Test Macro', codigo: 'TEST' });
+      void service.create('macroprocesos', {
+        nombre: 'Test Macro',
+        codigo: 'TEST',
+      });
 
       expect(mockPrisma.macroProceso.create).toHaveBeenCalledWith({
         data: { nombre: 'Test Macro', codigo: 'TEST' },

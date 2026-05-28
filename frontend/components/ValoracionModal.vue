@@ -134,6 +134,16 @@ const macroProcesoName = computed(() => {
 const detallesAmenazas = computed(() => props.detallesRiesgo.filter(d => d.tipo === 'amenaza'))
 const detallesVulnerabilidades = computed(() => props.detallesRiesgo.filter(d => d.tipo === 'vulnerabilidad'))
 
+// ── Tab 3 Preview ──────────────────────────────────────────────────────────
+const previewRiesgo = computed<PreviewRiesgo>(() => {
+  const amenazaNivel = getValorRiesgo(evaluacionForm.amenazaRiesgoId)
+  const vulnerabilidadNivel = getValorRiesgo(evaluacionForm.vulnerabilidadRiesgoId)
+  if (ciaAverage.value === 0 || !amenazaNivel || !vulnerabilidadNivel) {
+    return { evaluacionRiesgo: 0, nivelRiesgo: '' }
+  }
+  return localCalculateRiesgo(ciaAverage.value, amenazaNivel, vulnerabilidadNivel)
+})
+
 // ── Local State ──────────────────────────────────────────────────────────────
 const amenazaCategoria = ref('')
 const vulnerabilidadCategoria = ref('')
@@ -343,6 +353,24 @@ function getAmenazaLabelNum(id: number) {
 function getVulnerabilidadLabelNum(id: number) {
   const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === id)
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${id}`
+}
+
+// ── Pure risk calculation (mirrors backend calculo-riesgo.service.ts) ────────
+interface PreviewRiesgo {
+  evaluacionRiesgo: number
+  nivelRiesgo: string
+}
+
+function deriveNivelRiesgo(evaluacion: number): string {
+  if (evaluacion <= 3) return 'BAJO'
+  if (evaluacion <= 8) return 'MEDIO'
+  return 'ALTO'
+}
+
+function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number): PreviewRiesgo {
+  const evaluacionRiesgo = va * nivelAmenaza * nivelVulnerabilidad
+  const nivelRiesgo = deriveNivelRiesgo(evaluacionRiesgo)
+  return { evaluacionRiesgo, nivelRiesgo }
 }
 
 function getCiaLevel(avg: number) {
@@ -557,6 +585,7 @@ const tabs = [
                     <th style="min-width:220px;">Amenazas</th>
                     <th style="min-width:220px;">Vulnerabilidades</th>
                     <th>Controles Implementados</th>
+                    <th>Riesgo Residual</th>
                     <th style="width:48px;"></th>
                   </tr>
                 </thead>
@@ -634,6 +663,23 @@ const tabs = [
                       ></textarea>
                     </td>
 
+                    <!-- Riesgo Residual cell: show ACEPTABLE/INACEPTABLE based on evaluacionRiesgoControl -->
+                    <td style="text-align:center;">
+                      <template v-for="d in detallesRiesgo.filter(dd => dd.amenazaIds === row.amenazaIds && dd.vulnerabilidadIds === row.vulnerabilidadIds)" :key="d.tipo + d.catalogoId">
+                        <span
+                          v-if="d.evaluacionRiesgoControl > 0"
+                          class="nivel-badge"
+                          :style="{
+                            color: d.evaluacionRiesgoControl <= 3 ? '#16a34a' : '#dc2626',
+                            background: d.evaluacionRiesgoControl <= 3 ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)'
+                          }"
+                        >
+                          {{ d.evaluacionRiesgoControl <= 3 ? 'ACEPTABLE' : 'INACEPTABLE' }}
+                        </span>
+                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                      </template>
+                    </td>
+
                     <!-- Remove row -->
                     <td>
                       <button type="button" @click="eliminarFila(index)" style="background:transparent; border:none; color:#dc2626; cursor:pointer; font-size:1.2rem; padding:0.25rem; line-height:1;" title="Eliminar fila">×</button>
@@ -694,12 +740,12 @@ const tabs = [
                       </select>
                     </td>
                     <td>
-                      <span v-if="d.evaluacionRiesgo > 0">{{ d.evaluacionRiesgo.toFixed(2) }}</span>
+                      <span v-if="previewRiesgo.evaluacionRiesgo > 0">{{ previewRiesgo.evaluacionRiesgo.toFixed(2) }}</span>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                     <td>
-                      <span v-if="d.nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgo).color, background: getNivelStyle(d.nivelRiesgo).bg }">
-                        {{ getNivelStyle(d.nivelRiesgo).label }}
+                      <span v-if="previewRiesgo.nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(previewRiesgo.nivelRiesgo).color, background: getNivelStyle(previewRiesgo.nivelRiesgo).bg }">
+                        {{ getNivelStyle(previewRiesgo.nivelRiesgo).label }}
                       </span>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>

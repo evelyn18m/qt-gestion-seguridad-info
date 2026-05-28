@@ -47,6 +47,16 @@ export interface ValoracionActivo {
   [key: string]: any
 }
 
+export interface RiesgoCalculado {
+  evaluacionRiesgo: number
+  nivelRiesgo: string
+  metodoTratamiento: string
+  tipoControl: string
+  evaluacionRiesgoControl: number
+  nivelRiesgoControl: string
+  riesgoResidual: 'ACEPTABLE' | 'INACEPTABLE'
+}
+
 export interface DetalleRiesgo {
   id?: number
   // Legacy fields (Tab 3/4 still use these)
@@ -60,6 +70,7 @@ export interface DetalleRiesgo {
   riesgoControlId?: number | string | null
   evaluacionRiesgoControl?: number
   nivelRiesgoControl?: string
+  riesgoResidual?: 'ACEPTABLE' | 'INACEPTABLE'
   // New per-row fields (Tab 2 row-based model)
   amenazaIds?: string[]
   vulnerabilidadIds?: string[]
