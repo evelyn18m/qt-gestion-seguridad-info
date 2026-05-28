@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const route = useRoute()
 const catalogoTipos = ref<any[]>([])
 const selectedCatalogo = ref<any>(null)
 const catalogoItems = ref<any[]>([])
@@ -125,76 +126,73 @@ async function deleteCatalogoItem() {
   }
 }
 
-onMounted(() => {
-  loadCatalogoTipos()
+onMounted(async () => {
+  await loadCatalogoTipos()
+  checkTipoFromRoute()
 })
+
+watch(() => route.query.tipo, () => {
+  checkTipoFromRoute()
+})
+
+function checkTipoFromRoute() {
+  const tipo = route.query.tipo as string
+  if (tipo) {
+    const match = catalogoTipos.value.find((t: any) => t.tipo === tipo)
+    if (match) selectCatalogo(match)
+  }
+}
 </script>
 
 <template>
   <div class="catalogos-section">
     <div class="welcome-banner">
       <h2>Catálogos del Sistema</h2>
-      <p>Selecciona un catálogo para ver sus registros.</p>
+      <p v-if="selectedCatalogo">{{ selectedCatalogo.tipo }} — {{ selectedCatalogo.modelo }}</p>
+      <p v-else>Seleccioná un catálogo desde el menú lateral.</p>
     </div>
     <div v-if="catalogosError" class="error-msg" style="margin-bottom:1rem">{{ catalogosError }}</div>
-    <div class="catalogos-layout">
-      <div class="catalogo-list">
-        <div
-          v-for="t in catalogoTipos"
-          :key="t.tipo"
-          class="catalogo-card"
-          :class="{ selected: selectedCatalogo?.tipo === t.tipo }"
-          @click="selectCatalogo(t)"
-        >
-          <span class="catalogo-nombre">{{ t.tipo }}</span>
-          <span class="catalogo-modelo">{{ t.modelo }}</span>
-        </div>
-        <div v-if="catalogoTipos.length === 0 && !catalogosError" class="catalogo-placeholder">
-          Cargando catálogos...
-        </div>
+    <div class="catalogo-items">
+      <div v-if="!selectedCatalogo" class="catalogo-placeholder">
+        Seleccioná un catálogo desde el menú lateral
       </div>
-      <div class="catalogo-items">
-        <div v-if="!selectedCatalogo" class="catalogo-placeholder">
-          Selecciona un catálogo de la lista
+      <template v-else-if="!catalogoLoading">
+        <div class="catalogo-toolbar">
+          <span class="catalogo-count">{{ catalogoItems.length }} registro(s)</span>
+          <button class="btn-primary btn-sm" @click="openCreateForm">+ Nuevo</button>
         </div>
-        <template v-else-if="!catalogoLoading">
-          <div class="catalogo-toolbar">
-            <span class="catalogo-count">{{ catalogoItems.length }} registro(s)</span>
-            <button class="btn-primary btn-sm" @click="openCreateForm">+ Nuevo</button>
-          </div>
-          <div v-if="catalogoItems.length === 0" class="catalogo-placeholder">
-            Sin registros
-          </div>
-          <table v-else class="catalogo-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))" :key="col">{{ col }}</th>
-                <th class="th-actions">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in catalogoItems" :key="item.id">
-                <td>{{ item.id }}</td>
-                <td v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))" :key="col">
-                  <div class="cell-text">{{ item[col] }}</div>
-                </td>
-                <td>
-                  <div class="row-actions">
-                    <button class="btn-icon btn-edit" title="Editar" @click="openEditForm(item)">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
-                    </button>
-                    <button class="btn-icon btn-delete" title="Eliminar" @click="confirmDelete(item)">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </template>
-        <div v-else class="catalogo-placeholder">Cargando...</div>
-      </div>
+        <div v-if="catalogoItems.length === 0" class="catalogo-placeholder">
+          Sin registros
+        </div>
+        <table v-else class="catalogo-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))" :key="col">{{ col }}</th>
+              <th class="th-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in catalogoItems" :key="item.id">
+              <td>{{ item.id }}</td>
+              <td v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))" :key="col">
+                <div class="cell-text">{{ item[col] }}</div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button class="btn-icon btn-edit" title="Editar" @click="openEditForm(item)">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                  </button>
+                  <button class="btn-icon btn-delete" title="Eliminar" @click="confirmDelete(item)">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </template>
+      <div v-else class="catalogo-placeholder">Cargando...</div>
     </div>
 
     <!-- Create/Edit Modal -->
@@ -271,57 +269,10 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.catalogos-layout {
-  display: flex;
-  gap: 2rem;
-  flex: 1;
-  min-height: 0;
-}
-
-.catalogo-list {
-  width: 260px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.catalogo-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.catalogo-card:hover {
-  border-color: var(--primary);
-  transform: translateX(4px);
-}
-
-.catalogo-card.selected {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: var(--primary);
-}
-
-.catalogo-nombre {
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.catalogo-modelo {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: capitalize;
-}
-
 .catalogo-items {
   flex: 1;
   overflow: auto;
+  min-height: 0;
 }
 
 .catalogo-placeholder {
