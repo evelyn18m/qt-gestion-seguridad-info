@@ -49,6 +49,7 @@ export interface ValoracionActivo {
 
 export interface DetalleRiesgo {
   id?: number
+  // Legacy fields (Tab 3/4 still use these)
   tipo: 'amenaza' | 'vulnerabilidad'
   catalogoId: number
   riesgoId?: number | string | null
@@ -59,6 +60,10 @@ export interface DetalleRiesgo {
   riesgoControlId?: number | string | null
   evaluacionRiesgoControl?: number
   nivelRiesgoControl?: string
+  // New per-row fields (Tab 2 row-based model)
+  amenazaIds?: string[]
+  vulnerabilidadIds?: string[]
+  controlesImplementados?: string
 }
 
 export interface ApiError {
