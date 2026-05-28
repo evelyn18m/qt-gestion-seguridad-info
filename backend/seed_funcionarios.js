@@ -7,7 +7,7 @@ const adapter = new PrismaMariaDb(connectionString);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const wb = XLSX.readFile(process.argv[2] || 'C:\\Users\\pasantetic\\Desktop\\qt-gestionseguridadinformacion\\documentos\\funcionarios.xlsx');
+  const wb = XLSX.readFile(process.argv[2] || './documentos/funcionarios.xlsx');
   const rows = XLSX.utils.sheet_to_json(wb.Sheets['Hoja1']);
 
   const seenFunc = new Set();
