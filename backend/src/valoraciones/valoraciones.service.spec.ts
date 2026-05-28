@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ValoracionesService } from './valoraciones.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { UpdateValoracionDto } from './dto/update-valoracion.dto';
 
 const mockPrisma = {
   valoracionActivo: {
@@ -147,7 +148,7 @@ describe('ValoracionesService — transaction + Tab 4 Payload', () => {
             nivelRiesgo: 'Medio',
           },
         ],
-      };
+      } as unknown as UpdateValoracionDto;
 
       await service.update(1, dto);
 
@@ -169,7 +170,7 @@ describe('ValoracionesService — transaction + Tab 4 Payload', () => {
 
       mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
 
-      const dto = { nombreActivo: 'Updated Activo', detallesRiesgo: [] };
+      const dto = { nombreActivo: 'Updated Activo', detallesRiesgo: [] } as unknown as UpdateValoracionDto;
 
       await service.update(1, dto);
 
@@ -204,7 +205,7 @@ describe('ValoracionesService — transaction + Tab 4 Payload', () => {
             nivelRiesgo: 'Medio',
           },
         ],
-      };
+      } as unknown as UpdateValoracionDto;
 
       await expect(service.update(1, dto)).rejects.toThrow('createMany failed');
 
