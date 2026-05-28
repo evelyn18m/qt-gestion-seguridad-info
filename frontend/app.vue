@@ -1,10 +1,13 @@
 <script setup lang="ts">
-const { username, password, loading, error, isLoggedIn, login, logout } = useAuth()
+const $auth = useAuth()
+
+const login = () => $auth.login()
+const logout = () => $auth.logout()
 </script>
 
 <template>
   <div>
-    <div v-if="!isLoggedIn" class="premium-container">
+    <div v-if="!$auth.loggedIn.value" class="premium-container">
       <div class="login-card">
         <div class="logo-section">
           <img src="https://turismo.quito.gob.ec/wp-content/uploads/2024/06/logoQT-1024x166.png" alt="Quito Turismo" class="logo-img">
@@ -12,30 +15,15 @@ const { username, password, loading, error, isLoggedIn, login, logout } = useAut
           <p>Sistema de Seguridad de la Información (SGSI)</p>
         </div>
 
-        <div class="form-group">
-          <label for="username">Usuario</label>
-          <input id="username" v-model="username" type="text" placeholder="Ingresa tu usuario" @keyup.enter="login">
-        </div>
-
-        <div class="form-group">
-          <label for="password">Contraseña</label>
-          <input id="password" v-model="password" type="password" placeholder="••••••••" @keyup.enter="login">
-        </div>
-
-        <button class="login-btn" :disabled="loading" @click="login">
-          <span v-if="loading">Cargando...</span>
-          <span v-else>Iniciar Sesión</span>
-          <svg v-if="!loading" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+        <button class="login-btn" @click="login">
+          <span>Iniciar Sesión</span>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
         </button>
 
-        <div v-if="error" class="error-msg">
-          {{ error }}
-        </div>
-
         <div class="footer-text">
-          &copy; 2026 Quito Turismo. Todos los derechos reservados.
+          © 2026 Quito Turismo. Todos los derechos reservados.
         </div>
       </div>
     </div>
@@ -120,42 +108,6 @@ body {
   margin-top: 0.5rem;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
-  text-align: left;
-}
-
-.form-group label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-}
-
-.form-group input,
-.form-group textarea,
-.form-group select {
-  width: 100%;
-  padding: 0.875rem;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  color: white;
-  font-family: inherit;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-}
-
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-}
-
 .login-btn {
   width: 100%;
   padding: 1rem;
@@ -174,17 +126,10 @@ body {
   margin-top: 2rem;
 }
 
-.login-btn:hover:not(:disabled) {
+.login-btn:hover {
   background: var(--primary-hover);
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);
-}
-
-.error-msg {
-  color: #ef4444;
-  font-size: 0.875rem;
-  margin-top: 1rem;
-  text-align: center;
 }
 
 .footer-text {

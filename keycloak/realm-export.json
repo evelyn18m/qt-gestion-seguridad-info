@@ -20,8 +20,7 @@
       "clientId": "sgsi-app",
       "name": "gestión de seguridad de información",
       "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "2AbmJS1ok5t52CKqUqUwoovk2wQDGWPC",
+      "clientAuthenticatorType": "client-jwt",
       "redirectUris": [
         "http://localhost:3000/*"
       ],
@@ -33,13 +32,13 @@
       "consentRequired": false,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "publicClient": false,
+      "publicClient": true,
       "frontchannelLogout": true,
       "protocol": "openid-connect",
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3000"
+        "post.logout.redirect.uris": "+"
       }
     }
   ],
