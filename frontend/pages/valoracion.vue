@@ -34,7 +34,6 @@ const valForm = ref({
   disponibilidad: '',
   tieneDatosPersonales: false,
 })
-
 const analisisForm = ref({
   macroProceso: '',
   nombreActivo: '',
@@ -42,14 +41,12 @@ const analisisForm = ref({
   vulnerabilidades: [] as number[],
   controlesImplementacion: '',
 })
-
 const evaluacionForm = ref({
   probabilidadId: '',
   amenazaRiesgoId: '',
   vulnerabilidadRiesgoId: '',
   controlesArea: '',
 })
-
 const tratamientoForm = ref({
   metodoTratamiento: '',
   tipoControl: '',
@@ -57,6 +54,22 @@ const tratamientoForm = ref({
   nivelAmenazaControl: '',
   nivelVulnerabilidadControl: '',
 })
+const amenazaCategoria = ref('')
+const vulnerabilidadCategoria = ref('')
+const amenazaSeleccionada = ref('')
+const vulnerabilidadSeleccionada = ref('')
+const detallesRiesgo = ref<DetalleRiesgo[]>([])
+
+const ciaAverage = computed(() => {
+  const c = getValorImpacto(valForm.value.confidencialidad)
+  const i = getValorImpacto(valForm.value.integridad)
+  const d = getValorImpacto(valForm.value.disponibilidad)
+  const selected = [c, i, d].filter(v => v && v > 0)
+  if (selected.length === 0) return 0
+  return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
+})
+
+const { fetchCatalog } = useCatalog()
 
 // Sincronizar Pestaña 1 → Pestaña 2 (macroproceso y nombre activo)
 watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([macro, nombre]) => {
@@ -64,100 +77,11 @@ watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([ma
   analisisForm.value.nombreActivo = nombre
 }, { immediate: true })
 
-const macroProcesoName = computed(() => {
-  const id = analisisForm.value.macroProceso
-  if (!id) return 'No seleccionado en Pestaña 1'
-  const found = valMacroprocesos.value.find((m: CatalogoItem) => m.id === Number(id))
-  return found ? found.nombre : `ID #${id}`
-})
-
-const subprocesosFiltrados = computed(() => {
-  const mpId = valForm.value.macroProceso
-  if (!mpId) return []
-  return valSubprocesos.value.filter((s: CatalogoItem) => s.macroProcesoId === Number(mpId))
-})
 
 // Limpiar subprocess cuando cambia macroproceso
 watch(() => valForm.value.macroProceso, () => {
   valForm.value.subProceso = ''
 })
-
-const amenazaCategoria = ref('')
-const vulnerabilidadCategoria = ref('')
-const amenazaSeleccionada = ref('')
-const vulnerabilidadSeleccionada = ref('')
-
-const amenazaCategorias = computed(() => {
-  const cats = new Set(valAmenazas.value.map((a: CatalogoItem) => a.categoria))
-  return Array.from(cats).sort()
-})
-
-const vulnerabilidadCategorias = computed(() => {
-  const cats = new Set(valVulnerabilidades.value.map((v: CatalogoItem) => v.categoria))
-  return Array.from(cats).sort()
-})
-
-const amenazasFiltradas = computed(() => {
-  if (!amenazaCategoria.value) return []
-  return valAmenazas.value.filter((a: CatalogoItem) => a.categoria === amenazaCategoria.value)
-})
-
-const vulnerabilidadesFiltradas = computed(() => {
-  if (!vulnerabilidadCategoria.value) return []
-  return valVulnerabilidades.value.filter((v: CatalogoItem) => v.categoria === vulnerabilidadCategoria.value)
-})
-
-const evaluacionRiesgo = computed(() => {
-  const impacto = ciaAverage.value
-  const amenaza = getValorRiesgo(evaluacionForm.value.amenazaRiesgoId)
-  const vulnerabilidad = getValorRiesgo(evaluacionForm.value.vulnerabilidadRiesgoId)
-  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
-  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
-})
-
-const nivelRiesgo = computed(() => {
-  const er = evaluacionRiesgo.value
-  if (er >= 18) return 'Crítico'
-  if (er >= 9) return 'Alto'
-  if (er >= 3) return 'Medio'
-  return 'Bajo'
-})
-
-const evaluacionRiesgoControl = computed(() => {
-  const impacto = ciaAverage.value
-  const amenaza = getValorRiesgo(tratamientoForm.value.nivelAmenazaControl)
-  const vulnerabilidad = getValorRiesgo(tratamientoForm.value.nivelVulnerabilidadControl)
-  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
-  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
-})
-
-const nivelRiesgoControl = computed(() => {
-  const er = evaluacionRiesgoControl.value
-  if (er >= 18) return 'Crítico'
-  if (er >= 9) return 'Alto'
-  if (er >= 3) return 'Medio'
-  return 'Bajo'
-})
-
-interface DetalleRiesgo {
-  id?: number
-  tipo: string
-  catalogoId: number
-  riesgoId: string | number
-  evaluacionRiesgo: number
-  nivelRiesgo: string
-  metodoTratamiento: string
-  tipoControlId: string | number
-  riesgoControlId: string | number
-  evaluacionRiesgoControl: number
-  nivelRiesgoControl: string
-  // New per-row fields (Tab 2 row-based model)
-  amenazaIds?: string[]
-  vulnerabilidadIds?: string[]
-  controlesImplementados?: string
-}
-
-const detallesRiesgo = ref<DetalleRiesgo[]>([])
 
 function getCatalogoLabel(tipo: string, catalogoId: number) {
   if (tipo === 'amenaza') {
@@ -167,22 +91,6 @@ function getCatalogoLabel(tipo: string, catalogoId: number) {
   const v = valVulnerabilidades.value.find((x: CatalogoItem) => x.id === catalogoId)
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
 }
-
-function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilidadRiesgoId: string | number) {
-  const impacto = ciaAverage.value
-  const amenaza = getValorRiesgo(amenazaRiesgoId)
-  const vulnerabilidad = getValorRiesgo(vulnerabilidadRiesgoId)
-  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
-  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
-}
-
-function calcularNivelRiesgo(evaluacion: number) {
-  if (evaluacion >= 18) return 'Crítico'
-  if (evaluacion >= 9) return 'Alto'
-  if (evaluacion >= 3) return 'Medio'
-  return 'Bajo'
-}
-
 function rebuildDetalles() {
   const existing = detallesRiesgo.value
   const nuevos: DetalleRiesgo[] = []
@@ -235,113 +143,47 @@ function rebuildDetalles() {
 
   detallesRiesgo.value = nuevos
 }
-
-function recalcAllEvaluaciones() {
-  const globalAmenazaId = evaluacionForm.value.amenazaRiesgoId
-  const globalVulnerabilidadId = evaluacionForm.value.vulnerabilidadRiesgoId
-  detallesRiesgo.value.forEach(d => {
-    if (d.tipo === 'amenaza') {
-      d.evaluacionRiesgo = calcularEvaluacionRiesgo(d.riesgoId, globalVulnerabilidadId)
-    } else {
-      d.evaluacionRiesgo = calcularEvaluacionRiesgo(globalAmenazaId, d.riesgoId)
-    }
-    d.nivelRiesgo = calcularNivelRiesgo(d.evaluacionRiesgo)
-  })
-}
-
-function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
-  recalcAllEvaluaciones()
-}
-
-function updateControlDetalle(d: DetalleRiesgo) {
-  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId, evaluacionForm.value.vulnerabilidadRiesgoId)
-  d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
-}
-
-const detallesAmenazas = computed(() => detallesRiesgo.value.filter(d => d.tipo === 'amenaza'))
-const detallesVulnerabilidades = computed(() => detallesRiesgo.value.filter(d => d.tipo === 'vulnerabilidad'))
-
-const { fetchCatalog } = useCatalog()
-
 const loadValoracionData = async () => {
   valLoading.value = true
   const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
   try {
     const results = await Promise.all(tipos.map(t => fetchCatalog(t)))
-    valTipoActivo.value = results[0]
-    valFormatos.value = results[1]
-    valMacroprocesos.value = results[2]
-    valSubprocesos.value = results[3]
-    valAmenazas.value = results[4]
-    valVulnerabilidades.value = results[5]
-    valImpactos.value = results[6]
-    valFuncionarios.value = results[7]
-    valAreas.value = results[8]
-    valRiesgos.value = results[9]
-    valProbabilidades.value = results[10]
-    valTiposControl.value = results[11]
+    valTipoActivo.value = results[0] as CatalogoItem[]
+    valFormatos.value = results[1] as CatalogoItem[]
+    valMacroprocesos.value = results[2] as CatalogoItem[]
+    valSubprocesos.value = results[3] as CatalogoItem[]
+    valAmenazas.value = results[4] as CatalogoItem[]
+    valVulnerabilidades.value = results[5] as CatalogoItem[]
+    valImpactos.value = results[6] as CatalogoItem[]
+    valFuncionarios.value = results[7] as CatalogoItem[]
+    valAreas.value = results[8] as CatalogoItem[]
+    valRiesgos.value = results[9] as CatalogoItem[]
+    valProbabilidades.value = results[10] as CatalogoItem[]
+    valTiposControl.value = results[11] as CatalogoItem[]
   } catch (e) {
     console.error('Error cargando datos de valoración', e)
   } finally {
     valLoading.value = false
   }
 }
-
-function getNivelesImpacto(tipo: string) {
-  return valImpactos.value.filter((i: CatalogoItem) => i.tipo === tipo)
-}
-
-function getValorImpacto(id: string | number) {
+function getValorImpacto(id: string | number): number {
   if (!id) return 0
   const found = valImpactos.value.find((i: CatalogoItem) => i.id === Number(id))
-  return found ? found.valor : 0
+  return found?.valor ?? 0
 }
-
-const ciaAverage = computed(() => {
-  const c = getValorImpacto(valForm.value.confidencialidad)
-  const i = getValorImpacto(valForm.value.integridad)
-  const d = getValorImpacto(valForm.value.disponibilidad)
-  const selected = [c, i, d].filter(v => v > 0)
-  if (selected.length === 0) return 0
-  return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
-})
-
-function calculateRowCiaAverage(v: DetalleRiesgo) {
+function calculateRowCiaAverage(v: ValoracionActivo) {
   const c = getValorImpacto(v.confidencialidadId)
   const i = getValorImpacto(v.integridadId)
   const d = getValorImpacto(v.disponibilidadId)
-  const selected = [c, i, d].filter(val => val > 0)
+  const selected: number[] = [c, i, d].filter(val => val && val > 0).map(Number)
   if (selected.length === 0) return 0
   return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
 }
-
 function getCiaLevel(avg: number) {
   if (avg >= 2.5) return 'Alto'
   if (avg >= 1.5) return 'Medio'
   return 'Bajo'
 }
-
-function getValorRiesgo(id: string | number) {
-  if (!id) return 0
-  const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(id))
-  return found ? (found.valor || 0) : 0
-}
-
-function calculateEvaluacionRiesgo(v: DetalleRiesgo) {
-  const impacto = calculateRowCiaAverage(v)
-  const amenaza = getValorRiesgo(v.amenazaRiesgoId)
-  const vulnerabilidad = getValorRiesgo(v.vulnerabilidadRiesgoId)
-  if (impacto === 0 || !amenaza || !vulnerabilidad) return 0
-  return Math.round(impacto * amenaza * vulnerabilidad * 100) / 100
-}
-
-const riesgosAmenaza = computed(() => {
-  return valRiesgos.value.filter((r: CatalogoItem) => r.valor && r.evaluacion?.toLowerCase().includes('amenaza'))
-})
-
-const riesgosVulnerabilidad = computed(() => {
-  return valRiesgos.value.filter((r: CatalogoItem) => r.valor && r.evaluacion?.toLowerCase().includes('vulnerabilidad'))
-})
 
 const valSaved = ref<ValoracionActivo[]>([])
 const valSaving = ref(false)
@@ -351,13 +193,6 @@ const showModalVal = ref(false)
 const showViewModal = ref(false)
 const viewItem = ref<ValoracionActivo | null>(null)
 const activeTab = ref(0)
-
-const tabs = [
-  { label: 'Valoración de Activo' },
-  { label: 'Análisis de Riesgos' },
-  { label: 'Evaluación de Riesgo' },
-  { label: 'Tratamiento de Riesgo' },
-]
 
 // ── CatalogData bundle for ValoracionModal ────────────────────────────────────
 const catalogData = computed(() => ({
@@ -381,7 +216,6 @@ async function loadValoraciones() {
     valSaved.value = await apiFetch<ValoracionActivo[]>('/valoraciones')
   } catch { /* ignore */ }
 }
-
 async function submitValoracion() {
   valSaving.value = true
   valSuccess.value = ''
@@ -401,12 +235,12 @@ async function submitValoracion() {
       tipo: d.tipo,
       catalogoId: Number(d.catalogoId),
       riesgoId: d.riesgoId ? Number(d.riesgoId) : null,
-      evaluacionRiesgo: d.evaluacionRiesgo > 0 ? d.evaluacionRiesgo : null,
+      evaluacionRiesgo: (d.evaluacionRiesgo || 0) > 0 ? d.evaluacionRiesgo : null,
       nivelRiesgo: d.nivelRiesgo || null,
       metodoTratamiento: d.metodoTratamiento || null,
       tipoControlId: d.tipoControlId ? Number(d.tipoControlId) : null,
       riesgoControlId: d.riesgoControlId ? Number(d.riesgoControlId) : null,
-      evaluacionRiesgoControl: d.evaluacionRiesgoControl > 0 ? d.evaluacionRiesgoControl : null,
+      evaluacionRiesgoControl: (d.evaluacionRiesgoControl || 0) > 0 ? d.evaluacionRiesgoControl : null,
       nivelRiesgoControl: d.nivelRiesgoControl || null,
       // New per-row fields (Tab 2 row-based model)
       amenazaIds: d.amenazaIds && d.amenazaIds.length > 0 ? JSON.stringify(d.amenazaIds) : null,
@@ -460,7 +294,6 @@ async function submitValoracion() {
     valSaving.value = false
   }
 }
-
 function editValoracion(item: ValoracionActivo) {
   showModalVal.value = true
   activeTab.value = 0
@@ -503,7 +336,7 @@ function editValoracion(item: ValoracionActivo) {
   }
 
   if (item.detallesRiesgo && Array.isArray(item.detallesRiesgo)) {
-    detallesRiesgo.value = item.detallesRiesgo.map((d: Record<string, unknown>) => ({
+    detallesRiesgo.value = item.detallesRiesgo.map((d: DetalleRiesgo) => ({
       id: d.id,
       tipo: d.tipo,
       catalogoId: Number(d.catalogoId),
@@ -516,22 +349,20 @@ function editValoracion(item: ValoracionActivo) {
       evaluacionRiesgoControl: d.evaluacionRiesgoControl || 0,
       nivelRiesgoControl: d.nivelRiesgoControl || '',
       // New per-row fields (Tab 2 row-based model)
-      amenazaIds: safeJsonParse(d.amenazaIds, []),
-      vulnerabilidadIds: safeJsonParse(d.vulnerabilidadIds, []),
+      amenazaIds: safeJsonParse((d.amenazaIds as unknown as string), []),
+      vulnerabilidadIds: safeJsonParse((d.vulnerabilidadIds as unknown as string), []),
       controlesImplementados: d.controlesImplementados || '',
     }))
   } else {
     detallesRiesgo.value = []
   }
 }
-
 async function viewValoracion(item: ValoracionActivo) {
   const { apiFetch } = useApi()
   const enriched = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
   viewItem.value = enriched
   showViewModal.value = true
 }
-
 async function deleteValoracion(id: number) {
   if (!confirm('¿Eliminar esta valoración?')) return
   try {
@@ -540,13 +371,11 @@ async function deleteValoracion(id: number) {
     await loadValoraciones()
   } catch { /* ignore */ }
 }
-
 function openNewValoracion() {
   resetForm()
   activeTab.value = 0
   showModalVal.value = true
 }
-
 function resetForm() {
   valEditId.value = null
   valForm.value = {
@@ -575,73 +404,15 @@ function resetForm() {
   amenazaSeleccionada.value = '';
   vulnerabilidadSeleccionada.value = '';
 }
-
-function toggleAmenaza(id: number) {
-  const idx = valForm.value.amenazas.indexOf(id)
-  if (idx >= 0) valForm.value.amenazas.splice(idx, 1)
-  else valForm.value.amenazas.push(id)
-}
-
-function toggleVulnerabilidad(id: number) {
-  const idx = valForm.value.vulnerabilidades.indexOf(id)
-  if (idx >= 0) valForm.value.vulnerabilidades.splice(idx, 1)
-  else valForm.value.vulnerabilidades.push(id)
-}
-
-function agregarAmenaza() {
-  const id = Number(amenazaSeleccionada.value)
-  if (!id) return
-  if (!analisisForm.value.amenazas.includes(id)) {
-    analisisForm.value.amenazas.push(id)
-  }
-  amenazaSeleccionada.value = ''
-  rebuildDetalles()
-}
-
-function quitarAmenaza(id: number) {
-  const idx = analisisForm.value.amenazas.indexOf(id)
-  if (idx >= 0) analisisForm.value.amenazas.splice(idx, 1)
-  rebuildDetalles()
-}
-
-function agregarVulnerabilidad() {
-  const id = Number(vulnerabilidadSeleccionada.value)
-  if (!id) return
-  if (!analisisForm.value.vulnerabilidades.includes(id)) {
-    analisisForm.value.vulnerabilidades.push(id)
-  }
-  vulnerabilidadSeleccionada.value = ''
-  rebuildDetalles()
-}
-
-function quitarVulnerabilidad(id: number) {
-  const idx = analisisForm.value.vulnerabilidades.indexOf(id)
-  if (idx >= 0) analisisForm.value.vulnerabilidades.splice(idx, 1)
-  rebuildDetalles()
-}
-
 function safeJsonParse(str: string | null, fallback: any[] = []): any[] {
   if (!str) return fallback
   try { return JSON.parse(str) } catch { return fallback }
 }
-
-function countFromJson(str: string | null): number {
-  if (!str) return 0
-  try { const arr = JSON.parse(str); return Array.isArray(arr) ? arr.length : 0 } catch { return 0 }
-}
-
 function getTipoControlName(id: number | string) {
   if (!id) return '—'
   const found = valTiposControl.value.find((tc: CatalogoItem) => tc.id === Number(id))
   return found ? found.nombre : `TC#${id}`
 }
-
-function getRiesgoEvaluacion(id: number | string) {
-  if (!id) return '—'
-  const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(id))
-  return found ? found.evaluacion : `R#${id}`
-}
-
 function getNivelStyle(nivel: string) {
   const n = (nivel || '').toLowerCase()
   if (n.includes('critico')) return { label: 'Critico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)' }
@@ -649,7 +420,6 @@ function getNivelStyle(nivel: string) {
   if (n.includes('medio')) return { label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)' }
   return { label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)' }
 }
-
 function getMaxNivelIndex(nivel: string) {
   const n = (nivel || '').toLowerCase()
   if (n.includes('critico')) return 4
@@ -657,14 +427,12 @@ function getMaxNivelIndex(nivel: string) {
   if (n.includes('medio')) return 2
   return 1
 }
-
 function getNivelFromIndex(idx: number) {
   if (idx >= 4) return 'Crítico'
   if (idx >= 3) return 'Alto'
   if (idx >= 2) return 'Medio'
   return 'Bajo'
 }
-
 function resumenEvaluacionRiesgo(v: ValoracionActivo) {
   const detalles = v.detallesRiesgo || []
   if (detalles.length === 0) {
@@ -677,7 +445,6 @@ function resumenEvaluacionRiesgo(v: ValoracionActivo) {
   const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgo as string)), 0)
   return { evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : '' }
 }
-
 function resumenControl(v: ValoracionActivo) {
   const detalles = v.detallesRiesgo || []
   if (detalles.length === 0) {
@@ -695,16 +462,6 @@ function resumenControl(v: ValoracionActivo) {
   const tipos = new Set(detalles.filter((d: Record<string, unknown>) => d.tipoControlId).map((d: Record<string, unknown>) => getTipoControlName(d.tipoControlId as string)))
   const tipoControl = tipos.size > 1 ? 'Múltiple' : (Array.from(tipos)[0] || '—')
   return { tipoControl, evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : '' }
-}
-
-function getAmenazaLabel(id: number) {
-  const a = valAmenazas.value.find((x: CatalogoItem) => x.id === id)
-  return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
-}
-
-function getVulnerabilidadLabel(id: number) {
-  const v = valVulnerabilidades.value.find((x: CatalogoItem) => x.id === id)
-  return v ? `${v.categoria} — ${v.descripcion}` : `V#${id}`
 }
 
 onMounted(() => {
@@ -973,12 +730,6 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.val-form {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
 .val-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
@@ -1056,30 +807,6 @@ onMounted(() => {
   resize: vertical;
 }
 
-.cia-average {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.cia-average-label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.cia-average-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--primary);
-}
-
 .cia-average-level {
   font-size: 0.75rem;
   font-weight: 600;
@@ -1088,43 +815,6 @@ onMounted(() => {
   border-radius: 6px;
   background: rgba(99, 102, 241, 0.15);
   color: var(--primary);
-}
-
-.chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.chip {
-  padding: 0.5rem 0.85rem;
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.chip:hover {
-  border-color: var(--primary);
-  color: var(--text);
-}
-
-.chip.selected {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: var(--primary);
-  color: white;
-}
-
-.chip-empty {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  padding: 1rem 0;
 }
 
 .val-actions {
@@ -1141,13 +831,6 @@ onMounted(() => {
   border-radius: 10px;
   margin-bottom: 1rem;
   font-weight: 500;
-}
-
-.val-form-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
 }
 
 .val-modal-overlay {
@@ -1277,51 +960,6 @@ onMounted(() => {
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
-}
-
-/* Tabs */
-.val-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  background: rgba(15, 23, 42, 0.4);
-  padding: 0 1.5rem;
-  gap: 0.25rem;
-}
-
-.val-tab {
-  padding: 0.85rem 1.25rem;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  white-space: nowrap;
-}
-
-.val-tab:hover {
-  color: var(--text);
-}
-
-.val-tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
-}
-
-.val-tab-panel {
-  min-height: 200px;
-}
-
-.val-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-  color: var(--text-muted);
-  font-size: 0.95rem;
 }
 
 /* View modal styles */
