@@ -58,7 +58,7 @@ async function main() {
     for (const t of tiposActivo) {
         if (t['tipo de activo']) {
             await prisma.tipoActivo.create({
-                data: { 
+                data: {
                     nombre: t['tipo de activo'],
                     detalle: t['detalle'] || ''
                 }
@@ -142,7 +142,7 @@ async function main() {
                 }
             });
         } else if (field1 && currentAmenazaCat) {
-             await prisma.amenaza.create({
+            await prisma.amenaza.create({
                 data: {
                     categoria: currentAmenazaCat,
                     nombre: field1,
