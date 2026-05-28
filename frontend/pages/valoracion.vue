@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CatalogoItem, ValoracionActivo } from '~/types/api'
+import type { CatalogoItem, DetalleRiesgo, ValoracionActivo } from '~/types/api'
 import ValoracionModal from '~/components/ValoracionModal.vue'
 const valTipoActivo = ref<CatalogoItem[]>([])
 const valFormatos = ref<CatalogoItem[]>([])
@@ -67,14 +67,14 @@ watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([ma
 const macroProcesoName = computed(() => {
   const id = analisisForm.value.macroProceso
   if (!id) return 'No seleccionado en Pestaña 1'
-  const found = valMacroprocesos.value.find((m: any) => m.id === Number(id))
+  const found = valMacroprocesos.value.find((m: CatalogoItem) => m.id === Number(id))
   return found ? found.nombre : `ID #${id}`
 })
 
 const subprocesosFiltrados = computed(() => {
   const mpId = valForm.value.macroProceso
   if (!mpId) return []
-  return valSubprocesos.value.filter((s: any) => s.macroProcesoId === Number(mpId))
+  return valSubprocesos.value.filter((s: CatalogoItem) => s.macroProcesoId === Number(mpId))
 })
 
 // Limpiar subprocess cuando cambia macroproceso
@@ -88,23 +88,23 @@ const amenazaSeleccionada = ref('')
 const vulnerabilidadSeleccionada = ref('')
 
 const amenazaCategorias = computed(() => {
-  const cats = new Set(valAmenazas.value.map((a: any) => a.categoria))
+  const cats = new Set(valAmenazas.value.map((a: CatalogoItem) => a.categoria))
   return Array.from(cats).sort()
 })
 
 const vulnerabilidadCategorias = computed(() => {
-  const cats = new Set(valVulnerabilidades.value.map((v: any) => v.categoria))
+  const cats = new Set(valVulnerabilidades.value.map((v: CatalogoItem) => v.categoria))
   return Array.from(cats).sort()
 })
 
 const amenazasFiltradas = computed(() => {
   if (!amenazaCategoria.value) return []
-  return valAmenazas.value.filter((a: any) => a.categoria === amenazaCategoria.value)
+  return valAmenazas.value.filter((a: CatalogoItem) => a.categoria === amenazaCategoria.value)
 })
 
 const vulnerabilidadesFiltradas = computed(() => {
   if (!vulnerabilidadCategoria.value) return []
-  return valVulnerabilidades.value.filter((v: any) => v.categoria === vulnerabilidadCategoria.value)
+  return valVulnerabilidades.value.filter((v: CatalogoItem) => v.categoria === vulnerabilidadCategoria.value)
 })
 
 const evaluacionRiesgo = computed(() => {
@@ -161,10 +161,10 @@ const detallesRiesgo = ref<DetalleRiesgo[]>([])
 
 function getCatalogoLabel(tipo: string, catalogoId: number) {
   if (tipo === 'amenaza') {
-    const a = valAmenazas.value.find((x: any) => x.id === catalogoId)
+    const a = valAmenazas.value.find((x: CatalogoItem) => x.id === catalogoId)
     return a ? `${a.categoria} — ${a.nombre}` : `A#${catalogoId}`
   }
-  const v = valVulnerabilidades.value.find((x: any) => x.id === catalogoId)
+  const v = valVulnerabilidades.value.find((x: CatalogoItem) => x.id === catalogoId)
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
 }
 
@@ -288,12 +288,12 @@ const loadValoracionData = async () => {
 }
 
 function getNivelesImpacto(tipo: string) {
-  return valImpactos.value.filter((i: any) => i.tipo === tipo)
+  return valImpactos.value.filter((i: CatalogoItem) => i.tipo === tipo)
 }
 
 function getValorImpacto(id: string | number) {
   if (!id) return 0
-  const found = valImpactos.value.find((i: any) => i.id === Number(id))
+  const found = valImpactos.value.find((i: CatalogoItem) => i.id === Number(id))
   return found ? found.valor : 0
 }
 
@@ -306,7 +306,7 @@ const ciaAverage = computed(() => {
   return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
 })
 
-function calculateRowCiaAverage(v: any) {
+function calculateRowCiaAverage(v: DetalleRiesgo) {
   const c = getValorImpacto(v.confidencialidadId)
   const i = getValorImpacto(v.integridadId)
   const d = getValorImpacto(v.disponibilidadId)
@@ -323,11 +323,11 @@ function getCiaLevel(avg: number) {
 
 function getValorRiesgo(id: string | number) {
   if (!id) return 0
-  const found = valRiesgos.value.find((r: any) => r.id === Number(id))
+  const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(id))
   return found ? (found.valor || 0) : 0
 }
 
-function calculateEvaluacionRiesgo(v: any) {
+function calculateEvaluacionRiesgo(v: DetalleRiesgo) {
   const impacto = calculateRowCiaAverage(v)
   const amenaza = getValorRiesgo(v.amenazaRiesgoId)
   const vulnerabilidad = getValorRiesgo(v.vulnerabilidadRiesgoId)
@@ -336,11 +336,11 @@ function calculateEvaluacionRiesgo(v: any) {
 }
 
 const riesgosAmenaza = computed(() => {
-  return valRiesgos.value.filter((r: any) => r.valor && r.evaluacion?.toLowerCase().includes('amenaza'))
+  return valRiesgos.value.filter((r: CatalogoItem) => r.valor && r.evaluacion?.toLowerCase().includes('amenaza'))
 })
 
 const riesgosVulnerabilidad = computed(() => {
-  return valRiesgos.value.filter((r: any) => r.valor && r.evaluacion?.toLowerCase().includes('vulnerabilidad'))
+  return valRiesgos.value.filter((r: CatalogoItem) => r.valor && r.evaluacion?.toLowerCase().includes('vulnerabilidad'))
 })
 
 const valSaved = ref<ValoracionActivo[]>([])
@@ -454,14 +454,14 @@ async function submitValoracion() {
     showModalVal.value = false
     resetForm()
     await loadValoraciones()
-  } catch (e: any) {
-    alert('Error: ' + e.message)
+  } catch (e: unknown) {
+    alert('Error: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
     valSaving.value = false
   }
 }
 
-function editValoracion(item: any) {
+function editValoracion(item: ValoracionActivo) {
   showModalVal.value = true
   activeTab.value = 0
   valEditId.value = item.id
@@ -503,7 +503,7 @@ function editValoracion(item: any) {
   }
 
   if (item.detallesRiesgo && Array.isArray(item.detallesRiesgo)) {
-    detallesRiesgo.value = item.detallesRiesgo.map((d: any) => ({
+    detallesRiesgo.value = item.detallesRiesgo.map((d: Record<string, unknown>) => ({
       id: d.id,
       tipo: d.tipo,
       catalogoId: Number(d.catalogoId),
@@ -525,7 +525,7 @@ function editValoracion(item: any) {
   }
 }
 
-async function viewValoracion(item: any) {
+async function viewValoracion(item: ValoracionActivo) {
   const { apiFetch } = useApi()
   const enriched = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
   viewItem.value = enriched
@@ -632,13 +632,13 @@ function countFromJson(str: string | null): number {
 
 function getTipoControlName(id: number | string) {
   if (!id) return '—'
-  const found = valTiposControl.value.find((tc: any) => tc.id === Number(id))
+  const found = valTiposControl.value.find((tc: CatalogoItem) => tc.id === Number(id))
   return found ? found.nombre : `TC#${id}`
 }
 
 function getRiesgoEvaluacion(id: number | string) {
   if (!id) return '—'
-  const found = valRiesgos.value.find((r: any) => r.id === Number(id))
+  const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(id))
   return found ? found.evaluacion : `R#${id}`
 }
 
@@ -665,20 +665,20 @@ function getNivelFromIndex(idx: number) {
   return 'Bajo'
 }
 
-function resumenEvaluacionRiesgo(v: any) {
+function resumenEvaluacionRiesgo(v: ValoracionActivo) {
   const detalles = v.detallesRiesgo || []
   if (detalles.length === 0) {
     return { evaluacion: v.evaluacionRiesgo || 0, nivel: v.nivelRiesgo || '' }
   }
-  const conEval = detalles.filter((d: any) => d.evaluacionRiesgo > 0)
+  const conEval = detalles.filter((d: Record<string, unknown>) => d.evaluacionRiesgo > 0)
   const avg = conEval.length > 0
-    ? Math.round((conEval.reduce((sum: number, d: any) => sum + d.evaluacionRiesgo, 0) / conEval.length) * 100) / 100
+    ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgo as number), 0) / conEval.length) * 100) / 100
     : 0
-  const maxNivel = conEval.reduce((max: number, d: any) => Math.max(max, getMaxNivelIndex(d.nivelRiesgo)), 0)
+  const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgo as string)), 0)
   return { evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : '' }
 }
 
-function resumenControl(v: any) {
+function resumenControl(v: ValoracionActivo) {
   const detalles = v.detallesRiesgo || []
   if (detalles.length === 0) {
     return {
@@ -687,23 +687,23 @@ function resumenControl(v: any) {
       nivel: v.nivelRiesgoControl || '',
     }
   }
-  const conEval = detalles.filter((d: any) => d.evaluacionRiesgoControl > 0)
+  const conEval = detalles.filter((d: Record<string, unknown>) => d.evaluacionRiesgoControl > 0)
   const avg = conEval.length > 0
-    ? Math.round((conEval.reduce((sum: number, d: any) => sum + d.evaluacionRiesgoControl, 0) / conEval.length) * 100) / 100
+    ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgoControl as number), 0) / conEval.length) * 100) / 100
     : 0
-  const maxNivel = conEval.reduce((max: number, d: any) => Math.max(max, getMaxNivelIndex(d.nivelRiesgoControl)), 0)
-  const tipos = new Set(detalles.filter((d: any) => d.tipoControlId).map((d: any) => getTipoControlName(d.tipoControlId)))
+  const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgoControl as string)), 0)
+  const tipos = new Set(detalles.filter((d: Record<string, unknown>) => d.tipoControlId).map((d: Record<string, unknown>) => getTipoControlName(d.tipoControlId as string)))
   const tipoControl = tipos.size > 1 ? 'Múltiple' : (Array.from(tipos)[0] || '—')
   return { tipoControl, evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : '' }
 }
 
 function getAmenazaLabel(id: number) {
-  const a = valAmenazas.value.find((x: any) => x.id === id)
+  const a = valAmenazas.value.find((x: CatalogoItem) => x.id === id)
   return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
 }
 
 function getVulnerabilidadLabel(id: number) {
-  const v = valVulnerabilidades.value.find((x: any) => x.id === id)
+  const v = valVulnerabilidades.value.find((x: CatalogoItem) => x.id === id)
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${id}`
 }
 

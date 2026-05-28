@@ -82,31 +82,37 @@ const emit = defineEmits<{
   'reset-form': []
 }>()
 
+// Legacy DetalleRiesgo (old API stored amenazaIds as JSON string)
+interface LegacyDetalleRiesgo extends DetalleRiesgo {
+  amenazaIdsStr?: string
+  vulnerabilidadIdsStr?: string
+}
+
 // ── Computed Properties ───────────────────────────────────────────────────────
 const subprocesosFiltrados = computed(() => {
   const mpId = props.valForm.macroProceso
   if (!mpId) return []
-  return props.catalogData.valSubprocesos.filter((s: any) => s.macroProcesoId === Number(mpId))
+  return props.catalogData.valSubprocesos.filter((s: CatalogoItem) => s.macroProcesoId === Number(mpId))
 })
 
 const amenazaCategorias = computed(() => {
-  const cats = new Set(props.catalogData.valAmenazas.map((a: any) => a.categoria))
+  const cats = new Set(props.catalogData.valAmenazas.map((a: CatalogoItem) => a.categoria))
   return Array.from(cats).sort()
 })
 
 const vulnerabilidadCategorias = computed(() => {
-  const cats = new Set(props.catalogData.valVulnerabilidades.map((v: any) => v.categoria))
+  const cats = new Set(props.catalogData.valVulnerabilidades.map((v: CatalogoItem) => v.categoria))
   return Array.from(cats).sort()
 })
 
 const amenazasFiltradas = computed(() => {
   if (!amenazaCategoria.value) return []
-  return props.catalogData.valAmenazas.filter((a: any) => a.categoria === amenazaCategoria.value)
+  return props.catalogData.valAmenazas.filter((a: CatalogoItem) => a.categoria === amenazaCategoria.value)
 })
 
 const vulnerabilidadesFiltradas = computed(() => {
   if (!vulnerabilidadCategoria.value) return []
-  return props.catalogData.valVulnerabilidades.filter((v: any) => v.categoria === vulnerabilidadCategoria.value)
+  return props.catalogData.valVulnerabilidades.filter((v: CatalogoItem) => v.categoria === vulnerabilidadCategoria.value)
 })
 
 const ciaAverage = computed(() => {
@@ -121,7 +127,7 @@ const ciaAverage = computed(() => {
 const macroProcesoName = computed(() => {
   const id = props.analisisForm.macroProceso
   if (!id) return 'No seleccionado en Pestaña 1'
-  const found = props.catalogData.valMacroprocesos.find((m: any) => m.id === Number(id))
+  const found = props.catalogData.valMacroprocesos.find((m: CatalogoItem) => m.id === Number(id))
   return found ? found.nombre : `ID #${id}`
 })
 
@@ -189,12 +195,12 @@ function hasAtLeastOne(row: RiskRow): boolean {
 }
 
 function getAmenazaLabel(id: string) {
-  const a = props.catalogData.valAmenazas.find((x: any) => x.id === Number(id))
+  const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === Number(id))
   return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
 }
 
 function getVulnerabilidadLabel(id: string) {
-  const v = props.catalogData.valVulnerabilidades.find((x: any) => x.id === Number(id))
+  const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === Number(id))
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${id}`
 }
 
@@ -258,8 +264,8 @@ function loadExistingRows() {
   riskRows.value = []
   const seen = new Set<string>()
   props.detallesRiesgo.forEach(d => {
-    const aIds = d.amenazaIds ?? parseIds((d as any).amenazaIdsStr ?? null)
-    const vIds = d.vulnerabilidadIds ?? parseIds((d as any).vulnerabilidadIdsStr ?? null)
+    const aIds = d.amenazaIds ?? parseIds((d as LegacyDetalleRiesgo).amenazaIdsStr ?? null)
+    const vIds = d.vulnerabilidadIds ?? parseIds((d as LegacyDetalleRiesgo).vulnerabilidadIdsStr ?? null)
     const key = JSON.stringify([...aIds, ...vIds].sort())
     if (!seen.has(key) && (aIds.length > 0 || vIds.length > 0)) {
       seen.add(key)
@@ -282,18 +288,18 @@ watch(() => props.modelValue, (isOpen) => {
 
 // ── Helper Functions ─────────────────────────────────────────────────────────
 function getNivelesImpacto(tipo: string) {
-  return props.catalogData.valImpactos.filter((i: any) => i.tipo === tipo)
+  return props.catalogData.valImpactos.filter((i: CatalogoItem) => i.tipo === tipo)
 }
 
 function getValorImpacto(id: string | number) {
   if (!id) return 0
-  const found = props.catalogData.valImpactos.find((i: any) => i.id === Number(id))
+  const found = props.catalogData.valImpactos.find((i: CatalogoItem) => i.id === Number(id))
   return found ? found.valor : 0
 }
 
 function getValorRiesgo(id: string | number) {
   if (!id) return 0
-  const found = props.catalogData.valRiesgos.find((r: any) => r.id === Number(id))
+  const found = props.catalogData.valRiesgos.find((r: CatalogoItem) => r.id === Number(id))
   return found ? (found.valor || 0) : 0
 }
 
@@ -322,20 +328,20 @@ function getNivelStyle(nivel: string) {
 
 function getCatalogoLabel(tipo: string, catalogoId: number) {
   if (tipo === 'amenaza') {
-    const a = props.catalogData.valAmenazas.find((x: any) => x.id === catalogoId)
+    const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === catalogoId)
     return a ? `${a.categoria} — ${a.nombre}` : `A#${catalogoId}`
   }
-  const v = props.catalogData.valVulnerabilidades.find((x: any) => x.id === catalogoId)
+  const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === catalogoId)
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
 }
 
 function getAmenazaLabelNum(id: number) {
-  const a = props.catalogData.valAmenazas.find((x: any) => x.id === id)
+  const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === id)
   return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
 }
 
 function getVulnerabilidadLabelNum(id: number) {
-  const v = props.catalogData.valVulnerabilidades.find((x: any) => x.id === id)
+  const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === id)
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${id}`
 }
 
@@ -347,7 +353,7 @@ function getCiaLevel(avg: number) {
 
 function getTipoControlName(id: number | string) {
   if (!id) return '—'
-  const found = props.catalogData.valTiposControl.find((tc: any) => tc.id === Number(id))
+  const found = props.catalogData.valTiposControl.find((tc: CatalogoItem) => tc.id === Number(id))
   return found ? found.nombre : `TC#${id}`
 }
 
@@ -655,14 +661,14 @@ const tabs = [
                   <label>Nivel de Amenaza</label>
                   <select v-model="evaluacionForm.amenazaRiesgoId" @change="updateEvaluacionDetalle()">
                     <option value="">Seleccionar...</option>
-                    <option v-for="r in catalogData.valRiesgos.filter((r: any) => r.valor && r.evaluacion?.toLowerCase().includes('amenaza'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                    <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.valor && r.evaluacion?.toLowerCase().includes('amenaza'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
                   </select>
                 </div>
                 <div class="form-group">
                   <label>Nivel de Vulnerabilidad</label>
                   <select v-model="evaluacionForm.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle()">
                     <option value="">Seleccionar...</option>
-                    <option v-for="r in catalogData.valRiesgos.filter((r: any) => r.valor && r.evaluacion?.toLowerCase().includes('vulnerabilidad'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                    <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.valor && r.evaluacion?.toLowerCase().includes('vulnerabilidad'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
                   </select>
                 </div>
               </div>
