@@ -1,13 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateValoracionDto } from './dto/create-valoracion.dto';
+import {
+  CreateValoracionDto,
+  DetalleRiesgoDto,
+} from './dto/create-valoracion.dto';
 import { UpdateValoracionDto } from './dto/update-valoracion.dto';
 
 @Injectable()
 export class ValoracionesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async enrich(item: any) {
+  private async enrich(
+    item: Prisma.ValoracionActivoGetPayload<object> & {
+      tipoControl?: number | null;
+    },
+  ) {
     const [
       tipoActivo,
       formato,
@@ -75,11 +83,11 @@ export class ValoracionesService {
   }
 
   async create(dto: CreateValoracionDto) {
-    const { detallesRiesgo, ...data } = dto as any;
+    const { detallesRiesgo, ...data } = dto;
     const item = await this.prisma.valoracionActivo.create({ data });
     if (detallesRiesgo && Array.isArray(detallesRiesgo)) {
       await this.prisma.detalleRiesgo.createMany({
-        data: detallesRiesgo.map((d: any) => ({
+        data: detallesRiesgo.map((d: DetalleRiesgoDto) => ({
           ...d,
           valoracionActivoId: item.id,
         })),
@@ -90,21 +98,27 @@ export class ValoracionesService {
 
   async update(id: number, dto: UpdateValoracionDto) {
     await this.findOne(id);
-    const { detallesRiesgo, ...data } = dto as any;
+    const { detallesRiesgo, ...data } = dto;
     const item = await this.prisma.valoracionActivo.update({
       where: { id },
       data,
     });
-    if (detallesRiesgo && Array.isArray(detallesRiesgo)) {
-      await this.prisma.detalleRiesgo.deleteMany({
-        where: { valoracionActivoId: id },
-      });
-      await this.prisma.detalleRiesgo.createMany({
-        data: detallesRiesgo.map((d: any) => ({
-          ...d,
-          valoracionActivoId: id,
-        })),
-      });
+    if (
+      detallesRiesgo &&
+      Array.isArray(detallesRiesgo) &&
+      detallesRiesgo.length > 0
+    ) {
+      await this.prisma.$transaction([
+        this.prisma.detalleRiesgo.deleteMany({
+          where: { valoracionActivoId: id },
+        }),
+        this.prisma.detalleRiesgo.createMany({
+          data: detallesRiesgo.map((d: DetalleRiesgoDto) => ({
+            ...d,
+            valoracionActivoId: id,
+          })),
+        }),
+      ]);
     }
     return this.enrich(item);
   }
