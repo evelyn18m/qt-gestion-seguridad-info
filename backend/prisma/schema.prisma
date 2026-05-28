@@ -148,6 +148,10 @@ model DetalleRiesgo {
   riesgoControlId       Int?     // id del catálogo Riesgo para control
   evaluacionRiesgoControl Float?
   nivelRiesgoControl    String?
+  // Tab 2 new fields (row-based per-row model)
+  amenazaIds            String?   @db.Text  // JSON array, e.g. "[3,7]"
+  vulnerabilidadIds      String?   @db.Text  // JSON array, e.g. "[5]"
+  controlesImplementados String?  @db.Text  // per-row controls
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

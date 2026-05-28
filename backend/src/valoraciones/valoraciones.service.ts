@@ -11,6 +11,45 @@ import { UpdateValoracionDto } from './dto/update-valoracion.dto';
 export class ValoracionesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private mapDetalleRiesgo(
+    d: DetalleRiesgoDto,
+    valoracionActivoId: number,
+  ): Prisma.DetalleRiesgoCreateInput {
+    const data: Prisma.DetalleRiesgoCreateInput = {
+      valoracionActivoId,
+      tipo: d.tipo ?? 'amenaza',
+      catalogoId: d.catalogoId ?? 0,
+      // Tab 3/4 optional fields — only include if provided
+      ...(d.riesgoId !== undefined && { riesgoId: d.riesgoId }),
+      ...(d.evaluacionRiesgo !== undefined && {
+        evaluacionRiesgo: d.evaluacionRiesgo,
+      }),
+      ...(d.nivelRiesgo !== undefined && { nivelRiesgo: d.nivelRiesgo }),
+      ...(d.metodoTratamiento !== undefined && {
+        metodoTratamiento: d.metodoTratamiento,
+      }),
+      ...(d.tipoControlId !== undefined && { tipoControlId: d.tipoControlId }),
+      ...(d.riesgoControlId !== undefined && {
+        riesgoControlId: d.riesgoControlId,
+      }),
+      ...(d.evaluacionRiesgoControl !== undefined && {
+        evaluacionRiesgoControl: d.evaluacionRiesgoControl,
+      }),
+      ...(d.nivelRiesgoControl !== undefined && {
+        nivelRiesgoControl: d.nivelRiesgoControl,
+      }),
+      // Tab 2 new fields
+      ...(d.amenazaIds !== undefined && { amenazaIds: d.amenazaIds }),
+      ...(d.vulnerabilidadIds !== undefined && {
+        vulnerabilidadIds: d.vulnerabilidadIds,
+      }),
+      ...(d.controlesImplementados !== undefined && {
+        controlesImplementados: d.controlesImplementados,
+      }),
+    };
+    return data;
+  }
+
   private async enrich(
     item: Prisma.ValoracionActivoGetPayload<object> & {
       tipoControl?: number | null;
@@ -85,13 +124,18 @@ export class ValoracionesService {
   async create(dto: CreateValoracionDto) {
     const { detallesRiesgo, ...data } = dto;
     const item = await this.prisma.valoracionActivo.create({ data });
-    if (detallesRiesgo && Array.isArray(detallesRiesgo)) {
-      await this.prisma.detalleRiesgo.createMany({
-        data: detallesRiesgo.map((d: DetalleRiesgoDto) => ({
-          ...d,
-          valoracionActivoId: item.id,
-        })),
-      });
+    if (
+      detallesRiesgo &&
+      Array.isArray(detallesRiesgo) &&
+      detallesRiesgo.length > 0
+    ) {
+      await this.prisma.$transaction(
+        detallesRiesgo.map((d) =>
+          this.prisma.detalleRiesgo.create({
+            data: this.mapDetalleRiesgo(d, item.id),
+          }),
+        ),
+      );
     }
     return this.enrich(item);
   }
@@ -112,12 +156,11 @@ export class ValoracionesService {
         this.prisma.detalleRiesgo.deleteMany({
           where: { valoracionActivoId: id },
         }),
-        this.prisma.detalleRiesgo.createMany({
-          data: detallesRiesgo.map((d: DetalleRiesgoDto) => ({
-            ...d,
-            valoracionActivoId: id,
-          })),
-        }),
+        ...detallesRiesgo.map((d) =>
+          this.prisma.detalleRiesgo.create({
+            data: this.mapDetalleRiesgo(d, id),
+          }),
+        ),
       ]);
     }
     return this.enrich(item);
