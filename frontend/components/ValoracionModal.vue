@@ -391,10 +391,12 @@ function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
 }
 
 function findMatchedDetalle(row: RiskRow): DetalleRiesgo | undefined {
-  if (!row.amenazaIds[0]) return undefined
+  if (!row.amenazaIds.length && !row.vulnerabilidadIds.length) return undefined
   return props.detallesRiesgo.find(d =>
-    d.tipo === 'amenaza' &&
-    d.catalogoId === Number(row.amenazaIds[0]) &&
+    // Match by amenaza if present
+    (row.amenazaIds[0]
+      ? d.tipo === 'amenaza' && d.catalogoId === Number(row.amenazaIds[0])
+      : d.tipo === 'vulnerabilidad' && d.catalogoId === Number(row.vulnerabilidadIds[0])) &&
     JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
     JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
   )
