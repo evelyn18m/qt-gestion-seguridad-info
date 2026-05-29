@@ -71,14 +71,12 @@ const props = defineProps<{
   evaluacionForm: EvaluacionFormData
   tratamientoForm: TratamientoFormData
   detallesRiesgo: DetalleRiesgo[]
-  activeTab: number
   valSaving: boolean
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'submit': []
-  'tab-change': [index: number]
   'reset-form': []
 }>()
 
@@ -149,6 +147,8 @@ const amenazaCategoria = ref('')
 const vulnerabilidadCategoria = ref('')
 const amenazaSeleccionada = ref('')
 const vulnerabilidadSeleccionada = ref('')
+const currentStep = ref(0)
+const TOTAL_STEPS = 4
 
 // ── Tab 2 Row State ─────────────────────────────────────────────────────────
 // Each row: { amenazaIds: string[], vulnerabilidadIds: string[], controlesImplementados: string }
@@ -301,7 +301,62 @@ watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
     loadExistingRows()
   }
+  if (!isOpen) {
+    currentStep.value = 0
+  }
 })
+
+// ── Validation Functions ──────────────────────────────────────────────────
+function canAdvanceFromStep1(): boolean {
+  return !!(
+    props.valForm.nombreActivo &&
+    props.valForm.tipoActivo &&
+    props.valForm.formato &&
+    props.valForm.macroProceso &&
+    props.valForm.subProceso &&
+    props.valForm.propietario &&
+    props.valForm.custodio &&
+    props.valForm.descripcion &&
+    props.valForm.controlSeguridad &&
+    props.valForm.ubicacion &&
+    props.valForm.confidencialidad &&
+    props.valForm.integridad &&
+    props.valForm.disponibilidad
+  )
+}
+
+function canAdvanceFromStep2(): boolean {
+  return riskRows.value.length > 0
+}
+
+function canAdvanceFromStep3(): boolean {
+  return riskRows.value.every(row =>
+    findMatchedDetalle(row)?.riesgoId &&
+    findMatchedDetalle(row)?.vulnerabilidadRiesgoId
+  )
+}
+
+function nextStep() {
+  if (currentStep.value === 0 && !canAdvanceFromStep1()) {
+    alert('Complete todos los campos requeridos en Valoración de Activo')
+    return
+  }
+  if (currentStep.value === 1 && !canAdvanceFromStep2()) {
+    alert('Agregue al menos una fila de riesgo')
+    return
+  }
+  if (currentStep.value === 2 && !canAdvanceFromStep3()) {
+    alert('Complete la evaluación de riesgo en todas las filas')
+    return
+  }
+  if (currentStep.value < TOTAL_STEPS - 1) {
+    currentStep.value++
+  }
+}
+
+function prevStep() {
+  if (currentStep.value > 0) currentStep.value--
+}
 
 // ── Helper Functions ─────────────────────────────────────────────────────────
 function getNivelesImpacto(tipo: string) {
@@ -477,27 +532,26 @@ const tabs = [
     <div class="val-modal-content">
       <div class="val-modal-header">
         <h3>{{ editId ? 'Editar' : 'Nueva' }} Valoración</h3>
-        <button class="btn-icon" @click="emit('update:modelValue', false)" title="Cerrar">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-      </div>
-
-      <!-- TABS -->
-      <div class="val-tabs">
-        <button
-          v-for="(tab, idx) in tabs"
-          :key="idx"
-          type="button"
-          class="val-tab"
-          :class="{ active: activeTab === idx }"
-          @click="emit('tab-change', idx)"
-        >{{ tab.label }}</button>
+        <div class="val-stepper">
+          <div
+            v-for="(tab, idx) in tabs"
+            :key="idx"
+            class="val-step"
+            :class="{ active: currentStep === idx, completed: currentStep > idx }"
+          >
+            <div class="val-step-circle">
+              <span v-if="currentStep > idx">&#10003;</span>
+              <span v-else>{{ idx + 1 }}</span>
+            </div>
+            <div class="val-step-label">{{ tab.label }}</div>
+          </div>
+        </div>
       </div>
 
       <div class="val-modal-body">
-        <form class="val-form" @submit.prevent="emit('submit')" novalidate>
+        <form class="val-form" novalidate>
           <!-- TAB 1: Valoración de Activo -->
-          <div v-show="activeTab === 0">
+          <div v-show="currentStep === 0">
             <div class="val-grid">
               <div class="val-card" style="border:none; padding:0; background:transparent;">
                 <h3 class="val-card-title">Identificación del Activo</h3>
@@ -604,7 +658,7 @@ const tabs = [
           </div>
 
           <!-- TAB 2: Análisis de Riesgos (row-based) -->
-          <div v-show="activeTab === 1" class="val-tab-panel">
+          <div v-show="currentStep === 1" class="val-tab-panel">
             <div class="val-card" style="border:none; padding:0; background:transparent;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
                 <h3 class="val-card-title" style="margin:0; border:none; padding:0;">Análisis de Riesgos — Filas de Riesgo</h3>
@@ -727,7 +781,7 @@ const tabs = [
           </div>
 
           <!-- TAB 3: Evaluación de Riesgo -->
-          <div v-show="activeTab === 2" class="val-tab-panel">
+          <div v-show="currentStep === 2" class="val-tab-panel">
             <div class="val-card" style="border:none; padding:0; background:transparent;">
               <h3 class="val-card-title">Evaluación de Riesgo por Item</h3>
               <div class="form-group">
@@ -799,7 +853,7 @@ const tabs = [
           </div>
 
           <!-- TAB 4: Tratamiento de Riesgo -->
-          <div v-show="activeTab === 3" class="val-tab-panel">
+          <div v-show="currentStep === 3" class="val-tab-panel">
             <div class="val-card" style="border:none; padding:0; background:transparent;">
               <h3 class="val-card-title">Tratamiento de Riesgo — por Fila</h3>
               <div v-if="riskRows.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y evalúe en la Pestaña 3.</div>
@@ -872,11 +926,13 @@ const tabs = [
             </div>
           </div>
 
-          <div class="val-actions">
-            <button type="button" class="btn-cancel" @click="emit('update:modelValue', false)" style="margin-right:1rem;">Cancelar</button>
-            <button type="submit" class="btn-primary" :disabled="valSaving" style="padding:0.75rem 2rem;font-size:1rem">{{ valSaving ? 'Guardando...' : editId ? 'Actualizar Valoración' : 'Guardar Valoración' }}</button>
-          </div>
         </form>
+      </div>
+      <div class="val-actions">
+        <button type="button" class="btn-cancel" @click="emit('update:modelValue', false); currentStep = 0">Cancelar</button>
+        <button v-if="currentStep > 0" type="button" class="btn-secondary" @click="prevStep">Atrás</button>
+        <button v-if="currentStep < TOTAL_STEPS - 1" type="button" class="btn-primary" @click="nextStep">Siguiente</button>
+        <button v-else type="button" class="btn-primary" :disabled="valSaving" @click="emit('submit')">{{ valSaving ? 'Guardando...' : editId ? 'Actualizar' : 'Guardar' }}</button>
       </div>
     </div>
   </div>
@@ -929,6 +985,7 @@ const tabs = [
   padding: 1.5rem;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -1116,9 +1173,12 @@ const tabs = [
 }
 
 .val-actions {
-  margin-top: 1.5rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
+  gap: 0.75rem;
+  background: var(--card-bg);
 }
 
 .val-table {
@@ -1168,36 +1228,60 @@ const tabs = [
   font-weight: 600;
 }
 
-/* Tabs */
-.val-tabs {
+/* Stepper — lives inside .val-modal-header, no extra borders/padding */
+.val-stepper {
   display: flex;
-  border-bottom: 1px solid var(--border);
-  background: rgba(15, 23, 42, 0.4);
-  padding: 0 1.5rem;
-  gap: 0.25rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.val-tab {
-  padding: 0.85rem 1.25rem;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  color: var(--text-muted);
-  font-size: 0.9rem;
+.val-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  opacity: 0.5;
+}
+
+.val-step.active {
+  opacity: 1;
+}
+
+.val-step.completed {
+  opacity: 0.8;
+}
+
+.val-step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
   font-weight: 600;
-  cursor: pointer;
   transition: all 0.2s ease;
-  font-family: inherit;
-  white-space: nowrap;
 }
 
-.val-tab:hover {
-  color: var(--text);
+.val-step.active .val-step-circle {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
 }
 
-.val-tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+.val-step.completed .val-step-circle {
+  background: rgba(22, 163, 74, 0.2);
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.val-step-label {
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--text-muted);
+  max-width: 80px;
 }
 
 .val-tab-panel {

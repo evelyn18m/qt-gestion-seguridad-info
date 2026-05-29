@@ -644,11 +644,9 @@ onMounted(() => {
         :evaluacion-form="evaluacionForm"
         :tratamiento-form="tratamientoForm"
         :detalles-riesgo="detallesRiesgo"
-        :active-tab="activeTab"
         :val-saving="valSaving"
         @update:model-value="showModalVal = $event"
         @submit="submitValoracion"
-        @tab-change="activeTab = $event"
         @reset-form="rebuildDetalles"
       />
 
