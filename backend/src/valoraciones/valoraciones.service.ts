@@ -6,6 +6,8 @@ import {
   DetalleRiesgoDto,
 } from './dto/create-valoracion.dto';
 import { UpdateValoracionDto } from './dto/update-valoracion.dto';
+import { calculateRiesgo, RiesgoCalculado } from './calculo-riesgo.service';
+import { CalcularDetalleDto } from './dto/calcular-detalle.dto';
 
 @Injectable()
 export class ValoracionesService {
@@ -14,6 +16,7 @@ export class ValoracionesService {
   private mapDetalleRiesgo(
     d: DetalleRiesgoDto,
     valoracionActivoId: number,
+    nivelRiesgoValor?: number,
   ): Prisma.DetalleRiesgoCreateInput {
     const data: Prisma.DetalleRiesgoCreateInput = {
       valoracionActivoId,
@@ -47,6 +50,19 @@ export class ValoracionesService {
         controlesImplementados: d.controlesImplementados,
       }),
     };
+
+    // Compute risk fields using calculateRiesgo with VA=3 (CIA promedio fallback)
+    // nivelRiesgoValor comes from the Riesgo catalog's valor field via riesgoId lookup
+    const nivelAmenaza = nivelRiesgoValor ?? 1;
+    const nivelVulnerabilidad = nivelRiesgoValor ?? 1;
+    const riesgo = calculateRiesgo(3, nivelAmenaza, nivelVulnerabilidad);
+    data.evaluacionRiesgo = riesgo.evaluacionRiesgo;
+    data.nivelRiesgo = riesgo.nivelRiesgo;
+    data.metodoTratamiento = riesgo.metodoTratamiento;
+    data.tipoControlId = d.tipoControlId; // tipoControl FK still set from DTO if present
+    data.evaluacionRiesgoControl = riesgo.evaluacionRiesgoControl;
+    data.nivelRiesgoControl = riesgo.nivelRiesgoControl;
+
     return data;
   }
 
@@ -129,10 +145,19 @@ export class ValoracionesService {
       Array.isArray(detallesRiesgo) &&
       detallesRiesgo.length > 0
     ) {
-      await this.prisma.$transaction(
+      // Look up Riesgo catalog entries to get nivel (valor field) for calculateRiesgo
+      const riesgoResults = await Promise.all(
         detallesRiesgo.map((d) =>
+          d.riesgoId != null
+            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoId } })
+            : Promise.resolve(null),
+        ),
+      );
+      const nivelValores = riesgoResults.map((r) => r?.valor ?? 1);
+      await this.prisma.$transaction(
+        detallesRiesgo.map((d, i) =>
           this.prisma.detalleRiesgo.create({
-            data: this.mapDetalleRiesgo(d, item.id),
+            data: this.mapDetalleRiesgo(d, item.id, nivelValores[i]),
           }),
         ),
       );
@@ -152,18 +177,56 @@ export class ValoracionesService {
       Array.isArray(detallesRiesgo) &&
       detallesRiesgo.length > 0
     ) {
+      // Look up Riesgo catalog entries to get nivel (valor field) for calculateRiesgo
+      const riesgoResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.riesgoId != null
+            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoId } })
+            : Promise.resolve(null),
+        ),
+      );
+      const nivelValores = riesgoResults.map((r) => r?.valor ?? 1);
       await this.prisma.$transaction([
         this.prisma.detalleRiesgo.deleteMany({
           where: { valoracionActivoId: id },
         }),
-        ...detallesRiesgo.map((d) =>
+        ...detallesRiesgo.map((d, i) =>
           this.prisma.detalleRiesgo.create({
-            data: this.mapDetalleRiesgo(d, id),
+            data: this.mapDetalleRiesgo(d, id, nivelValores[i]),
           }),
         ),
       ]);
     }
     return this.enrich(item);
+  }
+
+  /**
+   * Computes risk fields using calculateRiesgo without persisting.
+   * Reads the existing DetalleRiesgo row to validate it exists,
+   * then calculates using DTO params (overrides VA if provided).
+   */
+  async calcularDetalleRiesgo(
+    id: number,
+    detalleId: number,
+    dto: CalcularDetalleDto,
+  ): Promise<RiesgoCalculado> {
+    // Validate the detalle belongs to the valoracion
+    const detalle = await this.prisma.detalleRiesgo.findFirst({
+      where: { id: detalleId, valoracionActivoId: id },
+    });
+    if (!detalle) {
+      throw new NotFoundException(
+        `DetalleRiesgo ${detalleId} no encontrado para Valoración ${id}`,
+      );
+    }
+    const va = dto.VA ?? 3;
+    return calculateRiesgo(
+      va,
+      dto.nivelAmenaza,
+      dto.nivelVulnerabilidad,
+      dto.nivelAmenazaControl,
+      dto.nivelVulnerabilidadControl,
+    );
   }
 
   async remove(id: number) {

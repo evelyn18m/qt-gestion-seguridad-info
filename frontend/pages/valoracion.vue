@@ -248,6 +248,44 @@ async function submitValoracion() {
       controlesImplementados: d.controlesImplementados || null,
     }))
 
+    // ── Phase 3: Fetch server-computed risk fields via calculate endpoint ──
+    const { apiFetch } = useApi()
+    const nivelAmenaza = (() => {
+      if (!e.amenazaRiesgoId) return 1
+      const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(e.amenazaRiesgoId))
+      return found?.valor ?? 1
+    })()
+    const nivelVulnerabilidad = (() => {
+      if (!e.vulnerabilidadRiesgoId) return 1
+      const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(e.vulnerabilidadRiesgoId))
+      return found?.valor ?? 1
+    })()
+
+    for (let i = 0; i < detallesPayload.length; i++) {
+      const d = detallesPayload[i]
+      const hasRiskInput = d.amenazaIds || d.vulnerabilidadIds
+      if (hasRiskInput && valEditId.value && d.id) {
+        // Only call calculate for existing rows during edit
+        const calculado = await apiFetch<{ evaluacionRiesgo: number; nivelRiesgo: string; metodoTratamiento: string; tipoControl: string; evaluacionRiesgoControl: number; nivelRiesgoControl: string; riesgoResidual: 'ACEPTABLE' | 'INACEPTABLE' }>(
+          `/valoraciones/${valEditId.value}/detalles-riesgo/${d.id}/calcular`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ nivelAmenaza, nivelVulnerabilidad }),
+          },
+        )
+        Object.assign(d, {
+          evaluacionRiesgo: calculado.evaluacionRiesgo,
+          nivelRiesgo: calculado.nivelRiesgo,
+          metodoTratamiento: calculado.metodoTratamiento,
+          tipoControlId: null,
+          riesgoControlId: null,
+          evaluacionRiesgoControl: calculado.evaluacionRiesgoControl,
+          nivelRiesgoControl: calculado.nivelRiesgoControl,
+          riesgoResidual: calculado.riesgoResidual,
+        })
+      }
+    }
+
     const body = {
       nombreActivo: f.nombreActivo,
       tipoActivoId: Number(f.tipoActivo),
@@ -277,7 +315,6 @@ async function submitValoracion() {
       detallesRiesgo: detallesPayload,
     }
 
-    const { apiFetch } = useApi()
     const url = valEditId.value
       ? `/valoraciones/${valEditId.value}`
       : '/valoraciones'

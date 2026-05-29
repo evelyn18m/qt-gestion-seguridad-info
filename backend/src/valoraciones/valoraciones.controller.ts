@@ -11,6 +11,7 @@ import {
 import { ValoracionesService } from './valoraciones.service';
 import { CreateValoracionDto } from './dto/create-valoracion.dto';
 import { UpdateValoracionDto } from './dto/update-valoracion.dto';
+import { CalcularDetalleDto } from './dto/calcular-detalle.dto';
 
 @Controller('valoraciones')
 export class ValoracionesController {
@@ -37,6 +38,15 @@ export class ValoracionesController {
     @Body() dto: UpdateValoracionDto,
   ) {
     return this.valoracionesService.update(id, dto);
+  }
+
+  @Patch(':id/detalles-riesgo/:detalleId/calcular')
+  calcularDetalleRiesgo(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('detalleId', ParseIntPipe) detalleId: number,
+    @Body() dto: CalcularDetalleDto,
+  ) {
+    return this.valoracionesService.calcularDetalleRiesgo(id, detalleId, dto);
   }
 
   @Delete(':id')

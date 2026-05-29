@@ -148,7 +148,7 @@ describe('ValoracionesService — Tab 2 new fields', () => {
             controlesImplementados: undefined,
           },
         ],
-      } as unknown as UpdateValoracionDto;
+      };
 
       await service.create(dto);
 

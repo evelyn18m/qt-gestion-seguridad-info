@@ -39,7 +39,7 @@ export class AtLeastOneConstraint implements ValidatorConstraintInterface {
 
     return !amenazaEmpty || !vulnerabilidadEmpty;
   }
-  defaultMessage(_args: ValidationArguments): string {
+  defaultMessage(): string {
     return 'Debe proporcionar al menos una amenaza o una vulnerabilidad';
   }
 }
