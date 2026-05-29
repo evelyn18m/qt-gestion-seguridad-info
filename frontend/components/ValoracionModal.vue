@@ -456,6 +456,13 @@ function updateControlDetalle(d: DetalleRiesgo) {
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
 }
 
+function updateControlDetalleRow(row: RiskRow) {
+  const d = findMatchedDetalle(row)
+  if (!d) return
+  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId, props.evaluacionForm.vulnerabilidadRiesgoId)
+  d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
+}
+
 const tabs = [
   { label: 'Valoración de Activo' },
   { label: 'Análisis de Riesgos' },
@@ -794,101 +801,74 @@ const tabs = [
           <!-- TAB 4: Tratamiento de Riesgo -->
           <div v-show="activeTab === 3" class="val-tab-panel">
             <div class="val-card" style="border:none; padding:0; background:transparent;">
-              <h3 class="val-card-title">Tratamiento de Riesgo por Item</h3>
-              <div v-if="detallesRiesgo.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y evalúe en la Pestaña 3.</div>
-              <div v-else class="val-grid" style="grid-template-columns: 1fr 1fr; gap:1.5rem; margin-top:1rem;">
-                <!-- COLUMNA: Amenazas -->
-                <div>
-                  <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; color:var(--text-muted);">Amenazas</h4>
-                  <table class="val-table" v-if="detallesAmenazas.length > 0">
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Método</th>
-                        <th>Tipo Control</th>
-                        <th>Riesgo (Ctrl)</th>
-                        <th>Eval. (Ctrl)</th>
-                        <th>Nivel (Ctrl)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="d in detallesAmenazas" :key="d.catalogoId">
-                        <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
-                        <td><input v-model="d.metodoTratamiento" type="text" placeholder="Método" style="min-width:100px;" /></td>
-                        <td>
-                          <select v-model="d.tipoControlId" style="min-width:110px;">
-                            <option value="">Seleccionar...</option>
-                            <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
-                          </select>
-                        </td>
-                        <td>
-                          <select v-model="d.riesgoControlId" @change="updateControlDetalle(d)" style="min-width:110px;">
-                            <option value="">Seleccionar...</option>
-                            <option v-for="r in catalogData.valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                            </select>
-                        </td>
-                        <td>
-                          <span v-if="d.evaluacionRiesgoControl > 0">{{ d.evaluacionRiesgoControl.toFixed(2) }}</span>
-                          <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                        </td>
-                        <td>
-                          <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
-                            {{ getNivelStyle(d.nivelRiesgoControl).label }}
-                          </span>
-                          <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div v-else class="chip-empty" style="margin-top:0.5rem;">Sin amenazas</div>
-                </div>
-
-                <!-- COLUMNA: Vulnerabilidades -->
-                <div>
-                  <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; color:var(--text-muted);">Vulnerabilidades</h4>
-                  <table class="val-table" v-if="detallesVulnerabilidades.length > 0">
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Método</th>
-                        <th>Tipo Control</th>
-                        <th>Riesgo (Ctrl)</th>
-                        <th>Eval. (Ctrl)</th>
-                        <th>Nivel (Ctrl)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="d in detallesVulnerabilidades" :key="d.catalogoId">
-                        <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
-                        <td><input v-model="d.metodoTratamiento" type="text" placeholder="Método" style="min-width:100px;" /></td>
-                        <td>
-                          <select v-model="d.tipoControlId" style="min-width:110px;">
-                            <option value="">Seleccionar...</option>
-                            <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
-                          </select>
-                        </td>
-                        <td>
-                          <select v-model="d.riesgoControlId" @change="updateControlDetalle(d)" style="min-width:110px;">
-                            <option value="">Seleccionar...</option>
-                            <option v-for="r in catalogData.valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                          </select>
-                        </td>
-                        <td>
-                          <span v-if="d.evaluacionRiesgoControl > 0">{{ d.evaluacionRiesgoControl.toFixed(2) }}</span>
-                          <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                        </td>
-                        <td>
-                          <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
-                            {{ getNivelStyle(d.nivelRiesgoControl).label }}
-                          </span>
-                          <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div v-else class="chip-empty" style="margin-top:0.5rem;">Sin vulnerabilidades</div>
-                </div>
-              </div>
+              <h3 class="val-card-title">Tratamiento de Riesgo — por Fila</h3>
+              <div v-if="riskRows.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y evalúe en la Pestaña 3.</div>
+              <table v-else class="val-table">
+                <thead>
+                  <tr>
+                    <th>Amenaza</th>
+                    <th>Vulnerabilidad</th>
+                    <th>Método</th>
+                    <th>Tipo Control</th>
+                    <th>Riesgo (Ctrl)</th>
+                    <th>Eval. (Ctrl)</th>
+                    <th>Nivel (Ctrl)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template v-for="row in riskRows" :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
+                    <tr v-if="row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0">
+                    <td>
+                      <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{ getAmenazaLabel(aId) }}</span>
+                      <span v-if="row.amenazaIds.length === 0" style="color:var(--text-muted);">—</span>
+                    </td>
+                    <td>
+                      <span v-for="vId in row.vulnerabilidadIds" :key="'v-' + vId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{ getVulnerabilidadLabel(vId) }}</span>
+                      <span v-if="row.vulnerabilidadIds.length === 0" style="color:var(--text-muted);">—</span>
+                    </td>
+                    <td>
+                      <template v-if="findMatchedDetalle(row)">
+                        <input v-model="findMatchedDetalle(row)!.metodoTratamiento" type="text" placeholder="Método" style="min-width:100px;" />
+                      </template>
+                      <span v-else style="color:var(--text-muted);">—</span>
+                    </td>
+                    <td>
+                      <template v-if="findMatchedDetalle(row)">
+                        <select v-model="findMatchedDetalle(row)!.tipoControlId" style="min-width:110px;">
+                          <option value="">Seleccionar...</option>
+                          <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
+                        </select>
+                      </template>
+                      <span v-else style="color:var(--text-muted);">—</span>
+                    </td>
+                    <td>
+                      <template v-if="findMatchedDetalle(row)">
+                        <select v-model="findMatchedDetalle(row)!.riesgoControlId" @change="updateControlDetalleRow(row)" style="min-width:110px;">
+                          <option value="">Seleccionar...</option>
+                          <option v-for="r in catalogData.valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                        </select>
+                      </template>
+                      <span v-else style="color:var(--text-muted);">—</span>
+                    </td>
+                    <td>
+                      <template v-if="findMatchedDetalle(row)">
+                        <span v-if="findMatchedDetalle(row)!.evaluacionRiesgoControl > 0">{{ findMatchedDetalle(row)!.evaluacionRiesgoControl.toFixed(2) }}</span>
+                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                      </template>
+                      <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                    </td>
+                    <td>
+                      <template v-if="findMatchedDetalle(row) && findMatchedDetalle(row)!.nivelRiesgoControl">
+                        <span class="nivel-badge" :style="{ color: getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).color, background: getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).bg }">
+                          {{ getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).label }}
+                        </span>
+                      </template>
+                      <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                    </td>
+                  </tr>
+                  </template>
+                </tbody>
+              </table>
             </div>
           </div>
 

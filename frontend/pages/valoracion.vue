@@ -248,6 +248,33 @@ async function submitValoracion() {
       controlesImplementados: d.controlesImplementados || null,
     }))
 
+    // ── Propagation: copy treatment fields from first-matched entry to all row siblings ──
+    const TREATMENT_FIELDS = ['metodoTratamiento', 'tipoControlId', 'riesgoControlId', 'evaluacionRiesgoControl', 'nivelRiesgoControl'] as const
+    const riesgoRows: { amenazaIds: string[], vulnerabilidadIds: string[] }[] = []
+    const seen = new Set<string>()
+    detallesRiesgo.value.forEach(d => {
+      if (!d.amenazaIds?.length && !d.vulnerabilidadIds?.length) return
+      const key = JSON.stringify([...(d.amenazaIds ?? []), ...(d.vulnerabilidadIds ?? [])].sort())
+      if (!seen.has(key)) {
+        seen.add(key)
+        riesgoRows.push({ amenazaIds: d.amenazaIds ?? [], vulnerabilidadIds: d.vulnerabilidadIds ?? [] })
+      }
+    })
+    riesgoRows.forEach(row => {
+      const matched = detallesRiesgo.value.find(d =>
+        JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
+        JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
+      )
+      if (!matched) return
+      detallesRiesgo.value
+        .filter(d => d !== matched &&
+          JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
+          JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds))
+        .forEach(sibling => {
+          TREATMENT_FIELDS.forEach(f => { (sibling as any)[f] = (matched as any)[f] })
+        })
+    })
+
     // ── Phase 3: Fetch server-computed risk fields via calculate endpoint ──
     const { apiFetch } = useApi()
     const nivelAmenaza = (() => {
