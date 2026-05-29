@@ -225,9 +225,15 @@ function parseIds(jsonStr: string | null | undefined): string[] {
 }
 
 // Sync riskRows to detallesRiesgo (for Tabs 3/4 backward compat)
+// Creates ONE combined entry per RiskRow (not separate amenaza + vulnerabilidad entries)
+// This ensures grouping is preserved when loading existing data
 function syncRowsToDetalles() {
   const entries: DetalleRiesgo[] = []
   riskRows.value.forEach(row => {
+    // Only create entries if the row has at least one amenaza or vulnerabilidad
+    if (row.amenazaIds.length === 0 && row.vulnerabilidadIds.length === 0) return
+
+    // Create one entry per amenaza in this row (with acceso to all row's arrays)
     row.amenazaIds.forEach(aId => {
       entries.push({
         tipo: 'amenaza' as const,
@@ -245,6 +251,7 @@ function syncRowsToDetalles() {
         controlesImplementados: row.controlesImplementados,
       })
     })
+    // Create one entry per vulnerabilidad in this row (with acceso to all row's arrays)
     row.vulnerabilidadIds.forEach(vId => {
       entries.push({
         tipo: 'vulnerabilidad' as const,
