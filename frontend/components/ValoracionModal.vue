@@ -383,6 +383,16 @@ function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
   return localCalculateRiesgo(va, nivelA, nivelV)
 }
 
+function findMatchedDetalle(row: RiskRow): DetalleRiesgo | undefined {
+  if (!row.amenazaIds[0]) return undefined
+  return props.detallesRiesgo.find(d =>
+    d.tipo === 'amenaza' &&
+    d.catalogoId === Number(row.amenazaIds[0]) &&
+    JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
+    JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
+  )
+}
+
 function getCiaLevel(avg: number) {
   if (avg >= 2.5) return 'Alto'
   if (avg >= 1.5) return 'Medio'
@@ -675,7 +685,7 @@ const tabs = [
 
                     <!-- Riesgo Residual cell: show ACEPTABLE/INACEPTABLE based on evaluacionRiesgoControl -->
                     <td style="text-align:center;">
-                      <template v-for="d in detallesRiesgo.filter(dd => dd.amenazaIds === row.amenazaIds && dd.vulnerabilidadIds === row.vulnerabilidadIds)" :key="d.tipo + d.catalogoId">
+                      <template v-for="d in detallesRiesgo.filter(dd => JSON.stringify(dd.amenazaIds) === JSON.stringify(row.amenazaIds) && JSON.stringify(dd.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds))" :key="d.tipo + d.catalogoId">
                         <span
                           v-if="d.evaluacionRiesgoControl > 0"
                           class="nivel-badge"
@@ -708,50 +718,58 @@ const tabs = [
                 <label>Impacto (Extraído de Valoración CIA - Pestaña 1)</label>
                 <input type="text" :value="ciaAverage > 0 ? ciaAverage.toFixed(2) + ' — ' + getCiaLevel(ciaAverage) : 'Complete Valoración CIA en Pestaña 1'" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" />
               </div>
-              <div class="form-group">
-                <label>Controles de Área</label>
-                <textarea v-model="evaluacionForm.controlesArea" placeholder="Describa los controles de área" rows="2"></textarea>
-              </div>
-              <div v-if="detallesRiesgo.length === 0" class="chip-empty">No hay amenazas ni vulnerabilidades seleccionadas en la Pestaña 2.</div>
+              <div v-if="riskRows.length === 0" class="chip-empty">No hay amenazas ni vulnerabilidades seleccionadas en la Pestaña 2.</div>
               <table v-else class="val-table" style="margin-top:1rem;">
                 <thead>
                   <tr>
-                    <th>Tipo</th>
-                    <th>Item</th>
-                    <th>Nivel de Amenaza</th>
+                    <th>Amenaza</th>
+                    <th>Vulnerabilidad</th>
+                    <th>Nivel Amenaza</th>
                     <th>Nivel Vulnerabilidad</th>
                     <th>Evaluación</th>
                     <th>Nivel</th>
-                    <th>Controles de Área</th>
+                    <th>Controles</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="d in detallesRiesgo" :key="d.tipo + d.catalogoId">
-                    <td><span class="tag-count">{{ d.tipo === 'amenaza' ? 'A' : 'V' }}</span></td>
-                    <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
+                  <tr v-for="row in riskRows" :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
                     <td>
-                      <select v-model="d.riesgoId" @change="updateEvaluacionDetalle(d)" style="min-width:130px;">
+                      <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{ getAmenazaLabel(aId) }}</span>
+                      <span v-if="row.amenazaIds.length === 0" style="color:var(--text-muted);">—</span>
+                    </td>
+                    <td>
+                      <span v-for="vId in row.vulnerabilidadIds" :key="'v-' + vId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{ getVulnerabilidadLabel(vId) }}</span>
+                      <span v-if="row.vulnerabilidadIds.length === 0" style="color:var(--text-muted);">—</span>
+                    </td>
+                    <td>
+                      <select v-model="findMatchedDetalle(row)!.riesgoId" @change="updateEvaluacionDetalle(findMatchedDetalle(row))" style="min-width:130px;">
                         <option value="">Seleccionar...</option>
-                        <option v-for="r in catalogData.valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                        <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.evaluacion?.toLowerCase().includes('amenaza'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
                       </select>
                     </td>
                     <td>
-                      <select v-model="d.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle(d)" style="min-width:130px;">
+                      <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle(findMatchedDetalle(row))" style="min-width:130px;">
                         <option value="">Seleccionar...</option>
-                        <option v-for="r in catalogData.valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                        <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.evaluacion?.toLowerCase().includes('vulnerabilidad'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
                       </select>
                     </td>
                     <td>
-                      <span v-if="getRowPreview(d).evaluacionRiesgo > 0">{{ getRowPreview(d).evaluacionRiesgo.toFixed(2) }}</span>
+                      <template v-if="findMatchedDetalle(row)">
+                        <span v-if="getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo > 0">{{ getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo.toFixed(2) }}</span>
+                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                      </template>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                     <td>
-                      <span v-if="getRowPreview(d).nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(getRowPreview(d).nivelRiesgo).color, background: getNivelStyle(getRowPreview(d).nivelRiesgo).bg }">
-                        {{ getNivelStyle(getRowPreview(d).nivelRiesgo).label }}
-                      </span>
+                      <template v-if="findMatchedDetalle(row)">
+                        <span v-if="getRowPreview(findMatchedDetalle(row)!).nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).color, background: getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).bg }">{{ getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).label }}</span>
+                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                      </template>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
-                    <td><span style="font-size:0.8rem;">{{ d.controlesImplementados || '—' }}</span></td>
+                    <td>
+                      <textarea v-model="row.controlesImplementados" placeholder="Controles implementados..." rows="2" style="resize:vertical; min-width:120px;"></textarea>
+                    </td>
                   </tr>
                 </tbody>
               </table>
