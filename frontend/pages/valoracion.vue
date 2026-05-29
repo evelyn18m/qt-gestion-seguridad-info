@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CatalogoItem, DetalleRiesgo, ValoracionActivo } from '~/types/api'
 import ValoracionModal from '~/components/ValoracionModal.vue'
+import ValoracionViewModal from '~/components/ValoracionViewModal.vue'
 const valTipoActivo = ref<CatalogoItem[]>([])
 const valFormatos = ref<CatalogoItem[]>([])
 const valMacroprocesos = ref<CatalogoItem[]>([])
@@ -651,123 +652,11 @@ onMounted(() => {
       />
 
       <!-- VIEW MODAL -->
-      <div v-if="showViewModal && viewItem" class="val-modal-overlay" @click.self="showViewModal = false">
-        <div class="val-modal-content" style="max-width: 700px;">
-          <div class="val-modal-header">
-            <h3>Detalle de Valoración #{{ viewItem.id }}</h3>
-            <button class="btn-icon" @click="showViewModal = false" title="Cerrar">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <div class="val-modal-body">
-            <div class="val-grid" style="grid-template-columns: 1fr 1fr;">
-              <div class="val-card" style="border:none; padding:0; background:transparent;">
-                <h3 class="val-card-title">Información del Activo</h3>
-                <div class="view-field"><span class="view-label">Nombre:</span> <span class="view-value">{{ viewItem.nombreActivo || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Tipo:</span> <span class="view-value">{{ viewItem.tipoActivo?.nombre || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Formato:</span> <span class="view-value">{{ viewItem.formato?.nombre || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">MacroProceso:</span> <span class="view-value">{{ viewItem.macroProceso?.nombre || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Subproceso:</span> <span class="view-value">{{ viewItem.subProceso?.nombre || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Propietario:</span> <span class="view-value">{{ viewItem.propietario?.nombre || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Custodio:</span> <span class="view-value">{{ viewItem.custodio?.nombre || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Ubicación:</span> <span class="view-value">{{ viewItem.ubicacion || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Datos Personales:</span> <span class="view-value">{{ viewItem.tieneDatosPersonales ? 'SÍ' : 'NO' }}</span></div>
-              </div>
-              <div class="val-card" style="border:none; padding:0; background:transparent;">
-                <h3 class="val-card-title">Valoración CIA</h3>
-                <div class="view-field"><span class="view-label">Confidencialidad:</span> <span class="view-value">{{ viewItem.confidencialidad?.nivel || 'N/A' }} ({{ viewItem.confidencialidad?.valor || '-' }})</span></div>
-                <div class="view-field"><span class="view-label">Integridad:</span> <span class="view-value">{{ viewItem.integridad?.nivel || 'N/A' }} ({{ viewItem.integridad?.valor || '-' }})</span></div>
-                <div class="view-field"><span class="view-label">Disponibilidad:</span> <span class="view-value">{{ viewItem.disponibilidad?.nivel || 'N/A' }} ({{ viewItem.disponibilidad?.valor || '-' }})</span></div>
-                <div class="view-field"><span class="view-label">Promedio CIA:</span>
-                  <span class="view-value" v-if="calculateRowCiaAverage(viewItem) > 0">
-                    <span class="cia-average-level" style="display:inline-block;">{{ calculateRowCiaAverage(viewItem).toFixed(2) }} — {{ getCiaLevel(calculateRowCiaAverage(viewItem)) }}</span>
-                  </span>
-                  <span class="view-value" v-else>Pendiente</span>
-                </div>
-                <div class="view-field"><span class="view-label">Descripción:</span> <span class="view-value">{{ viewItem.descripcion || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Controles:</span> <span class="view-value">{{ viewItem.controlSeguridad || 'N/A' }}</span></div>
-                <div class="view-field"><span class="view-label">Observaciones:</span> <span class="view-value">{{ viewItem.observaciones || 'N/A' }}</span></div>
-              </div>
-            </div>
-
-            <!-- Tab 2: Análisis de Riesgos -->
-            <div v-if="viewItem.amenazas || viewItem.vulnerabilidades" class="val-card" style="border:none; padding:0; background:transparent; margin-top:1.5rem;">
-              <h3 class="val-card-title">Análisis de Riesgos</h3>
-              <div class="view-field"><span class="view-label">Amenazas:</span> <span class="view-value">{{ safeJsonParse(viewItem.amenazas ?? null, []).length }} seleccionadas</span></div>
-              <div class="view-field"><span class="view-label">Vulnerabilidades:</span> <span class="view-value">{{ safeJsonParse(viewItem.vulnerabilidades ?? null, []).length }} seleccionadas</span></div>
-              <div class="view-field" v-if="viewItem.controlesImplementacion"><span class="view-label">Controles de Implementación:</span> <span class="view-value">{{ viewItem.controlesImplementacion }}</span></div>
-            </div>
-
-            <!-- Tab 3: Evaluación de Riesgo -->
-            <div v-if="viewItem.detallesRiesgo && viewItem.detallesRiesgo.length > 0" class="val-card" style="border:none; padding:0; background:transparent; margin-top:1.5rem;">
-              <h3 class="val-card-title">Evaluación de Riesgos</h3>
-              <table class="val-table" style="margin-top:0.75rem;">
-                <thead>
-                  <tr>
-                    <th>Tipo</th>
-                    <th>Item</th>
-                    <th>Evaluación</th>
-                    <th>Nivel</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="d in viewItem.detallesRiesgo" :key="d.id">
-                    <td><span class="tag-count">{{ d.tipo === 'amenaza' ? 'A' : 'V' }}</span></td>
-                    <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
-                    <td>{{ (d.evaluacionRiesgo ?? 0) > 0 ? (d.evaluacionRiesgo ?? 0).toFixed(2) : '—' }}</td>
-                    <td>
-                      <span v-if="d.nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgo).color, background: getNivelStyle(d.nivelRiesgo).bg }">
-                        {{ getNivelStyle(d.nivelRiesgo).label }}
-                      </span>
-                      <span v-else>—</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Tab 4: Tratamiento de Riesgo -->
-            <div v-if="viewItem.metodoTratamiento || viewItem.tipoControl || (viewItem.detallesRiesgo && viewItem.detallesRiesgo.some(d => d.metodoTratamiento || d.tipoControlId))" class="val-card" style="border:none; padding:0; background:transparent; margin-top:1.5rem;">
-              <h3 class="val-card-title">Tratamiento de Riesgo</h3>
-              <div v-if="viewItem.metodoTratamiento" class="view-field"><span class="view-label">Método:</span> <span class="view-value">{{ viewItem.metodoTratamiento }}</span></div>
-              <div v-if="viewItem.tipoControl" class="view-field"><span class="view-label">Tipo de Control:</span> <span class="view-value">{{ viewItem.tipoControl?.nombre || getTipoControlName(viewItem.tipoControl) }}</span></div>
-              <div v-if="viewItem.controlesImplementar" class="view-field"><span class="view-label">Controles a Implementar:</span> <span class="view-value">{{ viewItem.controlesImplementar }}</span></div>
-              <div v-if="viewItem.detallesRiesgo && viewItem.detallesRiesgo.some(d => d.metodoTratamiento || d.tipoControlId)" style="margin-top:1rem;">
-                <h4 style="font-size:0.9rem; color:var(--text-muted); margin:0 0 0.75rem 0;">Controles por Item</h4>
-                <table class="val-table">
-                  <thead>
-                    <tr>
-                      <th>Item</th>
-                      <th>Método</th>
-                      <th>Tipo Control</th>
-                      <th>Eval. Control</th>
-                      <th>Nivel Control</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="d in viewItem.detallesRiesgo.filter(d => d.metodoTratamiento || d.tipoControlId)" :key="d.id">
-                      <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
-                      <td>{{ d.metodoTratamiento || '—' }}</td>
-                      <td>{{ d.tipoControlId ? getTipoControlName(d.tipoControlId) : '—' }}</td>
-                      <td>{{ (d.evaluacionRiesgoControl ?? 0) > 0 ? (d.evaluacionRiesgoControl ?? 0).toFixed(2) : '—' }}</td>
-                      <td>
-                        <span v-if="d.nivelRiesgoControl" class="nivel-badge" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }">
-                          {{ getNivelStyle(d.nivelRiesgoControl).label }}
-                        </span>
-                        <span v-else>—</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="val-actions" style="margin-top:1.5rem;">
-              <button type="button" class="btn-cancel" @click="showViewModal = false">Cerrar</button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ValoracionViewModal
+        v-model="showViewModal"
+        :view-item="viewItem"
+        :catalog-data="catalogData"
+      />
     </template>
   </div>
 </template>
@@ -895,52 +784,6 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.val-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 2rem;
-}
-
-.val-modal-content {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  width: 100%;
-  max-width: 900px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-
-.val-modal-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.val-modal-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: var(--primary);
-}
-
-.val-modal-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-}
-
 .val-empty-state {
   text-align: center;
   color: var(--text-muted);
@@ -1022,25 +865,6 @@ onMounted(() => {
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
-}
-
-/* View modal styles */
-.view-field {
-  margin-bottom: 0.75rem;
-  line-height: 1.5;
-}
-
-.view-label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  display: block;
-  margin-bottom: 0.15rem;
-}
-
-.view-value {
-  font-size: 0.95rem;
-  color: var(--text);
 }
 
 .btn-view {
