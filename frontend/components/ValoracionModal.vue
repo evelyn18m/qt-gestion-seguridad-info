@@ -751,16 +751,22 @@ const tabs = [
                       <span v-if="row.vulnerabilidadIds.length === 0" style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
-                      <select v-model="findMatchedDetalle(row)!.riesgoId" @change="updateEvaluacionDetalle(findMatchedDetalle(row))" style="min-width:130px;">
-                        <option value="">Seleccionar...</option>
-                        <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.evaluacion?.toLowerCase().includes('amenaza'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                      </select>
+                      <template v-if="row.amenazaIds.length > 0 && findMatchedDetalle(row)">
+                        <select v-model="findMatchedDetalle(row)!.riesgoId" @change="updateEvaluacionDetalle(findMatchedDetalle(row))" style="min-width:130px;">
+                          <option value="">Seleccionar...</option>
+                          <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.evaluacion?.toLowerCase().includes('amenaza'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                        </select>
+                      </template>
+                      <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                     <td>
-                      <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle(findMatchedDetalle(row))" style="min-width:130px;">
-                        <option value="">Seleccionar...</option>
-                        <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.evaluacion?.toLowerCase().includes('vulnerabilidad'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                      </select>
+                      <template v-if="row.vulnerabilidadIds.length > 0 && findMatchedDetalle(row)">
+                        <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle(findMatchedDetalle(row))" style="min-width:130px;">
+                          <option value="">Seleccionar...</option>
+                          <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.evaluacion?.toLowerCase().includes('vulnerabilidad'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                        </select>
+                      </template>
+                      <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
