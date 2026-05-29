@@ -373,6 +373,16 @@ function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabili
   return { evaluacionRiesgo, nivelRiesgo }
 }
 
+function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
+  const va = ciaAverage.value
+  const nivelA = getValorRiesgo(d.riesgoId)
+  const nivelV = getValorRiesgo(d.vulnerabilidadRiesgoId)
+  if (va === 0 || !nivelA || !nivelV) {
+    return { evaluacionRiesgo: 0, nivelRiesgo: '' }
+  }
+  return localCalculateRiesgo(va, nivelA, nivelV)
+}
+
 function getCiaLevel(avg: number) {
   if (avg >= 2.5) return 'Alto'
   if (avg >= 1.5) return 'Medio'
@@ -702,31 +712,17 @@ const tabs = [
                 <label>Controles de Área</label>
                 <textarea v-model="evaluacionForm.controlesArea" placeholder="Describa los controles de área" rows="2"></textarea>
               </div>
-              <div class="val-grid" style="grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
-                <div class="form-group">
-                  <label>Nivel de Amenaza</label>
-                  <select v-model="evaluacionForm.amenazaRiesgoId" @change="updateEvaluacionDetalle()">
-                    <option value="">Seleccionar...</option>
-                    <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.valor && r.evaluacion?.toLowerCase().includes('amenaza'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Nivel de Vulnerabilidad</label>
-                  <select v-model="evaluacionForm.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle()">
-                    <option value="">Seleccionar...</option>
-                    <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.valor && r.evaluacion?.toLowerCase().includes('vulnerabilidad'))" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
-                  </select>
-                </div>
-              </div>
               <div v-if="detallesRiesgo.length === 0" class="chip-empty">No hay amenazas ni vulnerabilidades seleccionadas en la Pestaña 2.</div>
               <table v-else class="val-table" style="margin-top:1rem;">
                 <thead>
                   <tr>
                     <th>Tipo</th>
                     <th>Item</th>
-                    <th>Nivel de Riesgo</th>
+                    <th>Nivel de Amenaza</th>
+                    <th>Nivel Vulnerabilidad</th>
                     <th>Evaluación</th>
                     <th>Nivel</th>
+                    <th>Controles de Área</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -740,15 +736,22 @@ const tabs = [
                       </select>
                     </td>
                     <td>
-                      <span v-if="previewRiesgo.evaluacionRiesgo > 0">{{ previewRiesgo.evaluacionRiesgo.toFixed(2) }}</span>
+                      <select v-model="d.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle(d)" style="min-width:130px;">
+                        <option value="">Seleccionar...</option>
+                        <option v-for="r in catalogData.valRiesgos" :key="r.id" :value="r.id">{{ r.evaluacion }}</option>
+                      </select>
+                    </td>
+                    <td>
+                      <span v-if="getRowPreview(d).evaluacionRiesgo > 0">{{ getRowPreview(d).evaluacionRiesgo.toFixed(2) }}</span>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                     <td>
-                      <span v-if="previewRiesgo.nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(previewRiesgo.nivelRiesgo).color, background: getNivelStyle(previewRiesgo.nivelRiesgo).bg }">
-                        {{ getNivelStyle(previewRiesgo.nivelRiesgo).label }}
+                      <span v-if="getRowPreview(d).nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(getRowPreview(d).nivelRiesgo).color, background: getNivelStyle(getRowPreview(d).nivelRiesgo).bg }">
+                        {{ getNivelStyle(getRowPreview(d).nivelRiesgo).label }}
                       </span>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
+                    <td><span style="font-size:0.8rem;">{{ d.controlesImplementados || '—' }}</span></td>
                   </tr>
                 </tbody>
               </table>

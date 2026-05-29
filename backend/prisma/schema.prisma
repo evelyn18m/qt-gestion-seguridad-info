@@ -141,6 +141,7 @@ model DetalleRiesgo {
   tipo                  String   // "amenaza" | "vulnerabilidad"
   catalogoId            Int      // id de Amenaza o Vulnerabilidad
   riesgoId              Int?     // id del catálogo Riesgo seleccionado
+  vulnerabilidadRiesgoId Int?    // id del catálogo Riesgo para vulnerabilidad (per-row)
   evaluacionRiesgo      Float?
   nivelRiesgo           String?
   metodoTratamiento     String?  @db.Text

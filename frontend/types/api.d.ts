@@ -63,6 +63,7 @@ export interface DetalleRiesgo {
   tipo: 'amenaza' | 'vulnerabilidad'
   catalogoId: number
   riesgoId?: number | string | null
+  vulnerabilidadRiesgoId?: number | null
   evaluacionRiesgo?: number
   nivelRiesgo?: string
   metodoTratamiento?: string
