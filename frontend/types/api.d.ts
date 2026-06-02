@@ -76,6 +76,7 @@ export interface DetalleRiesgo {
   amenazaIds?: string[]
   vulnerabilidadIds?: string[]
   controlesImplementados?: string
+  controlesArea?: string
 }
 
 export interface ApiError {

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Preview reactiva en Tab 3 (Evaluación de Riesgos) y badge residual en Tab 2. Muestra `evaluacionRiesgo` y `nivelRiesgo` antes de guardar, usando CIA promedio del formulario padre.
+Preview reactiva en Tab 3 (Evaluación de Riesgos). Muestra `evaluacionRiesgo` y `nivelRiesgo` antes de guardar, usando CIA promedio del formulario padre.
 
 ## ADDED Requirements
 
@@ -77,21 +77,6 @@ The `controlesImplementados` field of each `DetalleRiesgo` entry MUST be display
 - THEN a column shows that text
 - AND no `<input>` or `<textarea>` for `controlesImplementados` is rendered in Tab 3
 
-### Requirement: Riesgo Residual Badge in Tab 2
-
-La tabla de análisis en Tab 2 DEBE mostrar badge `"ACEPTABLE"` o `"INACEPTABLE"` basado en `evaluacionRiesgoControl` y `nivelRiesgoControl` de cada fila.
-
-#### Scenario: Badge muestra ACEPTABLE
-
-- GIVEN una fila tiene `evaluacionRiesgoControl = 2`, `nivelRiesgoControl = "BAJO"`
-- WHEN Tab 2 se renderiza
-- THEN muestra badge verde "ACEPTABLE"
-
-#### Scenario: Badge muestra INACEPTABLE
-
-- GIVEN una fila tiene `evaluacionRiesgoControl = 6`, `nivelRiesgoControl = "MEDIO"`
-- WHEN Tab 2 se renderiza
-- THEN muestra badge rojo "INACEPTABLE"
 
 ### Requirement: Preview API Call for Exact Calculation
 
@@ -108,7 +93,6 @@ El frontend DEBE llamar a `PATCH /detalle-riesgo/:id/calcular` para obtener el c
 | Component | Change | Description |
 |-----------|--------|-------------|
 | `ValoracionModal.vue` | Modified Tab 3 | Añadir preview reactiva |
-| `ValoracionModal.vue` | Modified Tab 2 | Añadir badge residual |
 | `pages/valoracion.vue` | Modified | Conectar API preview |
 | `types/api.d.ts` | Modified | Tipos para campos calculados |
 

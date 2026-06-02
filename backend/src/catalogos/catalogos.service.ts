@@ -35,7 +35,7 @@ const FIELD_MAP: Record<string, readonly string[]> = {
   funcionario: ['nombre'],
   area: ['nombre'],
   tipoControl: ['nombre'],
-  riesgo: ['evaluacion', 'valor'],
+  riesgo: ['tipo', 'nivel', 'valor'],
   probabilidad: ['nombre'],
 };
 

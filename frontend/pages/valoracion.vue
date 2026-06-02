@@ -247,6 +247,7 @@ async function submitValoracion() {
       amenazaIds: d.amenazaIds && d.amenazaIds.length > 0 ? JSON.stringify(d.amenazaIds) : null,
       vulnerabilidadIds: d.vulnerabilidadIds && d.vulnerabilidadIds.length > 0 ? JSON.stringify(d.vulnerabilidadIds) : null,
       controlesImplementados: d.controlesImplementados || null,
+      controlesArea: d.controlesArea || null,
     }))
 
     // ── Propagation: copy treatment fields from first-matched entry to all row siblings ──
@@ -417,6 +418,7 @@ function editValoracion(item: ValoracionActivo) {
       amenazaIds: safeJsonParse((d.amenazaIds as unknown as string), []),
       vulnerabilidadIds: safeJsonParse((d.vulnerabilidadIds as unknown as string), []),
       controlesImplementados: d.controlesImplementados || '',
+      controlesArea: d.controlesArea || '',
     }))
   } else {
     detallesRiesgo.value = []
@@ -555,6 +557,7 @@ onMounted(() => {
         <table v-else class="val-table">
           <thead>
             <tr>
+              <th style="width:60px;">Nro</th>
               <th>Nombre de Activo</th>
               <th>Macroproceso</th>
               <th>Valoración CIA</th>
@@ -563,6 +566,7 @@ onMounted(() => {
           </thead>
           <tbody>
             <tr v-for="v in valSaved" :key="v.id">
+              <td style="text-align:center;">{{ v.id }}</td>
               <td>{{ v.nombreActivo || 'N/A' }}</td>
               <td>{{ v.macroProceso?.nombre || `MP#${v.macroProcesoId}` }}</td>
               <td>
@@ -575,60 +579,6 @@ onMounted(() => {
                 <button class="btn-icon btn-view" title="Ver" @click="viewValoracion(v)"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button>
                 <button class="btn-icon btn-edit" title="Editar" @click="editValoracion(v)"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg></button>
                 <button class="btn-icon btn-delete" title="Eliminar" @click="deleteValoracion(v.id)"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- RISK ANALYSIS TABLE -->
-      <div v-if="valSaved.length > 0" class="val-card" style="padding:0; overflow:hidden; margin-top:1.5rem;">
-        <div style="padding:1rem 1.25rem; border-bottom:1px solid var(--border); background:rgba(99,102,241,0.05);">
-          <h3 style="margin:0; font-size:1rem; color:var(--primary);">Análisis, Evaluación y Tratamiento de Riesgo</h3>
-        </div>
-        <table class="val-table">
-          <thead>
-            <tr>
-              <th>Macroproceso</th>
-              <th>Nombre de Activo</th>
-              <th>Valoración CIA</th>
-              <th>Cálculo de Evaluación de Riesgo</th>
-              <th>Nivel de Riesgo</th>
-              <th>Tipo de Control</th>
-              <th>Evaluación de Riesgo con Control</th>
-              <th>Nivel con Control</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="v in valSaved" :key="v.id">
-              <td>{{ v.macroProceso?.nombre || `MP#${v.macroProcesoId}` }}</td>
-              <td>{{ v.nombreActivo || 'N/A' }}</td>
-              <td>
-                <span v-if="calculateRowCiaAverage(v) > 0" class="cia-average-level" style="display:inline-block;">
-                  {{ calculateRowCiaAverage(v).toFixed(2) }} — {{ getCiaLevel(calculateRowCiaAverage(v)) }}
-                </span>
-                <span v-else style="color:var(--text-muted); font-size:0.85rem;">Pendiente</span>
-              </td>
-              <td>
-                <span v-if="resumenEvaluacionRiesgo(v).evaluacion > 0">{{ resumenEvaluacionRiesgo(v).evaluacion.toFixed(2) }}</span>
-                <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-              </td>
-              <td>
-                <span v-if="resumenEvaluacionRiesgo(v).nivel" class="nivel-badge" :style="{ color: getNivelStyle(resumenEvaluacionRiesgo(v).nivel).color, background: getNivelStyle(resumenEvaluacionRiesgo(v).nivel).bg }">
-                  {{ getNivelStyle(resumenEvaluacionRiesgo(v).nivel).label }}
-                </span>
-                <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-              </td>
-              <td>{{ resumenControl(v).tipoControl }}</td>
-              <td>
-                <span v-if="resumenControl(v).evaluacion > 0">{{ resumenControl(v).evaluacion.toFixed(2) }}</span>
-                <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-              </td>
-              <td>
-                <span v-if="resumenControl(v).nivel" class="nivel-badge" :style="{ color: getNivelStyle(resumenControl(v).nivel).color, background: getNivelStyle(resumenControl(v).nivel).bg }">
-                  {{ getNivelStyle(resumenControl(v).nivel).label }}
-                </span>
-                <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
               </td>
             </tr>
           </tbody>

@@ -153,6 +153,7 @@ model DetalleRiesgo {
   amenazaIds            String?   @db.Text  // JSON array, e.g. "[3,7]"
   vulnerabilidadIds      String?   @db.Text  // JSON array, e.g. "[5]"
   controlesImplementados String?  @db.Text  // per-row controls
+  controlesArea         String?  @db.Text  // per-row controls area (Tab 3 only)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
@@ -172,11 +173,12 @@ model Probabilidad {
 }
 
 model Riesgo {
-  id          Int      @id @default(autoincrement())
-  evaluacion  String   @db.Text
-  valor       Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  tipo      String   // Amenaza, Vulnerabilidad
+  nivel     String   // Alto, Medio, Bajo
+  valor     Int      // 3=Alto, 2=Medio, 1=Bajo
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 

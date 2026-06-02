@@ -49,6 +49,9 @@ export class ValoracionesService {
       ...(d.controlesImplementados !== undefined && {
         controlesImplementados: d.controlesImplementados,
       }),
+      ...(d.controlesArea !== undefined && {
+        controlesArea: d.controlesArea,
+      }),
     };
 
     // Compute risk fields using calculateRiesgo with VA=3 (CIA promedio fallback)

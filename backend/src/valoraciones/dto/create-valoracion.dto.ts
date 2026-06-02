@@ -103,6 +103,10 @@ export class DetalleRiesgoDto {
   @IsOptional()
   @IsString()
   controlesImplementados?: string;
+
+  @IsOptional()
+  @IsString()
+  controlesArea?: string;
 }
 
 export class CreateValoracionDto {

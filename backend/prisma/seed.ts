@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
+import { parseRiesgoRows } from '../src/catalogos/riesgo-parser';
 
 const connectionString = process.env.DATABASE_URL as string;
 const adapter = new PrismaMariaDb(connectionString);
@@ -227,15 +228,10 @@ async function main() {
   // --- Riesgo ---
   console.log('Seeding Riesgo...');
   const riesgoData = data['Catalogo de Riesgo'];
-  for (const r of riesgoData) {
-    const evalText = r['Tabla de evaluacion del Riesgo'];
-    if (!evalText) continue;
-    const valMatch = evalText.match(/\((\d)\)/);
+  const parsedRiesgo = parseRiesgoRows(riesgoData);
+  for (const r of parsedRiesgo) {
     await prisma.riesgo.create({
-      data: {
-        evaluacion: evalText,
-        valor: valMatch ? parseInt(valMatch[1]) : null,
-      },
+      data: { tipo: r.tipo, nivel: r.nivel, valor: r.valor },
     });
   }
 

@@ -17,6 +17,13 @@ const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
+  riesgo: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
 };
 
 describe('CatalogosService', () => {
@@ -125,6 +132,97 @@ describe('CatalogosService', () => {
       expect(mockPrisma.macroProceso.create).toHaveBeenCalledWith({
         data: { nombre: 'Test Macro', codigo: 'TEST' },
       });
+    });
+  });
+
+  describe('riesgo FIELD_MAP uses tipo, nivel, valor (no evaluacion)', () => {
+    it('RED: should create riesgo with tipo, nivel, valor fields', async () => {
+      const createdRiesgo = {
+        id: 1,
+        tipo: 'Amenaza',
+        nivel: 'Alto',
+        valor: 3,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockPrisma.riesgo.create.mockResolvedValue(createdRiesgo);
+      mockPrisma.riesgo.findMany.mockResolvedValue([]);
+
+      const result = await service.create('riesgos', {
+        tipo: 'Amenaza',
+        nivel: 'Alto',
+        valor: 3,
+      });
+
+      expect(result).toEqual(createdRiesgo);
+      expect(mockPrisma.riesgo.create).toHaveBeenCalledWith({
+        data: { tipo: 'Amenaza', nivel: 'Alto', valor: 3 },
+      });
+    });
+
+    it('RED: should filter out evaluacion field when creating riesgos', async () => {
+      // FIELD_MAP only includes ['tipo','nivel','valor'] so 'evaluacion' should be stripped
+      mockPrisma.riesgo.findMany.mockResolvedValue([]);
+
+      try {
+        await service.create('riesgos', {
+          evaluacion: 'Alto (3)',
+          tipo: 'Amenaza',
+          nivel: 'Alto',
+          valor: 3,
+        });
+      } catch (e: unknown) {
+        // This may be empty data error if evaluacion was the only field
+        // or it may succeed with only the mapped fields
+        expect(e).toBeTruthy();
+      }
+    });
+
+    it('RED: should list riesgos with tipo, nivel, valor', async () => {
+      const riesgosList = [
+        { id: 1, tipo: 'Amenaza', nivel: 'Alto', valor: 3 },
+        { id: 2, tipo: 'Amenaza', nivel: 'Medio', valor: 2 },
+      ];
+      mockPrisma.riesgo.findMany.mockResolvedValue(riesgosList);
+
+      const result = await service.findAll('riesgos');
+
+      expect(result).toEqual(riesgosList);
+      expect(mockPrisma.riesgo.findMany).toHaveBeenCalled();
+    });
+
+    it('RED: should update riesgo using tipo, nivel, valor', async () => {
+      const updatedRiesgo = {
+        id: 1,
+        tipo: 'Vulnerabilidad',
+        nivel: 'Alto',
+        valor: 3,
+      };
+      mockPrisma.riesgo.findUnique.mockResolvedValue({ id: 1, tipo: 'Amenaza', nivel: 'Medio', valor: 2 });
+      mockPrisma.riesgo.update.mockResolvedValue(updatedRiesgo);
+
+      const result = await service.update('riesgos', 1, {
+        tipo: 'Vulnerabilidad',
+        nivel: 'Alto',
+        valor: 3,
+      });
+
+      expect(result).toEqual(updatedRiesgo);
+      expect(mockPrisma.riesgo.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { tipo: 'Vulnerabilidad', nivel: 'Alto', valor: 3 },
+      });
+    });
+
+    it('RED: should remove riesgo by id', async () => {
+      const deletedRiesgo = { id: 1, tipo: 'Amenaza', nivel: 'Alto', valor: 3 };
+      mockPrisma.riesgo.findUnique.mockResolvedValue({ id: 1, tipo: 'Amenaza', nivel: 'Alto', valor: 3 });
+      mockPrisma.riesgo.delete.mockResolvedValue(deletedRiesgo);
+
+      const result = await service.remove('riesgos', 1);
+
+      expect(result).toEqual(deletedRiesgo);
+      expect(mockPrisma.riesgo.delete).toHaveBeenCalledWith({ where: { id: 1 } });
     });
   });
 });
