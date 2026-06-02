@@ -23,7 +23,8 @@
     "noFallthroughCasesInSwitch": true,
     "types": [
       "jest",
-      "mocha"
+      "mocha",
+      "node"
     ]
   }
 }
