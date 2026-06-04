@@ -91,6 +91,10 @@ export class DetalleRiesgoDto {
   @IsString()
   nivelRiesgoControl?: string;
 
+  @IsOptional()
+  @IsString()
+  riesgoResidual?: string;
+
   // Tab 2 new fields (JSON array as string, e.g. "[3,7]")
   @IsOptional()
   @IsString()

@@ -437,7 +437,7 @@ interface PreviewRiesgo {
 function deriveNivelRiesgo(evaluacion: number): string {
   if (evaluacion <= 3) return 'BAJO'
   if (evaluacion <= 8) return 'MEDIO'
-  return 'ALTO'
+  if (evaluacion <= 27) return 'ALTO'
 }
 
 function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number): PreviewRiesgo {
@@ -527,6 +527,12 @@ function updateControlDetalleRow(row: RiskRow) {
   if (!d) return
   d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoId, d.vulnerabilidadRiesgoId)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
+  d.riesgoResidual = (d.evaluacionRiesgoControl > 0 && d.evaluacionRiesgoControl <= 3) ? 'ACEPTABLE' : 'INACEPTABLE'
+}
+
+function calcularRiesgoResidual(evaluacion: number | undefined | null): 'ACEPTABLE' | 'INACEPTABLE' | null {
+  if (evaluacion === undefined || evaluacion === null || evaluacion <= 0) return null
+  return evaluacion <= 3 ? 'ACEPTABLE' : 'INACEPTABLE'
 }
 
 const tabs = [
@@ -877,8 +883,10 @@ const tabs = [
                     <th>Nivel Vulnerabilidad</th>
                     <th>Método</th>
                     <th>Tipo Control</th>
+                    <th>Controles a Implementar</th>
                     <th>Eval. (Ctrl)</th>
                     <th>Nivel (Ctrl)</th>
+                    <th>Riesgo Residual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -927,6 +935,12 @@ const tabs = [
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
+                        <textarea v-model="findMatchedDetalle(row)!.controlesImplementados" placeholder="Controles a implementar..." rows="2" style="resize:vertical; min-width:140px;"></textarea>
+                      </template>
+                      <span v-else style="color:var(--text-muted);">—</span>
+                    </td>
+                    <td>
+                      <template v-if="findMatchedDetalle(row)">
                         <span v-if="findMatchedDetalle(row)!.evaluacionRiesgoControl > 0">{{ findMatchedDetalle(row)!.evaluacionRiesgoControl.toFixed(2) }}</span>
                         <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                       </template>
@@ -937,6 +951,15 @@ const tabs = [
                         <span class="nivel-badge" :style="{ color: getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).color, background: getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).bg }">
                           {{ getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).label }}
                         </span>
+                      </template>
+                      <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                    </td>
+                    <td>
+                      <template v-if="findMatchedDetalle(row)">
+                        <span v-if="calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl)" class="nivel-badge" :style="{ color: calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl) === 'ACEPTABLE' ? '#10b981' : '#ef4444', background: calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl) === 'ACEPTABLE' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' }">
+                          {{ calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl) }}
+                        </span>
+                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                       </template>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>

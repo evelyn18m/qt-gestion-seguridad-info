@@ -243,6 +243,7 @@ async function submitValoracion() {
       riesgoControlId: d.riesgoControlId ? Number(d.riesgoControlId) : null,
       evaluacionRiesgoControl: (d.evaluacionRiesgoControl || 0) > 0 ? d.evaluacionRiesgoControl : null,
       nivelRiesgoControl: d.nivelRiesgoControl || null,
+      riesgoResidual: d.riesgoResidual || null,
       // New per-row fields (Tab 2 row-based model)
       amenazaIds: d.amenazaIds && d.amenazaIds.length > 0 ? JSON.stringify(d.amenazaIds) : null,
       vulnerabilidadIds: d.vulnerabilidadIds && d.vulnerabilidadIds.length > 0 ? JSON.stringify(d.vulnerabilidadIds) : null,
@@ -571,7 +572,7 @@ onMounted(() => {
               <td>{{ v.macroProceso?.nombre || `MP#${v.macroProcesoId}` }}</td>
               <td>
                 <span class="cia-average-level" style="display:inline-block;" v-if="calculateRowCiaAverage(v) > 0">
-                  {{ calculateRowCiaAverage(v).toFixed(2) }} — {{ getCiaLevel(calculateRowCiaAverage(v)) }}
+                  {{ calculateRowCiaAverage(v).toFixed(2) }}
                 </span>
                 <span v-else style="color:var(--text-muted); font-size:0.85rem;">Pendiente</span>
               </td>
