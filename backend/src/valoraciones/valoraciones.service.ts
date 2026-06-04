@@ -41,6 +41,9 @@ export class ValoracionesService {
       ...(d.nivelRiesgoControl !== undefined && {
         nivelRiesgoControl: d.nivelRiesgoControl,
       }),
+      ...(d.riesgoResidual !== undefined && {
+        riesgoResidual: d.riesgoResidual,
+      }),
       // Tab 2 new fields
       ...(d.amenazaIds !== undefined && { amenazaIds: d.amenazaIds }),
       ...(d.vulnerabilidadIds !== undefined && {
@@ -65,6 +68,7 @@ export class ValoracionesService {
     data.tipoControlId = d.tipoControlId; // tipoControl FK still set from DTO if present
     data.evaluacionRiesgoControl = riesgo.evaluacionRiesgoControl;
     data.nivelRiesgoControl = riesgo.nivelRiesgoControl;
+    data.riesgoResidual = riesgo.riesgoResidual;
 
     return data;
   }
