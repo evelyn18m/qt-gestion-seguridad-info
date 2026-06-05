@@ -12,12 +12,12 @@ datasource db {
 }
 
 model Amenaza {
-  id          Int      @id @default(autoincrement())
-  categoria   String
-  nombre      String   @db.Text
-  tipoFuente  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  categoria  String
+  nombre     String   @db.Text
+  tipoFuente String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Vulnerabilidad {
@@ -29,29 +29,29 @@ model Vulnerabilidad {
 }
 
 model Impacto {
-  id          Int      @id @default(autoincrement())
-  tipo        String   // Confidencialidad, Integridad, Disponibilidad
-  nivel       String   // Alto, Medio, Bajo
-  valor       Int
-  criterio    String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  tipo      String // Confidencialidad, Integridad, Disponibilidad
+  nivel     String // Alto, Medio, Bajo
+  valor     Int
+  criterio  String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Formato {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Subproceso {
-  id              Int          @id @default(autoincrement())
-  nombre          String       @db.Text
-  macroProcesoId  Int
-  macroProceso    MacroProceso @relation(fields: [macroProcesoId], references: [id], onDelete: Restrict)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             Int          @id @default(autoincrement())
+  nombre         String       @db.Text
+  macroProcesoId Int
+  macroProceso   MacroProceso @relation(fields: [macroProcesoId], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model MacroProceso {
@@ -64,122 +64,134 @@ model MacroProceso {
 }
 
 model TipoActivo {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  detalle     String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Valoracion {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Funcionario {
-  id          Int      @id @default(autoincrement())
-  nombre      String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Area {
-  id          Int      @id @default(autoincrement())
-  nombre      String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model ValoracionActivo {
-  id               Int      @id @default(autoincrement())
-  nombreActivo     String   @db.Text
-  tipoActivoId     Int
-  formatoId        Int
-  macroProcesoId   Int
-  subProcesoId     Int
-  propietarioId    Int
-  custodioId       Int
-  descripcion      String   @db.Text
-  controlSeguridad String   @db.Text
-  ubicacion        String   @db.Text
-  observaciones    String?  @db.Text
-  confidencialidadId Int
-  integridadId       Int
-  disponibilidadId   Int
-  tieneDatosPersonales Boolean @default(false)
-
-  // Análisis de Riesgos (pestañas 2-4)
-  amenazas              String?   @db.Text // JSON array of ids
-  vulnerabilidades      String?   @db.Text // JSON array of ids
-  controlesImplementacion String? @db.Text
-  impacto               Float?
-  probabilidadId        Int?
-  amenazaRiesgoId       Int?
-  vulnerabilidadRiesgoId Int?
-  controlesArea         String?   @db.Text
-  evaluacionRiesgo      Float?
-  nivelRiesgo           String?
-
-  // Tratamiento de Riesgo
-  metodoTratamiento     String?  @db.Text
-  tipoControl           Int?
-  controlesImplementar  String?  @db.Text
-  nivelAmenazaControl   Int?
-  nivelVulnerabilidadControl Int?
-  evaluacionRiesgoControl Float?
-  nivelRiesgoControl    String?
-
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
-
-model DetalleRiesgo {
-  id                    Int      @id @default(autoincrement())
-  valoracionActivoId    Int
-  tipo                  String   // "amenaza" | "vulnerabilidad"
-  catalogoId            Int      // id de Amenaza o Vulnerabilidad
-  riesgoId              Int?     // id del catálogo Riesgo seleccionado
-  vulnerabilidadRiesgoId Int?    // id del catálogo Riesgo para vulnerabilidad (per-row)
-  evaluacionRiesgo      Float?
-  nivelRiesgo           String?
-  metodoTratamiento     String?  @db.Text
-  tipoControlId         Int?
-  riesgoControlId       Int?     // id del catálogo Riesgo para control
-   evaluacionRiesgoControl Float?
-   nivelRiesgoControl    String?
-   riesgoResidual        String?
-   // Tab 2 new fields (row-based per-row model)
-   amenazaIds            String?   @db.Text  // JSON array, e.g. "[3,7]"
-   vulnerabilidadIds      String?   @db.Text  // JSON array, e.g. "[5]"
-   controlesImplementados String?  @db.Text  // per-row controls
-   controlesArea         String?  @db.Text  // per-row controls area (Tab 3 only)
-   createdAt             DateTime @default(now())
-   updatedAt             DateTime @updatedAt
-}
-
-model TipoControl {
-  id          Int      @id @default(autoincrement())
-  nombre      String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Probabilidad {
-  id          Int      @id @default(autoincrement())
-  nombre      String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Riesgo {
   id        Int      @id @default(autoincrement())
-  tipo      String   // Amenaza, Vulnerabilidad
-  nivel     String   // Alto, Medio, Bajo
-  valor     Int      // 3=Alto, 2=Medio, 1=Bajo
+  nombre    String
+  detalle   String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+model Valoracion {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
+model Funcionario {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Area {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ValoracionActivo {
+  id                   Int     @id @default(autoincrement())
+  nombreActivo         String  @db.Text
+  tipoActivoId         Int
+  formatoId            Int
+  macroProcesoId       Int
+  subProcesoId         Int
+  propietarioId        Int
+  custodioId           Int
+  descripcion          String  @db.Text
+  controlSeguridad     String  @db.Text
+  ubicacion            String  @db.Text
+  observaciones        String? @db.Text
+  confidencialidadId   Int
+  integridadId         Int
+  disponibilidadId     Int
+  tieneDatosPersonales Boolean @default(false)
+
+  // Análisis de Riesgos (pestañas 2-4)
+  amenazas                String? @db.Text // JSON array of ids
+  vulnerabilidades        String? @db.Text // JSON array of ids
+  controlesImplementacion String? @db.Text
+  impacto                 Float?
+  probabilidadId          Int?
+  amenazaRiesgoId         Int?
+  vulnerabilidadRiesgoId  Int?
+  controlesArea           String? @db.Text
+  evaluacionRiesgo        Float?
+  nivelRiesgo             String?
+
+  // Tratamiento de Riesgo
+  metodoTratamiento          String? @db.Text
+  tipoControl                Int?
+  controlesImplementar       String? @db.Text
+  nivelAmenazaControl        Int?
+  nivelVulnerabilidadControl Int?
+  evaluacionRiesgoControl    Float?
+  nivelRiesgoControl         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DetalleRiesgo {
+  id                      Int      @id @default(autoincrement())
+  valoracionActivoId      Int
+  tipo                    String // "amenaza" | "vulnerabilidad"
+  catalogoId              Int // id de Amenaza o Vulnerabilidad
+  riesgoId                Int? // id del catálogo Riesgo seleccionado
+  vulnerabilidadRiesgoId  Int? // id del catálogo Riesgo para vulnerabilidad (per-row)
+  evaluacionRiesgo        Float?
+  nivelRiesgo             String?
+  metodoTratamiento       String?  @db.Text
+  tipoControlId           Int?
+  riesgoControlId         Int? // id del catálogo Riesgo para control
+  evaluacionRiesgoControl Float?
+  nivelRiesgoControl      String?
+  riesgoResidual          String?
+  // Tab 2 new fields (row-based per-row model)
+  amenazaIds              String?  @db.Text // JSON array, e.g. "[3,7]"
+  vulnerabilidadIds       String?  @db.Text // JSON array, e.g. "[5]"
+  controlesImplementados  String?  @db.Text // per-row controls
+  controlesArea           String?  @db.Text // per-row controls area (Tab 3 only)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model TipoControl {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Probabilidad {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Riesgo {
+  id        Int      @id @default(autoincrement())
+  tipo      String // Amenaza, Vulnerabilidad
+  nivel     String // Alto, Medio, Bajo
+  valor     Int // 3=Alto, 2=Medio, 1=Bajo
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CategoriaControlesImplementar {
+  id                   Int                    @id @default(autoincrement())
+  nombre               String
+  controlesImplementar ControlesImplementar[]
+}
+
+model ControlesImplementar {
+  id          Int                           @id @default(autoincrement())
+  seccion     String                        @unique
+  descripcion String
+  categoriaId Int
+  categoria   CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
+}
