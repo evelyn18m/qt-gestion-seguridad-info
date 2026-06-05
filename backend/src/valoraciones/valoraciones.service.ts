@@ -44,11 +44,51 @@ export class ValoracionesService {
             : Promise.resolve(null),
         ),
       );
+      const vulnRiesgoResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.vulnerabilidadRiesgoId != null
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.vulnerabilidadRiesgoId },
+              })
+            : Promise.resolve(null),
+        ),
+      );
       const nivelValores = riesgoResults.map((r) => r?.valor ?? 1);
+      const vulnNivelValores = vulnRiesgoResults.map((r) => r?.valor ?? 1);
+
+      // Look up Riesgo catalog for control-level IDs (independent Tab 4)
+      const riesgoControlResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.riesgoControlId != null
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.riesgoControlId },
+              })
+            : Promise.resolve(null),
+        ),
+      );
+      const vulnControlResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.vulnerabilidadControlId != null
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.vulnerabilidadControlId },
+              })
+            : Promise.resolve(null),
+        ),
+      );
+      const nivelControlAmenaza = riesgoControlResults.map((r) => r?.valor ?? undefined);
+      const nivelControlVuln = vulnControlResults.map((r) => r?.valor ?? undefined);
+
       await this.prisma.$transaction(
         detallesRiesgo.map((d, i) =>
           this.prisma.detalleRiesgo.create({
-            data: this.mapDetalleRiesgo(d, item.id, nivelValores[i]),
+            data: this.mapDetalleRiesgo(
+              d,
+              item.id,
+              nivelValores[i],
+              vulnNivelValores[i],
+              nivelControlAmenaza[i],
+              nivelControlVuln[i],
+            ),
           }),
         ),
       );
@@ -76,14 +116,54 @@ export class ValoracionesService {
             : Promise.resolve(null),
         ),
       );
+      const vulnRiesgoResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.vulnerabilidadRiesgoId != null
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.vulnerabilidadRiesgoId },
+              })
+            : Promise.resolve(null),
+        ),
+      );
       const nivelValores = riesgoResults.map((r) => r?.valor ?? 1);
+      const vulnNivelValores = vulnRiesgoResults.map((r) => r?.valor ?? 1);
+
+      // Look up Riesgo catalog for control-level IDs (independent Tab 4)
+      const riesgoControlResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.riesgoControlId != null
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.riesgoControlId },
+              })
+            : Promise.resolve(null),
+        ),
+      );
+      const vulnControlResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.vulnerabilidadControlId != null
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.vulnerabilidadControlId },
+              })
+            : Promise.resolve(null),
+        ),
+      );
+      const nivelControlAmenaza = riesgoControlResults.map((r) => r?.valor ?? undefined);
+      const nivelControlVuln = vulnControlResults.map((r) => r?.valor ?? undefined);
+
       await this.prisma.$transaction([
         this.prisma.detalleRiesgo.deleteMany({
           where: { valoracionActivoId: id },
         }),
         ...detallesRiesgo.map((d, i) =>
           this.prisma.detalleRiesgo.create({
-            data: this.mapDetalleRiesgo(d, id, nivelValores[i]),
+            data: this.mapDetalleRiesgo(
+              d,
+              id,
+              nivelValores[i],
+              vulnNivelValores[i],
+              nivelControlAmenaza[i],
+              nivelControlVuln[i],
+            ),
           }),
         ),
       ]);
@@ -131,7 +211,10 @@ export class ValoracionesService {
   private mapDetalleRiesgo(
     d: DetalleRiesgoDto,
     valoracionActivoId: number,
-    nivelRiesgoValor?: number,
+    nivelAmenazaValor?: number,
+    nivelVulnerabilidadValor?: number,
+    nivelAmenazaControlValor?: number,
+    nivelVulnerabilidadControlValor?: number,
   ): Prisma.DetalleRiesgoUncheckedCreateInput {
     const data: Prisma.DetalleRiesgoUncheckedCreateInput = {
       valoracionActivoId,
@@ -139,6 +222,9 @@ export class ValoracionesService {
       catalogoId: d.catalogoId ?? 0,
       // Tab 3/4 optional fields — only include if provided
       ...(d.riesgoId !== undefined && { riesgoId: d.riesgoId }),
+      ...(d.vulnerabilidadRiesgoId !== undefined && {
+        vulnerabilidadRiesgoId: d.vulnerabilidadRiesgoId,
+      }),
       ...(d.evaluacionRiesgo !== undefined && {
         evaluacionRiesgo: d.evaluacionRiesgo,
       }),
@@ -149,6 +235,9 @@ export class ValoracionesService {
       ...(d.tipoControlId !== undefined && { tipoControlId: d.tipoControlId }),
       ...(d.riesgoControlId !== undefined && {
         riesgoControlId: d.riesgoControlId,
+      }),
+      ...(d.vulnerabilidadControlId !== undefined && {
+        vulnerabilidadControlId: d.vulnerabilidadControlId,
       }),
       ...(d.evaluacionRiesgoControl !== undefined && {
         evaluacionRiesgoControl: d.evaluacionRiesgoControl,
@@ -177,10 +266,17 @@ export class ValoracionesService {
     };
 
     // Compute risk fields using calculateRiesgo with VA=3 (CIA promedio fallback)
-    // nivelRiesgoValor comes from the Riesgo catalog's valor field via riesgoId lookup
-    const nivelAmenaza = nivelRiesgoValor ?? 1;
-    const nivelVulnerabilidad = nivelRiesgoValor ?? 1;
-    const riesgo = calculateRiesgo(3, nivelAmenaza, nivelVulnerabilidad);
+    // nivelAmenazaValor comes from the Riesgo catalog's valor field via riesgoId lookup
+    // nivelVulnerabilidadValor comes independently from vulnerabilidadRiesgoId lookup
+    const nivelAmenaza = nivelAmenazaValor ?? 1;
+    const nivelVulnerabilidad = nivelVulnerabilidadValor ?? 1;
+    const riesgo = calculateRiesgo(
+      3,
+      nivelAmenaza,
+      nivelVulnerabilidad,
+      nivelAmenazaControlValor,
+      nivelVulnerabilidadControlValor,
+    );
     data.evaluacionRiesgo = riesgo.evaluacionRiesgo;
     data.nivelRiesgo = riesgo.nivelRiesgo;
     data.metodoTratamiento = riesgo.metodoTratamiento;

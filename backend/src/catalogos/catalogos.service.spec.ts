@@ -268,9 +268,17 @@ describe('CatalogosService generic remove() P2003', () => {
 
   it('RED→GREEN: should throw ConflictException when generic remove() receives P2003 from Prisma', async () => {
     // Simulates deleting a categoriaControlesImplementar that has linked controls
-    const prismaP2003 = Object.assign(new Error('FK constraint failed on delete'), { code: 'P2003' });
-    mockPrisma.categoriaControlesImplementar.findUnique.mockResolvedValue({ id: 2, nombre: 'Cat A' });
-    mockPrisma.categoriaControlesImplementar.delete.mockRejectedValue(prismaP2003);
+    const prismaP2003 = Object.assign(
+      new Error('FK constraint failed on delete'),
+      { code: 'P2003' },
+    );
+    mockPrisma.categoriaControlesImplementar.findUnique.mockResolvedValue({
+      id: 2,
+      nombre: 'Cat A',
+    });
+    mockPrisma.categoriaControlesImplementar.delete.mockRejectedValue(
+      prismaP2003,
+    );
 
     await expect(
       service.remove('categorias-controles-implementar', 2),
@@ -279,10 +287,17 @@ describe('CatalogosService generic remove() P2003', () => {
 
   it('TRIANGULATE: should propagate non-P2003 errors from generic remove() unchanged', async () => {
     const genericError = new Error('DB connection lost');
-    mockPrisma.riesgo.findUnique.mockResolvedValue({ id: 1, tipo: 'A', nivel: 'B', valor: 1 });
+    mockPrisma.riesgo.findUnique.mockResolvedValue({
+      id: 1,
+      tipo: 'A',
+      nivel: 'B',
+      valor: 1,
+    });
     mockPrisma.riesgo.delete.mockRejectedValue(genericError);
 
-    await expect(service.remove('riesgos', 1)).rejects.toThrow('DB connection lost');
+    await expect(service.remove('riesgos', 1)).rejects.toThrow(
+      'DB connection lost',
+    );
   });
 });
 
@@ -304,17 +319,26 @@ describe('CatalogosService.removeControlesImplementar()', () => {
   });
 
   it('RED→GREEN: should call prisma.controlesImplementar.delete with correct where', async () => {
-    const deleted = { id: 7, seccion: 'B.1', descripcion: 'Old control', categoriaId: 1 };
+    const deleted = {
+      id: 7,
+      seccion: 'B.1',
+      descripcion: 'Old control',
+      categoriaId: 1,
+    };
     mockPrisma.controlesImplementar.delete.mockResolvedValue(deleted);
 
     const result = await service.removeControlesImplementar(7);
 
-    expect(mockPrisma.controlesImplementar.delete).toHaveBeenCalledWith({ where: { id: 7 } });
+    expect(mockPrisma.controlesImplementar.delete).toHaveBeenCalledWith({
+      where: { id: 7 },
+    });
     expect(result).toEqual(deleted);
   });
 
   it('TRIANGULATE: should throw ConflictException on P2003 (linked FK)', async () => {
-    const prismaP2003 = Object.assign(new Error('FK constraint failed'), { code: 'P2003' });
+    const prismaP2003 = Object.assign(new Error('FK constraint failed'), {
+      code: 'P2003',
+    });
     mockPrisma.controlesImplementar.delete.mockRejectedValue(prismaP2003);
 
     await expect(service.removeControlesImplementar(7)).rejects.toThrow(
@@ -341,7 +365,11 @@ describe('CatalogosService.updateControlesImplementar()', () => {
   });
 
   it('RED→GREEN: should call prisma.controlesImplementar.update with correct where and data', async () => {
-    const dto = { seccion: 'A.2', descripcion: 'Updated control', categoriaId: 2 };
+    const dto = {
+      seccion: 'A.2',
+      descripcion: 'Updated control',
+      categoriaId: 2,
+    };
     const updated = { id: 3, ...dto };
     mockPrisma.controlesImplementar.update.mockResolvedValue(updated);
 
@@ -355,11 +383,17 @@ describe('CatalogosService.updateControlesImplementar()', () => {
   });
 
   it('TRIANGULATE: should throw ConflictException on P2002 (duplicate seccion on update)', async () => {
-    const prismaP2002 = Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+    const prismaP2002 = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+    });
     mockPrisma.controlesImplementar.update.mockRejectedValue(prismaP2002);
 
     await expect(
-      service.updateControlesImplementar(5, { seccion: 'A.1', descripcion: 'Dup update', categoriaId: 1 }),
+      service.updateControlesImplementar(5, {
+        seccion: 'A.1',
+        descripcion: 'Dup update',
+        categoriaId: 1,
+      }),
     ).rejects.toThrow('La sección ya existe');
   });
 });
@@ -382,24 +416,43 @@ describe('CatalogosService.createControlesImplementar()', () => {
   });
 
   it('RED→GREEN: should call prisma.controlesImplementar.create with correct data', async () => {
-    const dto = { seccion: 'A.1', descripcion: 'Control de acceso', categoriaId: 1 };
-    const created = { id: 1, seccion: 'A.1', descripcion: 'Control de acceso', categoriaId: 1 };
+    const dto = {
+      seccion: 'A.1',
+      descripcion: 'Control de acceso',
+      categoriaId: 1,
+    };
+    const created = {
+      id: 1,
+      seccion: 'A.1',
+      descripcion: 'Control de acceso',
+      categoriaId: 1,
+    };
     mockPrisma.controlesImplementar.create.mockResolvedValue(created);
 
     const result = await service.createControlesImplementar(dto);
 
     expect(mockPrisma.controlesImplementar.create).toHaveBeenCalledWith({
-      data: { seccion: 'A.1', descripcion: 'Control de acceso', categoriaId: 1 },
+      data: {
+        seccion: 'A.1',
+        descripcion: 'Control de acceso',
+        categoriaId: 1,
+      },
     });
     expect(result).toEqual(created);
   });
 
   it('TRIANGULATE: should throw ConflictException on P2002 (duplicate seccion)', async () => {
-    const prismaP2002 = Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+    const prismaP2002 = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+    });
     mockPrisma.controlesImplementar.create.mockRejectedValue(prismaP2002);
 
     await expect(
-      service.createControlesImplementar({ seccion: 'A.1', descripcion: 'Dup', categoriaId: 1 }),
+      service.createControlesImplementar({
+        seccion: 'A.1',
+        descripcion: 'Dup',
+        categoriaId: 1,
+      }),
     ).rejects.toThrow('La sección ya existe');
   });
 });
@@ -453,8 +506,8 @@ describe('CatalogosService.findAllControlesImplementar()', () => {
     const result = await service.findAllControlesImplementar();
 
     expect(result).toHaveLength(2);
-    const first = result[0] as typeof mockItems[0];
-    const second = result[1] as typeof mockItems[0];
+    const first = result[0];
+    const second = result[1];
     expect(first.categoria.nombre).toBe('Control de Acceso');
     expect(second.categoria.nombre).toBe('Activos de Informacion');
     expect(first.descripcion).toBe('Politica de control de acceso');

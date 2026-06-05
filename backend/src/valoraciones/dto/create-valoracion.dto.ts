@@ -65,6 +65,10 @@ export class DetalleRiesgoDto {
 
   @IsOptional()
   @IsNumber()
+  vulnerabilidadRiesgoId?: number;
+
+  @IsOptional()
+  @IsNumber()
   evaluacionRiesgo?: number;
 
   @IsOptional()
@@ -82,6 +86,10 @@ export class DetalleRiesgoDto {
   @IsOptional()
   @IsNumber()
   riesgoControlId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  vulnerabilidadControlId?: number;
 
   @IsOptional()
   @IsNumber()

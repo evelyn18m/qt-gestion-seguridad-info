@@ -251,11 +251,13 @@ async function submitValoracion() {
       tipo: d.tipo,
       catalogoId: Number(d.catalogoId),
       riesgoId: d.riesgoId ? Number(d.riesgoId) : null,
+      vulnerabilidadRiesgoId: d.vulnerabilidadRiesgoId ? Number(d.vulnerabilidadRiesgoId) : null,
       evaluacionRiesgo: (d.evaluacionRiesgo || 0) > 0 ? d.evaluacionRiesgo : null,
       nivelRiesgo: d.nivelRiesgo || null,
       metodoTratamiento: d.metodoTratamiento || null,
       tipoControlId: d.tipoControlId ? Number(d.tipoControlId) : null,
       riesgoControlId: d.riesgoControlId ? Number(d.riesgoControlId) : null,
+      vulnerabilidadControlId: d.vulnerabilidadControlId ? Number(d.vulnerabilidadControlId) : null,
       evaluacionRiesgoControl: (d.evaluacionRiesgoControl || 0) > 0 ? d.evaluacionRiesgoControl : null,
       nivelRiesgoControl: d.nivelRiesgoControl || null,
       riesgoResidual: d.riesgoResidual || null,
@@ -299,22 +301,32 @@ async function submitValoracion() {
 
     // ── Phase 3: Fetch server-computed risk fields via calculate endpoint ──
     const {apiFetch} = useApi()
-    const nivelAmenaza = (() => {
-      if (!e.amenazaRiesgoId) return 1
-      const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(e.amenazaRiesgoId))
-      return found?.valor ?? 1
-    })()
-    const nivelVulnerabilidad = (() => {
-      if (!e.vulnerabilidadRiesgoId) return 1
-      const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(e.vulnerabilidadRiesgoId))
-      return found?.valor ?? 1
-    })()
-
     for (let i = 0; i < detallesPayload.length; i++) {
       const d = detallesPayload[i]
+      // Resolve per-row nivel values from valRiesgos catalog via d.riesgoId / d.vulnerabilidadRiesgoId
+      const nivelAmenaza = (() => {
+        if (!d.riesgoId) return 1
+        const found = valRiesgos.value.find((r: CatalogoItem) => r.id === d.riesgoId)
+        return found?.valor ?? 1
+      })()
+      const nivelVulnerabilidad = (() => {
+        if (!d.vulnerabilidadRiesgoId) return 1
+        const found = valRiesgos.value.find((r: CatalogoItem) => r.id === d.vulnerabilidadRiesgoId)
+        return found?.valor ?? 1
+      })()
+      // Resolve per-row control-level valors from valRiesgos catalog via riesgoControlId / vulnerabilidadControlId
+      const nivelAmenazaControl = (() => {
+        if (!d.riesgoControlId) return undefined
+        const found = valRiesgos.value.find((r: CatalogoItem) => r.id === d.riesgoControlId)
+        return found?.valor ?? undefined
+      })()
+      const nivelVulnerabilidadControl = (() => {
+        if (!d.vulnerabilidadControlId) return undefined
+        const found = valRiesgos.value.find((r: CatalogoItem) => r.id === d.vulnerabilidadControlId)
+        return found?.valor ?? undefined
+      })()
       const hasRiskInput = d.amenazaIds || d.vulnerabilidadIds
-      if (hasRiskInput && valEditId.value && d.id) {
-        // Only call calculate for existing rows during edit
+      if (hasRiskInput && d.id) {
         const calculado = await apiFetch<{
           evaluacionRiesgo: number;
           nivelRiesgo: string;
@@ -327,7 +339,7 @@ async function submitValoracion() {
             `/valoraciones/${valEditId.value}/detalles-riesgo/${d.id}/calcular`,
             {
               method: 'PATCH',
-              body: JSON.stringify({nivelAmenaza, nivelVulnerabilidad}),
+              body: JSON.stringify({ nivelAmenaza, nivelVulnerabilidad, nivelAmenazaControl, nivelVulnerabilidadControl }),
             },
         )
         Object.assign(d, {
@@ -441,6 +453,7 @@ function editValoracion(item: ValoracionActivo) {
       metodoTratamiento: d.metodoTratamiento || '',
       tipoControlId: d.tipoControlId ? String(d.tipoControlId) : '',
       riesgoControlId: d.riesgoControlId ? String(d.riesgoControlId) : '',
+      vulnerabilidadControlId: d.vulnerabilidadControlId ?? null,
       evaluacionRiesgoControl: d.evaluacionRiesgoControl || 0,
       nivelRiesgoControl: d.nivelRiesgoControl || '',
       // New per-row fields (Tab 2 row-based model)

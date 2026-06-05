@@ -233,22 +233,34 @@ function parseIds(jsonStr: string | null | undefined): string[] {
 // Creates ONE combined entry per RiskRow (not separate amenaza + vulnerabilidad entries)
 // This ensures grouping is preserved when loading existing data
 function syncRowsToDetalles() {
+  // Build lookup from existing entries to preserve control field values
+  const prevMap = new Map<string, DetalleRiesgo>()
+  props.detallesRiesgo.forEach(e => {
+    if (!e.amenazaIds?.length && !e.vulnerabilidadIds?.length) return
+    const key = `${e.tipo}:${e.catalogoId}:${JSON.stringify(e.amenazaIds)}:${JSON.stringify(e.vulnerabilidadIds)}`
+    prevMap.set(key, e)
+  })
+
   const entries: DetalleRiesgo[] = []
   riskRows.value.forEach(row => {
     // Only create entries if the row has at least one amenaza or vulnerabilidad
     if (row.amenazaIds.length === 0 && row.vulnerabilidadIds.length === 0) return
 
-    // Create one entry per amenaza in this row (with acceso to all row's arrays)
+    // Create one entry per amenaza in this row (with access to all row's arrays)
     row.amenazaIds.forEach(aId => {
+      const key = `amenaza:${aId}:${JSON.stringify(row.amenazaIds)}:${JSON.stringify(row.vulnerabilidadIds)}`
+      const prev = prevMap.get(key)
       entries.push({
         tipo: 'amenaza' as const,
         catalogoId: Number(aId),
-        riesgoId: '',
+        riesgoId: prev?.riesgoId ?? '',
+        vulnerabilidadRiesgoId: prev?.vulnerabilidadRiesgoId ?? undefined,
         evaluacionRiesgo: 0,
         nivelRiesgo: '',
         metodoTratamiento: '',
-        tipoControlId: '',
-        riesgoControlId: '',
+        tipoControlId: prev?.tipoControlId ?? '',
+        riesgoControlId: prev?.riesgoControlId ?? '',
+        vulnerabilidadControlId: prev?.vulnerabilidadControlId ?? undefined,
         evaluacionRiesgoControl: 0,
         nivelRiesgoControl: '',
         amenazaIds: [...row.amenazaIds],
@@ -258,17 +270,21 @@ function syncRowsToDetalles() {
         controlesImplementarId: row.controlesImplementarId ?? null,
       })
     })
-    // Create one entry per vulnerabilidad in this row (with acceso to all row's arrays)
+    // Create one entry per vulnerabilidad in this row (with access to all row's arrays)
     row.vulnerabilidadIds.forEach(vId => {
+      const key = `vulnerabilidad:${vId}:${JSON.stringify(row.amenazaIds)}:${JSON.stringify(row.vulnerabilidadIds)}`
+      const prev = prevMap.get(key)
       entries.push({
         tipo: 'vulnerabilidad' as const,
         catalogoId: Number(vId),
-        riesgoId: '',
+        riesgoId: prev?.riesgoId ?? '',
+        vulnerabilidadRiesgoId: prev?.vulnerabilidadRiesgoId ?? undefined,
         evaluacionRiesgo: 0,
         nivelRiesgo: '',
         metodoTratamiento: '',
-        tipoControlId: '',
-        riesgoControlId: '',
+        tipoControlId: prev?.tipoControlId ?? '',
+        riesgoControlId: prev?.riesgoControlId ?? '',
+        vulnerabilidadControlId: prev?.vulnerabilidadControlId ?? undefined,
         evaluacionRiesgoControl: 0,
         nivelRiesgoControl: '',
         amenazaIds: [...row.amenazaIds],
@@ -523,15 +539,15 @@ function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
   // Tab 3 riesgo changes are tracked directly in detallesRiesgo entries
 }
 
-function updateControlDetalle(d: DetalleRiesgo) {
-  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId, props.evaluacionForm.vulnerabilidadRiesgoId)
-  d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
+/** @deprecated Use updateControlDetalleRow instead — dead code, no template call-sites */
+function updateControlDetalle(_d: DetalleRiesgo) {
+  // no-op: removed global evaluacionForm.vulnerabilidadRiesgoId dependency
 }
 
 function updateControlDetalleRow(row: RiskRow) {
   const d = findMatchedDetalle(row)
   if (!d) return
-  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoId, d.vulnerabilidadRiesgoId)
+  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId, d.vulnerabilidadControlId)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
   d.riesgoResidual = (d.evaluacionRiesgoControl > 0 && d.evaluacionRiesgoControl <= 3) ? 'ACEPTABLE' : 'INACEPTABLE'
 }
@@ -985,7 +1001,7 @@ const controlesImplementarGrupos = computed(() => {
                     </td>
                     <td style="text-align:center;">
                       <template v-if="row.amenazaIds.length > 0 && findMatchedDetalle(row)">
-                        <select v-model="findMatchedDetalle(row)!.riesgoId" style="min-width:130px;"
+                        <select v-model="findMatchedDetalle(row)!.riesgoControlId" style="min-width:130px;"
                                 @change="updateControlDetalleRow(row)">
                           <option value="">Seleccionar...</option>
                           <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Amenaza')"
@@ -997,7 +1013,7 @@ const controlesImplementarGrupos = computed(() => {
                     </td>
                     <td style="text-align:center;">
                       <template v-if="row.vulnerabilidadIds.length > 0 && findMatchedDetalle(row)">
-                        <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId"
+                        <select v-model="findMatchedDetalle(row)!.vulnerabilidadControlId"
                                 style="min-width:130px;" @change="updateControlDetalleRow(row)">
                           <option value="">Seleccionar...</option>
                           <option

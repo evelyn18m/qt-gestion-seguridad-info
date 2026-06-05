@@ -4,9 +4,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   AtLeastOneConstraint,
   CreateValoracionDto,
+  DetalleRiesgoDto,
 } from './dto/create-valoracion.dto';
 import { UpdateValoracionDto } from './dto/update-valoracion.dto';
 import type { ValidationArguments } from 'class-validator';
+import { validateSync } from 'class-validator';
 
 type AnyMock = jest.Mock<any, any[]>;
 
@@ -26,6 +28,9 @@ const mockPrisma = {
   funcionario: { findUnique: jest.fn() },
   impacto: { findUnique: jest.fn() },
   tipoControl: { findUnique: jest.fn() },
+  riesgo: {
+    findUnique: jest.fn(),
+  },
   detalleRiesgo: {
     findMany: jest.fn(),
     deleteMany: jest.fn(),
@@ -331,6 +336,189 @@ describe('AtLeastOneConstraint', () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
+// DetalleRiesgoDto — vulnerabilidadRiesgoId validation (Phase 1: TDD)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('DetalleRiesgoDto — vulnerabilidadRiesgoId validation', () => {
+  it('RED: should accept vulnerabilidadRiesgoId as known (decorated) property', () => {
+    const dto = Object.assign(new DetalleRiesgoDto(), {
+      riesgoId: 2,
+      vulnerabilidadRiesgoId: 3,
+    });
+    const errors = validateSync(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should tolerate missing vulnerabilidadRiesgoId (optional field)', () => {
+    const dto = Object.assign(new DetalleRiesgoDto(), { riesgoId: 1 });
+    const errors = validateSync(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// mapDetalleRiesgo — separate threat/vulnerability levels (Phase 2: TDD)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('mapDetalleRiesgo with separate threat/vulnerability levels', () => {
+  let service: ValoracionesService;
+
+  const baseDto: CreateValoracionDto = {
+    nombreActivo: 'Test Activo',
+    tipoActivoId: 1,
+    formatoId: 1,
+    macroProcesoId: 1,
+    subProcesoId: 1,
+    propietarioId: 1,
+    custodioId: 1,
+    descripcion: 'Test desc',
+    controlSeguridad: 'Test ctrl',
+    ubicacion: 'Test loc',
+    confidencialidadId: 1,
+    integridadId: 1,
+    disponibilidadId: 1,
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED: should compute evaluacionRiesgo from independent amenaza and vulnerabilidad valors', async () => {
+    // Catalog: riesgoId=2 → valor=2, vulnerabilidadRiesgoId=3 → valor=3
+    mockPrisma.riesgo.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 2)
+          return Promise.resolve({ id: 2, valor: 2, nivel: 'Medio' });
+        if (args.where.id === 3)
+          return Promise.resolve({ id: 3, valor: 3, nivel: 'Alto' });
+        return Promise.resolve(null);
+      },
+    );
+
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 20 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 20 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          riesgoId: 2,
+          vulnerabilidadRiesgoId: 3,
+          amenazaIds: '[1]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    // With the bug: evaluacionRiesgo = 3 × 2 × 2 = 12 (both use riesgoId's valor).
+    // After fix:   evaluacionRiesgo = 3 × 2 × 3 = 18 (independent valors).
+    const createCall = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(createCall.data.evaluacionRiesgo).toBe(18);
+    expect(createCall.data.vulnerabilidadRiesgoId).toBe(3);
+  });
+
+  it('TRIANGULATE: should default vulnerabilidad to 1 when vulnerabilidadRiesgoId is missing', async () => {
+    // riesgoId=2 → valor=2, no vulnerabilidadRiesgoId → default 1
+    mockPrisma.riesgo.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 2)
+          return Promise.resolve({ id: 2, valor: 2, nivel: 'Medio' });
+        return Promise.resolve(null);
+      },
+    );
+
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 21 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 21 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          riesgoId: 2,
+          // vulnerabilidadRiesgoId not set → defaults to nivel 1
+          amenazaIds: '[1]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    // evaluacionRiesgo = 3 × 2 × 1 = 6
+    const createCall = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(createCall.data.evaluacionRiesgo).toBe(6);
+    expect(createCall.data.vulnerabilidadRiesgoId).toBeUndefined();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
 // mapDetalleRiesgo() — controlesImplementarId passthrough (Task 6.2)
 // ──────────────────────────────────────────────────────────────────────────────
 describe('mapDetalleRiesgo() with controlesImplementarId', () => {
@@ -459,9 +647,343 @@ describe('mapDetalleRiesgo() with controlesImplementarId', () => {
 
     await service.create(dto);
 
-    const callData = mockPrisma.detalleRiesgo.create.mock
-      .calls[0][0] as { data: Record<string, unknown> };
+    const callData = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
     expect(callData.data.controlesImplementarId).toBeUndefined();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// mapDetalleRiesgo — vulnerabilidadControlId spread + control valors (Phase 2: TDD)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('mapDetalleRiesgo with vulnerabilidadControlId', () => {
+  let service: ValoracionesService;
+
+  const baseDto: CreateValoracionDto = {
+    nombreActivo: 'Test Activo',
+    tipoActivoId: 1,
+    formatoId: 1,
+    macroProcesoId: 1,
+    subProcesoId: 1,
+    propietarioId: 1,
+    custodioId: 1,
+    descripcion: 'Test desc',
+    controlSeguridad: 'Test ctrl',
+    ubicacion: 'Test loc',
+    confidencialidadId: 1,
+    integridadId: 1,
+    disponibilidadId: 1,
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED: should spread vulnerabilidadControlId into create data when defined', async () => {
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 30 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 30 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          vulnerabilidadControlId: 4,
+          amenazaIds: '[1]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    const createCall = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(createCall.data.vulnerabilidadControlId).toBe(4);
+  });
+
+  it('TRIANGULATE: should NOT include vulnerabilidadControlId when undefined', async () => {
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 31 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 31 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          // vulnerabilidadControlId not set
+          amenazaIds: '[1]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    const createCall = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(createCall.data.vulnerabilidadControlId).toBeUndefined();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DetalleRiesgoDto — vulnerabilidadControlId validation (Phase 2: TDD)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('DetalleRiesgoDto — vulnerabilidadControlId validation', () => {
+  it('RED: should accept vulnerabilidadControlId as known (decorated) property', () => {
+    const dto = Object.assign(new DetalleRiesgoDto(), {
+      riesgoControlId: 2,
+      vulnerabilidadControlId: 5,
+    });
+    const errors = validateSync(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should tolerate missing vulnerabilidadControlId (optional field)', () => {
+    const dto = Object.assign(new DetalleRiesgoDto(), { riesgoControlId: 1 });
+    const errors = validateSync(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors).toHaveLength(0);
+  });
+
+  it('TRIANGULATE: should pass with valid integer value', () => {
+    const dto = Object.assign(new DetalleRiesgoDto(), {
+      riesgoControlId: 3,
+      vulnerabilidadControlId: 7,
+    });
+    const errors = validateSync(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// create() / update() — independent Riesgo lookups for control IDs (Phase 2: TDD)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('create() with control-level Riesgo lookups', () => {
+  let service: ValoracionesService;
+
+  const baseDto: CreateValoracionDto = {
+    nombreActivo: 'Test Activo',
+    tipoActivoId: 1,
+    formatoId: 1,
+    macroProcesoId: 1,
+    subProcesoId: 1,
+    propietarioId: 1,
+    custodioId: 1,
+    descripcion: 'Test desc',
+    controlSeguridad: 'Test ctrl',
+    ubicacion: 'Test loc',
+    confidencialidadId: 1,
+    integridadId: 1,
+    disponibilidadId: 1,
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED: should call prisma.riesgo.findUnique() for riesgoControlId and vulnerabilidadControlId', async () => {
+    // Mock Riesgo catalog: riesgoId=2→valor=2, riesgoControlId=1→valor=1, vulnerabilidadControlId=3→valor=3
+    mockPrisma.riesgo.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 2)
+          return Promise.resolve({ id: 2, valor: 2, nivel: 'Medio' });
+        if (args.where.id === 1)
+          return Promise.resolve({ id: 1, valor: 1, nivel: 'Bajo' });
+        if (args.where.id === 3)
+          return Promise.resolve({ id: 3, valor: 3, nivel: 'Alto' });
+        return Promise.resolve(null);
+      },
+    );
+
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 40 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 40 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          riesgoId: 2,
+          riesgoControlId: 1,
+          vulnerabilidadControlId: 3,
+          amenazaIds: '[1]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    // Verify riesgo.findUnique was called for all 3 IDs
+    const findUniqueCalls = mockPrisma.riesgo.findUnique.mock.calls.map(
+      (c: any[]) => (c[0] as { where: { id: number } }).where.id,
+    );
+    expect(findUniqueCalls).toContain(2); // riesgoId
+    expect(findUniqueCalls).toContain(1); // riesgoControlId
+    expect(findUniqueCalls).toContain(3); // vulnerabilidadControlId
+  });
+
+  it('TRIANGULATE: should compute evaluacionRiesgoControl using control valors', async () => {
+    // riesgoId=3→valor=3, riesgoControlId=1→valor=1, vulnerabilidadControlId=1→valor=1
+    // inherent: VA=3 × 3 × 1 = 9 (no vulnRiesgoId set)
+    // control: VA=3 × 1 × 1 = 3 → evaluacionRiesgoControl=3
+    mockPrisma.riesgo.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 3)
+          return Promise.resolve({ id: 3, valor: 3, nivel: 'Alto' });
+        if (args.where.id === 1)
+          return Promise.resolve({ id: 1, valor: 1, nivel: 'Bajo' });
+        return Promise.resolve(null);
+      },
+    );
+
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 41 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 41 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          riesgoId: 3,
+          riesgoControlId: 1,
+          vulnerabilidadControlId: 1,
+          amenazaIds: '[1]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    const createCall = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    // evaluacionRiesgoControl = 3 × 1 × 1 = 3 (independent from inherent)
+    expect(createCall.data.evaluacionRiesgoControl).toBe(3);
+    expect(createCall.data.nivelRiesgoControl).toBe('BAJO');
   });
 });
 

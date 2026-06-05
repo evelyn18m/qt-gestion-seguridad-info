@@ -84,6 +84,7 @@ export interface DetalleRiesgo {
     metodoTratamiento?: string
     tipoControlId?: number | string | null
     riesgoControlId?: number | string | null
+    vulnerabilidadControlId?: number | null
     evaluacionRiesgoControl?: number
     nivelRiesgoControl?: string
     riesgoResidual?: 'ACEPTABLE' | 'INACEPTABLE'

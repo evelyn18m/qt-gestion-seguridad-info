@@ -129,8 +129,10 @@ export class CatalogosService {
         }
       ).delete({ where: { id } });
     } catch (e: any) {
-      if (e?.code === 'P2003') throw new ConflictException('Cannot delete: item has linked records');
-      if (e?.code === 'P2002') throw new ConflictException('Cannot create: duplicate record');
+      if (e?.code === 'P2003')
+        throw new ConflictException('Cannot delete: item has linked records');
+      if (e?.code === 'P2002')
+        throw new ConflictException('Cannot create: duplicate record');
       throw e;
     }
   }
@@ -159,15 +161,21 @@ export class CatalogosService {
         },
       });
     } catch (e: any) {
-      if (e?.code === 'P2002') throw new ConflictException('La sección ya existe');
-      if (e?.code === 'P2003') throw new ConflictException('Cannot delete: item has linked records');
+      if (e?.code === 'P2002')
+        throw new ConflictException('La sección ya existe');
+      if (e?.code === 'P2003')
+        throw new ConflictException('Cannot delete: item has linked records');
       throw e;
     }
   }
 
   async updateControlesImplementar(id: number, dto: UpdateCatalogoDto) {
     try {
-      const data: { seccion?: string; descripcion?: string; categoriaId?: number } = {};
+      const data: {
+        seccion?: string;
+        descripcion?: string;
+        categoriaId?: number;
+      } = {};
       if (dto.seccion !== undefined) data.seccion = dto.seccion;
       if (dto.descripcion !== undefined) data.descripcion = dto.descripcion;
       if (dto.categoriaId !== undefined) data.categoriaId = dto.categoriaId;
@@ -176,8 +184,10 @@ export class CatalogosService {
         data,
       });
     } catch (e: any) {
-      if (e?.code === 'P2002') throw new ConflictException('La sección ya existe');
-      if (e?.code === 'P2003') throw new ConflictException('Cannot delete: item has linked records');
+      if (e?.code === 'P2002')
+        throw new ConflictException('La sección ya existe');
+      if (e?.code === 'P2003')
+        throw new ConflictException('Cannot delete: item has linked records');
       throw e;
     }
   }
@@ -186,8 +196,10 @@ export class CatalogosService {
     try {
       return await this.prisma.controlesImplementar.delete({ where: { id } });
     } catch (e: any) {
-      if (e?.code === 'P2002') throw new ConflictException('La sección ya existe');
-      if (e?.code === 'P2003') throw new ConflictException('Cannot delete: item has linked records');
+      if (e?.code === 'P2002')
+        throw new ConflictException('La sección ya existe');
+      if (e?.code === 'P2003')
+        throw new ConflictException('Cannot delete: item has linked records');
       throw e;
     }
   }
