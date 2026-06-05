@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
+import { seedControlCatalogFromSql } from '../src/catalogos/control-catalog-seed';
 import { parseRiesgoRows } from '../src/catalogos/riesgo-parser';
 
 const connectionString = process.env.DATABASE_URL as string;
@@ -23,6 +24,15 @@ async function main() {
   let content = fs.readFileSync(jsonPath, 'utf8');
   if (content.charCodeAt(0) === 0xfeff) content = content.slice(1);
   const data = JSON.parse(content);
+
+  // --- Control Catalogs (source-of-truth SQL) ---
+  console.log('Seeding Control Catalogs from SQL source...');
+  const controlCatalogSqlPath = path.join(
+    __dirname,
+    '../documentos/controles_implementar.sql',
+  );
+  await seedControlCatalogFromSql(prisma, controlCatalogSqlPath);
+  console.log('Control Catalogs seeding completed (idempotent upserts).');
 
   // --- Formato ---
   console.log('Seeding Formato...');
