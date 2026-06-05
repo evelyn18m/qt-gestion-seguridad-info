@@ -15,7 +15,7 @@ const loadCatalogoTipos = async () => {
   try {
     // fetchCatalog with comma-separated would hit /catalogos/tipos-activo,formatos,... which is wrong
     // Load tipos individually in parallel
-    const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
+    const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'categorias-controles-implementar', 'controles-implementar']
     await Promise.all(tipos.map(t => fetchCatalog(t)))
     // Also load the tipo list itself
     const {apiFetch} = useApi()
@@ -53,6 +53,8 @@ const FIELD_MAP: Record<string, string[]> = {
   'tipos-control': ['nombre'],
   riesgos: ['tipo', 'nivel', 'valor'],
   probabilidades: ['nombre'],
+  'controles-implementar': ['seccion', 'descripcion', 'categoriaId'],
+  'categorias-controles-implementar': ['nombre'],
 }
 
 const catalogoFormVisible = ref(false)
@@ -61,6 +63,7 @@ const catalogoEditingItem = ref<CatalogoItem | null>(null)
 const catalogoSaving = ref(false)
 const catalogoConfirmDelete = ref<CatalogoItem | null>(null)
 const macroprocesos = ref<CatalogoItem[]>([])
+const categoriasControlesImplementar = ref<CatalogoItem[]>([])
 
 function getFormFields() {
   if (!selectedCatalogo.value) return []
@@ -82,6 +85,10 @@ function openCreateForm() {
   if ((selectedCatalogo.value as any)?.tipo === 'subprocesos') {
     loadMacroprocesos()
   }
+  // Load categorias for controles-implementar dropdown
+  if ((selectedCatalogo.value as any)?.tipo === 'controles-implementar') {
+    loadCategoriasControlesImplementar()
+  }
 }
 
 function openEditForm(item: CatalogoItem) {
@@ -95,11 +102,20 @@ function openEditForm(item: CatalogoItem) {
   if ((selectedCatalogo.value as any)?.tipo === 'subprocesos') {
     loadMacroprocesos()
   }
+  // Load categorias for controles-implementar dropdown
+  if ((selectedCatalogo.value as any)?.tipo === 'controles-implementar') {
+    loadCategoriasControlesImplementar()
+  }
 }
 
 async function loadMacroprocesos() {
   const {fetchCatalog} = useCatalog()
   macroprocesos.value = await fetchCatalog('macroprocesos')
+}
+
+async function loadCategoriasControlesImplementar() {
+  const {fetchCatalog} = useCatalog()
+  categoriasControlesImplementar.value = await fetchCatalog('categorias-controles-implementar')
 }
 
 function closeCatalogoForm() {
@@ -161,6 +177,22 @@ function checkTipoFromRoute() {
     if (match) selectCatalogo(match)
   }
 }
+
+/**
+ * Resolves a cell value for safe display in the table.
+ * - Arrays (e.g. detallesRiesgo[]) → "(N)"
+ * - Objects with nombre (e.g. categoria relation) → categoria.nombre
+ * - Other objects → JSON string
+ * - Primitives → string
+ */
+function displayCellValue(col: string, item: CatalogoItem): string {
+  const val = (item as any)[col]
+  if (Array.isArray(val)) return `(${val.length})`
+  if (val !== null && val !== undefined && typeof val === 'object') {
+    return (val as any).nombre ?? JSON.stringify(val)
+  }
+  return String(val ?? '')
+}
 </script>
 
 <template>
@@ -187,7 +219,7 @@ function checkTipoFromRoute() {
           <thead>
           <tr>
             <th>#</th>
-            <th v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))"
+            <th v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At') && !Array.isArray((catalogoItems[0] as any)[c]))"
                 :key="col">{{ col }}
             </th>
             <th class="th-actions">Acciones</th>
@@ -196,9 +228,9 @@ function checkTipoFromRoute() {
           <tbody>
           <tr v-for="item in catalogoItems" :key="item.id">
             <td>{{ item.id }}</td>
-            <td v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))"
+            <td v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At') && !Array.isArray((catalogoItems[0] as any)[c]))"
                 :key="col">
-              <div class="cell-text">{{ item[col] }}</div>
+              <div class="cell-text">{{ displayCellValue(col, item) }}</div>
             </td>
             <td>
               <div class="row-actions">
@@ -244,6 +276,17 @@ function checkTipoFromRoute() {
               <option value="">Seleccionar MacroProceso...</option>
               <option v-for="mp in macroprocesos" :key="mp.id" :value="mp.id">
                 {{ (mp as any).codigo }} - {{ mp.nombre }}
+              </option>
+            </select>
+            <select
+                v-else-if="field === 'categoriaId'"
+                :id="'f-' + field"
+                v-model="catalogoFormData[field]"
+                required
+            >
+              <option value="">Seleccionar Categoría...</option>
+              <option v-for="cat in categoriasControlesImplementar" :key="cat.id" :value="cat.id">
+                {{ cat.nombre }}
               </option>
             </select>
             <input

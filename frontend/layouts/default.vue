@@ -26,6 +26,8 @@ const catalogos = [
   {path: '/catalogos?tipo=tipos-control', label: 'Tipos de Control'},
   {path: '/catalogos?tipo=riesgos', label: 'Riesgos'},
   {path: '/catalogos?tipo=probabilidades', label: 'Probabilidad'},
+  {path: '/catalogos?tipo=categorias-controles-implementar', label: 'Categorías Controles'},
+  {path: '/catalogos?tipo=controles-implementar', label: 'Controles a Implementar'},
 ]
 </script>
 

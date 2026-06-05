@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -21,6 +22,8 @@ const TIPO_MAP: Record<string, string> = {
   'tipos-control': 'tipoControl',
   riesgos: 'riesgo',
   probabilidades: 'probabilidad',
+  'categorias-controles-implementar': 'categoriaControlesImplementar',
+  'controles-implementar': 'controlesImplementar',
 };
 
 const FIELD_MAP: Record<string, readonly string[]> = {
@@ -37,6 +40,8 @@ const FIELD_MAP: Record<string, readonly string[]> = {
   tipoControl: ['nombre'],
   riesgo: ['tipo', 'nivel', 'valor'],
   probabilidad: ['nombre'],
+  categoriaControlesImplementar: ['nombre'],
+  controlesImplementar: ['seccion', 'descripcion', 'categoriaId'],
 };
 
 @Injectable()
@@ -117,11 +122,17 @@ export class CatalogosService {
     const model = TIPO_MAP[tipo];
     if (!model) throw new BadRequestException(`Tipo inválido: ${tipo}`);
     await this.findOne(tipo, id);
-    return (
-      this.delegate(model) as {
-        delete: (args: { where: { id: number } }) => Promise<unknown>;
-      }
-    ).delete({ where: { id } });
+    try {
+      return await (
+        this.delegate(model) as {
+          delete: (args: { where: { id: number } }) => Promise<unknown>;
+        }
+      ).delete({ where: { id } });
+    } catch (e: any) {
+      if (e?.code === 'P2003') throw new ConflictException('Cannot delete: item has linked records');
+      if (e?.code === 'P2002') throw new ConflictException('Cannot create: duplicate record');
+      throw e;
+    }
   }
 
   getTipos() {
@@ -136,6 +147,49 @@ export class CatalogosService {
       include: { categoria: true },
       orderBy: { categoriaId: 'asc' },
     });
+  }
+
+  async createControlesImplementar(dto: CreateCatalogoDto) {
+    try {
+      return await this.prisma.controlesImplementar.create({
+        data: {
+          seccion: dto.seccion as string,
+          descripcion: dto.descripcion as string,
+          categoriaId: dto.categoriaId as number,
+        },
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002') throw new ConflictException('La sección ya existe');
+      if (e?.code === 'P2003') throw new ConflictException('Cannot delete: item has linked records');
+      throw e;
+    }
+  }
+
+  async updateControlesImplementar(id: number, dto: UpdateCatalogoDto) {
+    try {
+      const data: { seccion?: string; descripcion?: string; categoriaId?: number } = {};
+      if (dto.seccion !== undefined) data.seccion = dto.seccion;
+      if (dto.descripcion !== undefined) data.descripcion = dto.descripcion;
+      if (dto.categoriaId !== undefined) data.categoriaId = dto.categoriaId;
+      return await this.prisma.controlesImplementar.update({
+        where: { id },
+        data,
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002') throw new ConflictException('La sección ya existe');
+      if (e?.code === 'P2003') throw new ConflictException('Cannot delete: item has linked records');
+      throw e;
+    }
+  }
+
+  async removeControlesImplementar(id: number) {
+    try {
+      return await this.prisma.controlesImplementar.delete({ where: { id } });
+    } catch (e: any) {
+      if (e?.code === 'P2002') throw new ConflictException('La sección ya existe');
+      if (e?.code === 'P2003') throw new ConflictException('Cannot delete: item has linked records');
+      throw e;
+    }
   }
 
   private delegate(model: string) {

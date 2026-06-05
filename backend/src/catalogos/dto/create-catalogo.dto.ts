@@ -10,4 +10,6 @@ export class CreateCatalogoDto {
   tipoFuente?: string;
   macroProcesoId?: number;
   codigo?: string;
+  seccion?: string;
+  categoriaId?: number;
 }
