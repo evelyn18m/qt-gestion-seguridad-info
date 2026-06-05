@@ -1,7 +1,7 @@
 import {
+  IsNumber,
   IsOptional,
   IsString,
-  IsNumber,
   Validate,
   ValidationArguments,
   ValidatorConstraint,

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 const $auth = useAuth()
 
 const login = () => $auth.login()
@@ -10,15 +10,17 @@ const logout = () => $auth.logout()
     <div v-if="!$auth.loggedIn.value" class="premium-container">
       <div class="login-card">
         <div class="logo-section">
-          <img src="https://turismo.quito.gob.ec/wp-content/uploads/2024/06/logoQT-1024x166.png" alt="Quito Turismo" class="logo-img">
+          <img alt="Quito Turismo" class="logo-img"
+               src="https://turismo.quito.gob.ec/wp-content/uploads/2024/06/logoQT-1024x166.png">
           <h1>Gestión de Seguridad</h1>
           <p>Sistema de Seguridad de la Información (SGSI)</p>
         </div>
 
         <button class="login-btn" @click="login">
           <span>Iniciar Sesión</span>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          <svg fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;" viewBox="0 0 24 24"
+               xmlns="http://www.w3.org/2000/svg">
+            <path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
 
@@ -29,7 +31,7 @@ const logout = () => $auth.logout()
     </div>
 
     <NuxtLayout v-else>
-      <NuxtPage />
+      <NuxtPage/>
     </NuxtLayout>
   </div>
 </template>
@@ -58,8 +60,14 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Auth Styles */
@@ -69,7 +77,7 @@ body {
   align-items: center;
   justify-content: center;
   background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent),
-              radial-gradient(circle at bottom left, rgba(79, 70, 229, 0.1), transparent);
+  radial-gradient(circle at bottom left, rgba(79, 70, 229, 0.1), transparent);
 }
 
 .login-card {
@@ -173,7 +181,7 @@ body {
 }
 
 .btn-cancel:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
 }
 

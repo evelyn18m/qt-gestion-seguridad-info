@@ -13,6 +13,121 @@ import { CalcularDetalleDto } from './dto/calcular-detalle.dto';
 export class ValoracionesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findAll() {
+    const items = await this.prisma.valoracionActivo.findMany({
+      orderBy: { id: 'desc' },
+    });
+    return Promise.all(items.map((i) => this.enrich(i)));
+  }
+
+  async findOne(id: number) {
+    const item = await this.prisma.valoracionActivo.findUnique({
+      where: { id },
+    });
+    if (!item) throw new NotFoundException(`Valoración ${id} no encontrada`);
+    return this.enrich(item);
+  }
+
+  async create(dto: CreateValoracionDto) {
+    const { detallesRiesgo, ...data } = dto;
+    const item = await this.prisma.valoracionActivo.create({ data });
+    if (
+      detallesRiesgo &&
+      Array.isArray(detallesRiesgo) &&
+      detallesRiesgo.length > 0
+    ) {
+      // Look up Riesgo catalog entries to get nivel (valor field) for calculateRiesgo
+      const riesgoResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.riesgoId != null
+            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoId } })
+            : Promise.resolve(null),
+        ),
+      );
+      const nivelValores = riesgoResults.map((r) => r?.valor ?? 1);
+      await this.prisma.$transaction(
+        detallesRiesgo.map((d, i) =>
+          this.prisma.detalleRiesgo.create({
+            data: this.mapDetalleRiesgo(d, item.id, nivelValores[i]),
+          }),
+        ),
+      );
+    }
+    return this.enrich(item);
+  }
+
+  async update(id: number, dto: UpdateValoracionDto) {
+    await this.findOne(id);
+    const { detallesRiesgo, ...data } = dto;
+    const item = await this.prisma.valoracionActivo.update({
+      where: { id },
+      data,
+    });
+    if (
+      detallesRiesgo &&
+      Array.isArray(detallesRiesgo) &&
+      detallesRiesgo.length > 0
+    ) {
+      // Look up Riesgo catalog entries to get nivel (valor field) for calculateRiesgo
+      const riesgoResults = await Promise.all(
+        detallesRiesgo.map((d) =>
+          d.riesgoId != null
+            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoId } })
+            : Promise.resolve(null),
+        ),
+      );
+      const nivelValores = riesgoResults.map((r) => r?.valor ?? 1);
+      await this.prisma.$transaction([
+        this.prisma.detalleRiesgo.deleteMany({
+          where: { valoracionActivoId: id },
+        }),
+        ...detallesRiesgo.map((d, i) =>
+          this.prisma.detalleRiesgo.create({
+            data: this.mapDetalleRiesgo(d, id, nivelValores[i]),
+          }),
+        ),
+      ]);
+    }
+    return this.enrich(item);
+  }
+
+  /**
+   * Computes risk fields using calculateRiesgo without persisting.
+   * Reads the existing DetalleRiesgo row to validate it exists,
+   * then calculates using DTO params (overrides VA if provided).
+   */
+  async calcularDetalleRiesgo(
+    id: number,
+    detalleId: number,
+    dto: CalcularDetalleDto,
+  ): Promise<RiesgoCalculado> {
+    // Validate the detalle belongs to the valoracion
+    const detalle = await this.prisma.detalleRiesgo.findFirst({
+      where: { id: detalleId, valoracionActivoId: id },
+    });
+    if (!detalle) {
+      throw new NotFoundException(
+        `DetalleRiesgo ${detalleId} no encontrado para Valoración ${id}`,
+      );
+    }
+    const va = dto.VA ?? 3;
+    return calculateRiesgo(
+      va,
+      dto.nivelAmenaza,
+      dto.nivelVulnerabilidad,
+      dto.nivelAmenazaControl,
+      dto.nivelVulnerabilidadControl,
+    );
+  }
+
+  async remove(id: number) {
+    await this.findOne(id);
+    await this.prisma.detalleRiesgo.deleteMany({
+      where: { valoracionActivoId: id },
+    });
+    return this.prisma.valoracionActivo.delete({ where: { id } });
+  }
+
   private mapDetalleRiesgo(
     d: DetalleRiesgoDto,
     valoracionActivoId: number,
@@ -127,120 +242,5 @@ export class ValoracionesService {
       tipoControl,
       detallesRiesgo,
     };
-  }
-
-  async findAll() {
-    const items = await this.prisma.valoracionActivo.findMany({
-      orderBy: { id: 'desc' },
-    });
-    return Promise.all(items.map((i) => this.enrich(i)));
-  }
-
-  async findOne(id: number) {
-    const item = await this.prisma.valoracionActivo.findUnique({
-      where: { id },
-    });
-    if (!item) throw new NotFoundException(`Valoración ${id} no encontrada`);
-    return this.enrich(item);
-  }
-
-  async create(dto: CreateValoracionDto) {
-    const { detallesRiesgo, ...data } = dto;
-    const item = await this.prisma.valoracionActivo.create({ data });
-    if (
-      detallesRiesgo &&
-      Array.isArray(detallesRiesgo) &&
-      detallesRiesgo.length > 0
-    ) {
-      // Look up Riesgo catalog entries to get nivel (valor field) for calculateRiesgo
-      const riesgoResults = await Promise.all(
-        detallesRiesgo.map((d) =>
-          d.riesgoId != null
-            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoId } })
-            : Promise.resolve(null),
-        ),
-      );
-      const nivelValores = riesgoResults.map((r) => r?.valor ?? 1);
-      await this.prisma.$transaction(
-        detallesRiesgo.map((d, i) =>
-          this.prisma.detalleRiesgo.create({
-            data: this.mapDetalleRiesgo(d, item.id, nivelValores[i]),
-          }),
-        ),
-      );
-    }
-    return this.enrich(item);
-  }
-
-  async update(id: number, dto: UpdateValoracionDto) {
-    await this.findOne(id);
-    const { detallesRiesgo, ...data } = dto;
-    const item = await this.prisma.valoracionActivo.update({
-      where: { id },
-      data,
-    });
-    if (
-      detallesRiesgo &&
-      Array.isArray(detallesRiesgo) &&
-      detallesRiesgo.length > 0
-    ) {
-      // Look up Riesgo catalog entries to get nivel (valor field) for calculateRiesgo
-      const riesgoResults = await Promise.all(
-        detallesRiesgo.map((d) =>
-          d.riesgoId != null
-            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoId } })
-            : Promise.resolve(null),
-        ),
-      );
-      const nivelValores = riesgoResults.map((r) => r?.valor ?? 1);
-      await this.prisma.$transaction([
-        this.prisma.detalleRiesgo.deleteMany({
-          where: { valoracionActivoId: id },
-        }),
-        ...detallesRiesgo.map((d, i) =>
-          this.prisma.detalleRiesgo.create({
-            data: this.mapDetalleRiesgo(d, id, nivelValores[i]),
-          }),
-        ),
-      ]);
-    }
-    return this.enrich(item);
-  }
-
-  /**
-   * Computes risk fields using calculateRiesgo without persisting.
-   * Reads the existing DetalleRiesgo row to validate it exists,
-   * then calculates using DTO params (overrides VA if provided).
-   */
-  async calcularDetalleRiesgo(
-    id: number,
-    detalleId: number,
-    dto: CalcularDetalleDto,
-  ): Promise<RiesgoCalculado> {
-    // Validate the detalle belongs to the valoracion
-    const detalle = await this.prisma.detalleRiesgo.findFirst({
-      where: { id: detalleId, valoracionActivoId: id },
-    });
-    if (!detalle) {
-      throw new NotFoundException(
-        `DetalleRiesgo ${detalleId} no encontrado para Valoración ${id}`,
-      );
-    }
-    const va = dto.VA ?? 3;
-    return calculateRiesgo(
-      va,
-      dto.nivelAmenaza,
-      dto.nivelVulnerabilidad,
-      dto.nivelAmenazaControl,
-      dto.nivelVulnerabilidadControl,
-    );
-  }
-
-  async remove(id: number) {
-    await this.findOne(id);
-    await this.prisma.detalleRiesgo.deleteMany({
-      where: { valoracionActivoId: id },
-    });
-    return this.prisma.valoracionActivo.delete({ where: { id } });
   }
 }

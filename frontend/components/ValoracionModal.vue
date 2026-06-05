@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import type { CatalogoItem, DetalleRiesgo } from '~/types/api'
+<script lang="ts" setup>
+import type {CatalogoItem, DetalleRiesgo} from '~/types/api'
 
 // ── Catalog Data ──────────────────────────────────────────────────────────────
 interface CatalogData {
@@ -137,7 +137,7 @@ const previewRiesgo = computed<PreviewRiesgo>(() => {
   const amenazaNivel = getValorRiesgo(props.evaluacionForm.amenazaRiesgoId)
   const vulnerabilidadNivel = getValorRiesgo(props.evaluacionForm.vulnerabilidadRiesgoId)
   if (ciaAverage.value === 0 || !amenazaNivel || !vulnerabilidadNivel) {
-    return { evaluacionRiesgo: 0, nivelRiesgo: '' }
+    return {evaluacionRiesgo: 0, nivelRiesgo: ''}
   }
   return localCalculateRiesgo(ciaAverage.value, amenazaNivel, vulnerabilidadNivel)
 })
@@ -314,19 +314,19 @@ watch(() => props.modelValue, (isOpen) => {
 // ── Validation Functions ──────────────────────────────────────────────────
 function canAdvanceFromStep1(): boolean {
   return !!(
-    props.valForm.nombreActivo &&
-    props.valForm.tipoActivo &&
-    props.valForm.formato &&
-    props.valForm.macroProceso &&
-    props.valForm.subProceso &&
-    props.valForm.propietario &&
-    props.valForm.custodio &&
-    props.valForm.descripcion &&
-    props.valForm.controlSeguridad &&
-    props.valForm.ubicacion &&
-    props.valForm.confidencialidad &&
-    props.valForm.integridad &&
-    props.valForm.disponibilidad
+      props.valForm.nombreActivo &&
+      props.valForm.tipoActivo &&
+      props.valForm.formato &&
+      props.valForm.macroProceso &&
+      props.valForm.subProceso &&
+      props.valForm.propietario &&
+      props.valForm.custodio &&
+      props.valForm.descripcion &&
+      props.valForm.controlSeguridad &&
+      props.valForm.ubicacion &&
+      props.valForm.confidencialidad &&
+      props.valForm.integridad &&
+      props.valForm.disponibilidad
   )
 }
 
@@ -336,8 +336,8 @@ function canAdvanceFromStep2(): boolean {
 
 function canAdvanceFromStep3(): boolean {
   return riskRows.value.every(row =>
-    findMatchedDetalle(row)?.riesgoId &&
-    findMatchedDetalle(row)?.vulnerabilidadRiesgoId
+      findMatchedDetalle(row)?.riesgoId &&
+      findMatchedDetalle(row)?.vulnerabilidadRiesgoId
   )
 }
 
@@ -403,10 +403,10 @@ function calcularNivelRiesgo(evaluacion: number) {
 
 function getNivelStyle(nivel: string) {
   const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return { label: 'Crítico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)' }
-  if (n.includes('alto')) return { label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)' }
-  if (n.includes('medio')) return { label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)' }
-  return { label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)' }
+  if (n.includes('critico')) return {label: 'Crítico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)'}
+  if (n.includes('alto')) return {label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)'}
+  if (n.includes('medio')) return {label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)'}
+  return {label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)'}
 }
 
 function getCatalogoLabel(tipo: string, catalogoId: number) {
@@ -443,7 +443,7 @@ function deriveNivelRiesgo(evaluacion: number): string {
 function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number): PreviewRiesgo {
   const evaluacionRiesgo = va * nivelAmenaza * nivelVulnerabilidad
   const nivelRiesgo = deriveNivelRiesgo(evaluacionRiesgo)
-  return { evaluacionRiesgo, nivelRiesgo }
+  return {evaluacionRiesgo, nivelRiesgo}
 }
 
 function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
@@ -451,7 +451,7 @@ function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
   const nivelA = getValorRiesgo(d.riesgoId)
   const nivelV = getValorRiesgo(d.vulnerabilidadRiesgoId)
   if (va === 0 || !nivelA || !nivelV) {
-    return { evaluacionRiesgo: 0, nivelRiesgo: '' }
+    return {evaluacionRiesgo: 0, nivelRiesgo: ''}
   }
   return localCalculateRiesgo(va, nivelA, nivelV)
 }
@@ -459,12 +459,12 @@ function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
 function findMatchedDetalle(row: RiskRow): DetalleRiesgo | undefined {
   if (!row.amenazaIds.length && !row.vulnerabilidadIds.length) return undefined
   return props.detallesRiesgo.find(d =>
-    // Match by amenaza if present
-    (row.amenazaIds[0]
-      ? d.tipo === 'amenaza' && d.catalogoId === Number(row.amenazaIds[0])
-      : d.tipo === 'vulnerabilidad' && d.catalogoId === Number(row.vulnerabilidadIds[0])) &&
-    JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
-    JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
+      // Match by amenaza if present
+      (row.amenazaIds[0]
+          ? d.tipo === 'amenaza' && d.catalogoId === Number(row.amenazaIds[0])
+          : d.tipo === 'vulnerabilidad' && d.catalogoId === Number(row.vulnerabilidadIds[0])) &&
+      JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
+      JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
   )
 }
 
@@ -536,10 +536,10 @@ function calcularRiesgoResidual(evaluacion: number | undefined | null): 'ACEPTAB
 }
 
 const tabs = [
-  { label: 'Valoración de Activo' },
-  { label: 'Análisis de Riesgos' },
-  { label: 'Evaluación de Riesgo' },
-  { label: 'Tratamiento de Riesgo' },
+  {label: 'Valoración de Activo'},
+  {label: 'Análisis de Riesgos'},
+  {label: 'Evaluación de Riesgo'},
+  {label: 'Tratamiento de Riesgo'},
 ]
 </script>
 
@@ -551,10 +551,10 @@ const tabs = [
         <h3>{{ editId ? 'Editar' : 'Nueva' }} Valoración</h3>
         <div class="val-stepper">
           <div
-            v-for="(tab, idx) in tabs"
-            :key="idx"
-            class="val-step"
-            :class="{ active: currentStep === idx, completed: currentStep > idx }"
+              v-for="(tab, idx) in tabs"
+              :key="idx"
+              :class="{ active: currentStep === idx, completed: currentStep > idx }"
+              class="val-step"
           >
             <div class="val-step-circle">
               <span v-if="currentStep > idx">&#10003;</span>
@@ -574,13 +574,16 @@ const tabs = [
                 <h3 class="val-card-title">Identificación del Activo</h3>
                 <div class="form-group">
                   <label>Nombre del Activo</label>
-                  <input v-model="valForm.nombreActivo" type="text" placeholder="Nombre del activo de información" required />
+                  <input v-model="valForm.nombreActivo" placeholder="Nombre del activo de información" required
+                         type="text"/>
                 </div>
                 <div class="form-group">
                   <label>Tipo de Activo</label>
                   <select v-model="valForm.tipoActivo" required>
                     <option value="">Seleccionar...</option>
-                    <option v-for="t in catalogData.valTipoActivo" :key="t.id" :value="t.id">{{ t.nombre }} — {{ t.detalle }}</option>
+                    <option v-for="t in catalogData.valTipoActivo" :key="t.id" :value="t.id">{{ t.nombre }} —
+                      {{ t.detalle }}
+                    </option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -620,15 +623,18 @@ const tabs = [
                 </div>
                 <div class="form-group">
                   <label>Descripción del Activo</label>
-                  <textarea v-model="valForm.descripcion" placeholder="Describa el activo de información" rows="2" required></textarea>
+                  <textarea v-model="valForm.descripcion" placeholder="Describa el activo de información" required
+                            rows="2"></textarea>
                 </div>
                 <div class="form-group">
                   <label>Control de Seguridad Implementado</label>
-                  <textarea v-model="valForm.controlSeguridad" placeholder="Controles de seguridad existentes" rows="2" required></textarea>
+                  <textarea v-model="valForm.controlSeguridad" placeholder="Controles de seguridad existentes" required
+                            rows="2"></textarea>
                 </div>
                 <div class="form-group">
                   <label>Ubicación</label>
-                  <input v-model="valForm.ubicacion" type="text" placeholder="Ubicación física o lógica del activo" required />
+                  <input v-model="valForm.ubicacion" placeholder="Ubicación física o lógica del activo" required
+                         type="text"/>
                 </div>
                 <div class="form-group">
                   <label>¿Tiene Datos Personales?</label>
@@ -649,24 +655,30 @@ const tabs = [
                   <label>Confidencialidad</label>
                   <select v-model="valForm.confidencialidad" required>
                     <option value="">Seleccionar...</option>
-                    <option v-for="n in getNivelesImpacto('confidencialidad')" :key="n.id" :value="n.id">{{ n.nivel }} ({{ n.valor }}) — {{ n.criterio }}</option>
+                    <option v-for="n in getNivelesImpacto('confidencialidad')" :key="n.id" :value="n.id">{{ n.nivel }}
+                      ({{ n.valor }}) — {{ n.criterio }}
+                    </option>
                   </select>
                 </div>
                 <div class="form-group">
                   <label>Integridad</label>
                   <select v-model="valForm.integridad" required>
                     <option value="">Seleccionar...</option>
-                    <option v-for="n in getNivelesImpacto('integridad')" :key="n.id" :value="n.id">{{ n.nivel }} ({{ n.valor }}) — {{ n.criterio }}</option>
+                    <option v-for="n in getNivelesImpacto('integridad')" :key="n.id" :value="n.id">{{ n.nivel }}
+                      ({{ n.valor }}) — {{ n.criterio }}
+                    </option>
                   </select>
                 </div>
                 <div class="form-group">
                   <label>Disponibilidad</label>
                   <select v-model="valForm.disponibilidad" required>
                     <option value="">Seleccionar...</option>
-                    <option v-for="n in getNivelesImpacto('disponibilidad')" :key="n.id" :value="n.id">{{ n.nivel }} ({{ n.valor }}) — {{ n.criterio }}</option>
+                    <option v-for="n in getNivelesImpacto('disponibilidad')" :key="n.id" :value="n.id">{{ n.nivel }}
+                      ({{ n.valor }}) — {{ n.criterio }}
+                    </option>
                   </select>
                 </div>
-                <div class="cia-average" v-if="ciaAverage > 0">
+                <div v-if="ciaAverage > 0" class="cia-average">
                   <span class="cia-average-label">Promedio CIA</span>
                   <span class="cia-average-value">{{ ciaAverage.toFixed(2) }}</span>
                 </div>
@@ -678,8 +690,11 @@ const tabs = [
           <div v-show="currentStep === 1" class="val-tab-panel">
             <div class="val-card" style="border:none; padding:0; background:transparent;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-                <h3 class="val-card-title" style="margin:0; border:none; padding:0;">Análisis de Riesgos — Filas de Riesgo</h3>
-                <button type="button" class="btn-primary" @click="agregarFila" style="padding:0.5rem 1rem; font-size:0.85rem;">+ Agregar fila</button>
+                <h3 class="val-card-title" style="margin:0; border:none; padding:0;">Análisis de Riesgos — Filas de
+                  Riesgo</h3>
+                <button class="btn-primary" style="padding:0.5rem 1rem; font-size:0.85rem;" type="button"
+                        @click="agregarFila">+ Agregar fila
+                </button>
               </div>
 
               <div v-if="riskRows.length === 0" class="chip-empty" style="text-align:center; padding:2rem 0;">
@@ -688,106 +703,122 @@ const tabs = [
 
               <table v-else class="val-table">
                 <thead>
-                  <tr>
-                    <th style="min-width:160px;">Nombre del Activo</th>
-                    <th style="min-width:180px;">Macroproceso</th>
-                    <th style="min-width:220px;">Amenazas</th>
-                    <th style="min-width:220px;">Vulnerabilidades</th>
-                    <th>Controles Implementados</th>
-                    <th style="width:48px;"></th>
-                  </tr>
+                <tr>
+                  <th style="min-width:160px;">Nombre del Activo</th>
+                  <th style="min-width:180px;">Macroproceso</th>
+                  <th style="min-width:220px;">Amenazas</th>
+                  <th style="min-width:220px;">Vulnerabilidades</th>
+                  <th>Controles Implementados</th>
+                  <th style="width:48px;"></th>
+                </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(row, index) in riskRows" :key="row.tempId">
-                    <!-- Nombre del Activo (readonly, mismo valor en todas las filas) -->
-                    <td>
-                      <input type="text" :value="analisisForm.nombreActivo" readonly
-                        style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
-                    </td>
+                <tr v-for="(row, index) in riskRows" :key="row.tempId">
+                  <!-- Nombre del Activo (readonly, mismo valor en todas las filas) -->
+                  <td>
+                    <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;"
+                           type="text"/>
+                  </td>
 
-                    <!-- Macroproceso (readonly, resuelto por computed) -->
-                    <td>
-                      <input type="text" :value="macroProcesoName" readonly
-                        style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
-                    </td>
+                  <!-- Macroproceso (readonly, resuelto por computed) -->
+                  <td>
+                    <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;"
+                           type="text"/>
+                  </td>
 
-                    <!-- Amenaza cell -->
-                    <td>
-                      <!-- Category + select for adding threats -->
-                      <select
+                  <!-- Amenaza cell -->
+                  <td>
+                    <!-- Category + select for adding threats -->
+                    <select
                         v-model="amenazaCategoria"
                         class="row-select"
                         style="margin-bottom:0.4rem;"
-                      >
-                        <option value="">+ Agregar amenaza...</option>
-                        <option v-for="cat in amenazaCategorias" :key="cat" :value="cat">{{ cat }}</option>
-                      </select>
-                      <select
+                    >
+                      <option value="">+ Agregar amenaza...</option>
+                      <option v-for="cat in amenazaCategorias" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                    <select
                         v-if="amenazaCategoria"
                         class="row-select"
-                        @change="(e) => { const s = (e.target as HTMLSelectElement).value; if (s) { toggleAmenazaInRow(row, s); amenazaCategoria = ''; (e.target as HTMLSelectElement).value = '' } }"
                         style="margin-bottom:0.4rem;"
-                      >
-                        <option value="">Seleccionar...</option>
-                        <option v-for="a in amenazasFiltradas" :key="a.id" :value="String(a.id)">{{ a.nombre }}</option>
-                      </select>
-                      <!-- Selected amenaza chips -->
-                      <div class="chip-list" style="max-height:140px;">
-                        <span v-for="aId in row.amenazaIds" :key="aId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; cursor:default;">
+                        @change="(e) => { const s = (e.target as HTMLSelectElement).value; if (s) { toggleAmenazaInRow(row, s); amenazaCategoria = ''; (e.target as HTMLSelectElement).value = '' } }"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option v-for="a in amenazasFiltradas" :key="a.id" :value="String(a.id)">{{ a.nombre }}</option>
+                    </select>
+                    <!-- Selected amenaza chips -->
+                    <div class="chip-list" style="max-height:140px;">
+                        <span v-for="aId in row.amenazaIds" :key="aId" class="chip selected"
+                              style="display:flex; align-items:center; gap:0.3rem; cursor:default;">
                           {{ getAmenazaLabel(aId) }}
-                          <button type="button" @click="removeAmenaza(row, aId)" style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width:10px; height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          <button style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;" type="button"
+                                  @click="removeAmenaza(row, aId)">
+                            <svg fill="none" stroke="currentColor" stroke-width="3" style="width:10px; height:10px;"
+                                 viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12"
+                                                                                              stroke-linecap="round"
+                                                                                              stroke-linejoin="round"/></svg>
                           </button>
                         </span>
-                      </div>
-                    </td>
+                    </div>
+                  </td>
 
-                    <!-- Vulnerabilidad cell -->
-                    <td>
-                      <!-- Category + select for adding vulnerabilities -->
-                      <select
+                  <!-- Vulnerabilidad cell -->
+                  <td>
+                    <!-- Category + select for adding vulnerabilities -->
+                    <select
                         v-model="vulnerabilidadCategoria"
                         class="row-select"
                         style="margin-bottom:0.4rem;"
-                      >
-                        <option value="">+ Agregar vulnerabilidad...</option>
-                        <option v-for="cat in vulnerabilidadCategorias" :key="cat" :value="cat">{{ cat }}</option>
-                      </select>
-                      <select
+                    >
+                      <option value="">+ Agregar vulnerabilidad...</option>
+                      <option v-for="cat in vulnerabilidadCategorias" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                    <select
                         v-if="vulnerabilidadCategoria"
                         class="row-select"
-                        @change="(e) => { const s = (e.target as HTMLSelectElement).value; if (s) { toggleVulnerabilidadInRow(row, s); vulnerabilidadCategoria = ''; (e.target as HTMLSelectElement).value = '' } }"
                         style="margin-bottom:0.4rem;"
-                      >
-                        <option value="">Seleccionar...</option>
-                        <option v-for="v in vulnerabilidadesFiltradas" :key="v.id" :value="String(v.id)">{{ v.descripcion }}</option>
-                      </select>
-                      <!-- Selected vulnerabilidad chips -->
-                      <div class="chip-list" style="max-height:140px;">
-                        <span v-for="vId in row.vulnerabilidadIds" :key="vId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; cursor:default;">
+                        @change="(e) => { const s = (e.target as HTMLSelectElement).value; if (s) { toggleVulnerabilidadInRow(row, s); vulnerabilidadCategoria = ''; (e.target as HTMLSelectElement).value = '' } }"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option v-for="v in vulnerabilidadesFiltradas" :key="v.id" :value="String(v.id)">{{
+                          v.descripcion
+                        }}
+                      </option>
+                    </select>
+                    <!-- Selected vulnerabilidad chips -->
+                    <div class="chip-list" style="max-height:140px;">
+                        <span v-for="vId in row.vulnerabilidadIds" :key="vId" class="chip selected"
+                              style="display:flex; align-items:center; gap:0.3rem; cursor:default;">
                           {{ getVulnerabilidadLabel(vId) }}
-                          <button type="button" @click="removeVulnerabilidad(row, vId)" style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" style="width:10px; height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          <button style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;" type="button"
+                                  @click="removeVulnerabilidad(row, vId)">
+                            <svg fill="none" stroke="currentColor" stroke-width="3" style="width:10px; height:10px;"
+                                 viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12"
+                                                                                              stroke-linecap="round"
+                                                                                              stroke-linejoin="round"/></svg>
                           </button>
                         </span>
-                      </div>
-                    </td>
+                    </div>
+                  </td>
 
-                    <!-- Controles Implementados cell -->
-                    <td>
+                  <!-- Controles Implementados cell -->
+                  <td>
                       <textarea
-                        v-model="row.controlesImplementados"
-                        placeholder="Controles implementados para esta combinación..."
-                        rows="3"
-                        style="resize:vertical; min-width:180px;"
+                          v-model="row.controlesImplementados"
+                          placeholder="Controles implementados para esta combinación..."
+                          rows="3"
+                          style="resize:vertical; min-width:180px;"
                       ></textarea>
-                    </td>
+                  </td>
 
-                    <!-- Remove row -->
-                    <td>
-                      <button type="button" @click="eliminarFila(index)" style="background:transparent; border:none; color:#dc2626; cursor:pointer; font-size:1.2rem; padding:0.25rem; line-height:1;" title="Eliminar fila">×</button>
-                    </td>
-                  </tr>
+                  <!-- Remove row -->
+                  <td>
+                    <button style="background:transparent; border:none; color:#dc2626; cursor:pointer; font-size:1.2rem; padding:0.25rem; line-height:1;" title="Eliminar fila"
+                            type="button"
+                            @click="eliminarFila(index)">×
+                    </button>
+                  </td>
+                </tr>
                 </tbody>
               </table>
             </div>
@@ -799,67 +830,90 @@ const tabs = [
               <h3 class="val-card-title">Evaluación de Riesgo por Item</h3>
               <div class="form-group">
                 <label>Impacto (Extraído de Valoración CIA - Pestaña 1)</label>
-                <input type="text" :value="ciaAverage > 0 ? ciaAverage.toFixed(2) + ' — ' + getCiaLevel(ciaAverage) : 'Complete Valoración CIA en Pestaña 1'" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" />
+                <input :value="ciaAverage > 0 ? ciaAverage.toFixed(2) + ' — ' + getCiaLevel(ciaAverage) : 'Complete Valoración CIA en Pestaña 1'"
+                       readonly
+                       style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
               </div>
-              <div v-if="riskRows.length === 0" class="chip-empty">No hay amenazas ni vulnerabilidades seleccionadas en la Pestaña 2.</div>
+              <div v-if="riskRows.length === 0" class="chip-empty">No hay amenazas ni vulnerabilidades seleccionadas en
+                la Pestaña 2.
+              </div>
               <table v-else class="val-table" style="margin-top:1rem;">
                 <thead>
-                  <tr>
-                    <th>Amenaza</th>
-                    <th>Vulnerabilidad</th>
-                    <th>Nivel Amenaza</th>
-                    <th>Nivel Vulnerabilidad</th>
-                    <th>Evaluación</th>
-                    <th>Nivel</th>
-                    <th>Controles Area</th>
-                  </tr>
+                <tr>
+                  <th>Amenaza</th>
+                  <th>Vulnerabilidad</th>
+                  <th>Nivel Amenaza</th>
+                  <th>Nivel Vulnerabilidad</th>
+                  <th>Evaluación</th>
+                  <th>Nivel</th>
+                  <th>Controles Area</th>
+                </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in riskRows" :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
-                    <td>
-                      <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{ getAmenazaLabel(aId) }}</span>
-                      <span v-if="row.amenazaIds.length === 0" style="color:var(--text-muted);">—</span>
-                    </td>
-                    <td>
-                      <span v-for="vId in row.vulnerabilidadIds" :key="'v-' + vId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{ getVulnerabilidadLabel(vId) }}</span>
-                      <span v-if="row.vulnerabilidadIds.length === 0" style="color:var(--text-muted);">—</span>
-                    </td>
-                    <td>
-                      <template v-if="row.amenazaIds.length > 0 && findMatchedDetalle(row)">
-                        <select v-model="findMatchedDetalle(row)!.riesgoId" @change="updateEvaluacionDetalle(findMatchedDetalle(row))" style="min-width:130px;">
-                          <option value="">Seleccionar...</option>
-                          <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Amenaza')" :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})</option>
-                        </select>
-                      </template>
+                <tr v-for="row in riskRows" :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
+                  <td>
+                    <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected"
+                          style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
+                        getAmenazaLabel(aId)
+                      }}</span>
+                    <span v-if="row.amenazaIds.length === 0" style="color:var(--text-muted);">—</span>
+                  </td>
+                  <td>
+                    <span v-for="vId in row.vulnerabilidadIds" :key="'v-' + vId" class="chip selected"
+                          style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
+                        getVulnerabilidadLabel(vId)
+                      }}</span>
+                    <span v-if="row.vulnerabilidadIds.length === 0" style="color:var(--text-muted);">—</span>
+                  </td>
+                  <td>
+                    <template v-if="row.amenazaIds.length > 0 && findMatchedDetalle(row)">
+                      <select v-model="findMatchedDetalle(row)!.riesgoId"
+                              style="min-width:130px;" @change="updateEvaluacionDetalle(findMatchedDetalle(row))">
+                        <option value="">Seleccionar...</option>
+                        <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Amenaza')"
+                                :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})
+                        </option>
+                      </select>
+                    </template>
+                    <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                  </td>
+                  <td>
+                    <template v-if="row.vulnerabilidadIds.length > 0 && findMatchedDetalle(row)">
+                      <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId"
+                              style="min-width:130px;" @change="updateEvaluacionDetalle(findMatchedDetalle(row))">
+                        <option value="">Seleccionar...</option>
+                        <option
+                            v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Vulnerabilidad')"
+                            :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})
+                        </option>
+                      </select>
+                    </template>
+                    <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                  </td>
+                  <td>
+                    <template v-if="findMatchedDetalle(row)">
+                      <span v-if="getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo > 0">{{
+                          getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo.toFixed(2)
+                        }}</span>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                    </td>
-                    <td>
-                      <template v-if="row.vulnerabilidadIds.length > 0 && findMatchedDetalle(row)">
-                        <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId" @change="updateEvaluacionDetalle(findMatchedDetalle(row))" style="min-width:130px;">
-                          <option value="">Seleccionar...</option>
-                          <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Vulnerabilidad')" :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})</option>
-                        </select>
-                      </template>
+                    </template>
+                    <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                  </td>
+                  <td>
+                    <template v-if="findMatchedDetalle(row)">
+                      <span v-if="getRowPreview(findMatchedDetalle(row)!).nivelRiesgo" :style="{ color: getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).color, background: getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).bg }"
+                            class="nivel-badge">{{
+                          getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).label
+                        }}</span>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                    </td>
-                    <td>
-                      <template v-if="findMatchedDetalle(row)">
-                        <span v-if="getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo > 0">{{ getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo.toFixed(2) }}</span>
-                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                      </template>
-                      <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                    </td>
-                    <td>
-                      <template v-if="findMatchedDetalle(row)">
-                        <span v-if="getRowPreview(findMatchedDetalle(row)!).nivelRiesgo" class="nivel-badge" :style="{ color: getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).color, background: getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).bg }">{{ getNivelStyle(getRowPreview(findMatchedDetalle(row)!).nivelRiesgo).label }}</span>
-                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                      </template>
-                      <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
-                    </td>
-                    <td>
-                      <textarea v-model="row.controlesArea" placeholder="Controles area..." rows="2" style="resize:vertical; min-width:120px;"></textarea>
-                    </td>
-                  </tr>
+                    </template>
+                    <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
+                  </td>
+                  <td>
+                    <textarea v-model="row.controlesArea" placeholder="Controles area..." rows="2"
+                              style="resize:vertical; min-width:120px;"></textarea>
+                  </td>
+                </tr>
                 </tbody>
               </table>
             </div>
@@ -871,56 +925,75 @@ const tabs = [
               <h3 class="val-card-title">Tratamiento de Riesgo — por Fila</h3>
               <div class="form-group">
                 <label>Impacto (Extraído de Valoración CIA - Pestaña 1)</label>
-                <input type="text" :value="ciaAverage > 0 ? ciaAverage.toFixed(2) + ' — ' + getCiaLevel(ciaAverage) : 'Complete Valoración CIA en Pestaña 1'" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" />
+                <input :value="ciaAverage > 0 ? ciaAverage.toFixed(2) + ' — ' + getCiaLevel(ciaAverage) : 'Complete Valoración CIA en Pestaña 1'"
+                       readonly
+                       style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
               </div>
-              <div v-if="riskRows.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y evalúe en la Pestaña 3.</div>
+              <div v-if="riskRows.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y
+                evalúe en la Pestaña 3.
+              </div>
               <table v-else class="val-table">
                 <thead>
-                  <tr>
-                    <th>Amenaza</th>
-                    <th>Vulnerabilidad</th>
-                    <th>Nivel Amenaza</th>
-                    <th>Nivel Vulnerabilidad</th>
-                    <th>Método</th>
-                    <th>Tipo Control</th>
-                    <th>Controles a Implementar</th>
-                    <th>Eval. (Ctrl)</th>
-                    <th>Nivel (Ctrl)</th>
-                    <th>Riesgo Residual</th>
-                  </tr>
+                <tr>
+                  <th>Amenaza</th>
+                  <th>Vulnerabilidad</th>
+                  <th>Nivel Amenaza</th>
+                  <th>Nivel Vulnerabilidad</th>
+                  <th>Método</th>
+                  <th>Tipo Control</th>
+                  <th>Controles a Implementar</th>
+                  <th>Eval. (Ctrl)</th>
+                  <th>Nivel (Ctrl)</th>
+                  <th>Riesgo Residual</th>
+                </tr>
                 </thead>
                 <tbody>
-                  <template v-for="row in riskRows" :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
-                    <tr v-if="row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0">
+                <template v-for="row in riskRows"
+                          :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
+                  <tr v-if="row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0">
                     <td>
-                      <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{ getAmenazaLabel(aId) }}</span>
+                      <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected"
+                            style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
+                          getAmenazaLabel(aId)
+                        }}</span>
                       <span v-if="row.amenazaIds.length === 0" style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
-                      <span v-for="vId in row.vulnerabilidadIds" :key="'v-' + vId" class="chip selected" style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{ getVulnerabilidadLabel(vId) }}</span>
+                      <span v-for="vId in row.vulnerabilidadIds" :key="'v-' + vId" class="chip selected"
+                            style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
+                          getVulnerabilidadLabel(vId)
+                        }}</span>
                       <span v-if="row.vulnerabilidadIds.length === 0" style="color:var(--text-muted);">—</span>
                     </td>
                     <td style="text-align:center;">
                       <template v-if="row.amenazaIds.length > 0 && findMatchedDetalle(row)">
-                        <select v-model="findMatchedDetalle(row)!.riesgoId" @change="updateControlDetalleRow(row)" style="min-width:130px;">
+                        <select v-model="findMatchedDetalle(row)!.riesgoId" style="min-width:130px;"
+                                @change="updateControlDetalleRow(row)">
                           <option value="">Seleccionar...</option>
-                          <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Amenaza')" :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})</option>
+                          <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Amenaza')"
+                                  :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})
+                          </option>
                         </select>
                       </template>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                     <td style="text-align:center;">
                       <template v-if="row.vulnerabilidadIds.length > 0 && findMatchedDetalle(row)">
-                        <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId" @change="updateControlDetalleRow(row)" style="min-width:130px;">
+                        <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId"
+                                style="min-width:130px;" @change="updateControlDetalleRow(row)">
                           <option value="">Seleccionar...</option>
-                          <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Vulnerabilidad')" :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})</option>
+                          <option
+                              v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Vulnerabilidad')"
+                              :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})
+                          </option>
                         </select>
                       </template>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <input v-model="findMatchedDetalle(row)!.metodoTratamiento" type="text" placeholder="Método" style="min-width:100px;" />
+                        <input v-model="findMatchedDetalle(row)!.metodoTratamiento" placeholder="Método" style="min-width:100px;"
+                               type="text"/>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
@@ -928,27 +1001,35 @@ const tabs = [
                       <template v-if="findMatchedDetalle(row)">
                         <select v-model="findMatchedDetalle(row)!.tipoControlId" style="min-width:110px;">
                           <option value="">Seleccionar...</option>
-                          <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{ tc.nombre }}</option>
+                          <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{
+                              tc.nombre
+                            }}
+                          </option>
                         </select>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <textarea v-model="findMatchedDetalle(row)!.controlesImplementados" placeholder="Controles a implementar..." rows="2" style="resize:vertical; min-width:140px;"></textarea>
+                        <textarea v-model="findMatchedDetalle(row)!.controlesImplementados"
+                                  placeholder="Controles a implementar..." rows="2"
+                                  style="resize:vertical; min-width:140px;"></textarea>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <span v-if="findMatchedDetalle(row)!.evaluacionRiesgoControl > 0">{{ findMatchedDetalle(row)!.evaluacionRiesgoControl.toFixed(2) }}</span>
+                        <span v-if="findMatchedDetalle(row)!.evaluacionRiesgoControl > 0">{{
+                            findMatchedDetalle(row)!.evaluacionRiesgoControl.toFixed(2)
+                          }}</span>
                         <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                       </template>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row) && findMatchedDetalle(row)!.nivelRiesgoControl">
-                        <span class="nivel-badge" :style="{ color: getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).color, background: getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).bg }">
+                        <span :style="{ color: getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).color, background: getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).bg }"
+                              class="nivel-badge">
                           {{ getNivelStyle(findMatchedDetalle(row)!.nivelRiesgoControl!).label }}
                         </span>
                       </template>
@@ -956,7 +1037,9 @@ const tabs = [
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <span v-if="calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl)" class="nivel-badge" :style="{ color: calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl) === 'ACEPTABLE' ? '#10b981' : '#ef4444', background: calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl) === 'ACEPTABLE' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' }">
+                        <span v-if="calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl)"
+                              :style="{ color: calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl) === 'ACEPTABLE' ? '#10b981' : '#ef4444', background: calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl) === 'ACEPTABLE' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' }"
+                              class="nivel-badge">
                           {{ calcularRiesgoResidual(findMatchedDetalle(row)!.evaluacionRiesgoControl) }}
                         </span>
                         <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
@@ -964,7 +1047,7 @@ const tabs = [
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                     </td>
                   </tr>
-                  </template>
+                </template>
                 </tbody>
               </table>
             </div>
@@ -973,10 +1056,14 @@ const tabs = [
         </form>
       </div>
       <div class="val-actions">
-        <button type="button" class="btn-cancel" @click="emit('update:modelValue', false); currentStep = 0">Cancelar</button>
-        <button v-if="currentStep > 0" type="button" class="btn-secondary" @click="prevStep">Atrás</button>
-        <button v-if="currentStep < TOTAL_STEPS - 1" type="button" class="btn-primary" @click="nextStep">Siguiente</button>
-        <button v-else type="button" class="btn-primary" :disabled="valSaving" @click="emit('submit')">{{ valSaving ? 'Guardando...' : editId ? 'Actualizar' : 'Guardar' }}</button>
+        <button class="btn-cancel" type="button" @click="emit('update:modelValue', false); currentStep = 0">Cancelar
+        </button>
+        <button v-if="currentStep > 0" class="btn-secondary" type="button" @click="prevStep">Atrás</button>
+        <button v-if="currentStep < TOTAL_STEPS - 1" class="btn-primary" type="button" @click="nextStep">Siguiente
+        </button>
+        <button v-else :disabled="valSaving" class="btn-primary" type="button" @click="emit('submit')">
+          {{ valSaving ? 'Guardando...' : editId ? 'Actualizar' : 'Guardar' }}
+        </button>
       </div>
     </div>
   </div>

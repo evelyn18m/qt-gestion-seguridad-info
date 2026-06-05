@@ -1,7 +1,8 @@
-<script setup lang="ts">
-import type { CatalogoItem, DetalleRiesgo, ValoracionActivo } from '~/types/api'
+<script lang="ts" setup>
+import type {CatalogoItem, DetalleRiesgo, ValoracionActivo} from '~/types/api'
 import ValoracionModal from '~/components/ValoracionModal.vue'
 import ValoracionViewModal from '~/components/ValoracionViewModal.vue'
+
 const valTipoActivo = ref<CatalogoItem[]>([])
 const valFormatos = ref<CatalogoItem[]>([])
 const valMacroprocesos = ref<CatalogoItem[]>([])
@@ -70,13 +71,13 @@ const ciaAverage = computed(() => {
   return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
 })
 
-const { fetchCatalog } = useCatalog()
+const {fetchCatalog} = useCatalog()
 
 // Sincronizar Pestaña 1 → Pestaña 2 (macroproceso y nombre activo)
 watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([macro, nombre]) => {
   analisisForm.value.macroProceso = macro
   analisisForm.value.nombreActivo = nombre
-}, { immediate: true })
+}, {immediate: true})
 
 
 // Limpiar subprocess cuando cambia macroproceso
@@ -92,6 +93,7 @@ function getCatalogoLabel(tipo: string, catalogoId: number) {
   const v = valVulnerabilidades.value.find((x: CatalogoItem) => x.id === catalogoId)
   return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
 }
+
 function rebuildDetalles() {
   const existing = detallesRiesgo.value
   const nuevos: DetalleRiesgo[] = []
@@ -144,6 +146,7 @@ function rebuildDetalles() {
 
   detallesRiesgo.value = nuevos
 }
+
 const loadValoracionData = async () => {
   valLoading.value = true
   const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
@@ -167,11 +170,13 @@ const loadValoracionData = async () => {
     valLoading.value = false
   }
 }
+
 function getValorImpacto(id: string | number): number {
   if (!id) return 0
   const found = valImpactos.value.find((i: CatalogoItem) => i.id === Number(id))
   return found?.valor ?? 0
 }
+
 function calculateRowCiaAverage(v: ValoracionActivo) {
   const c = getValorImpacto(v.confidencialidadId)
   const i = getValorImpacto(v.integridadId)
@@ -180,6 +185,7 @@ function calculateRowCiaAverage(v: ValoracionActivo) {
   if (selected.length === 0) return 0
   return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
 }
+
 function getCiaLevel(avg: number) {
   if (avg >= 2.5) return 'Alto'
   if (avg >= 1.5) return 'Medio'
@@ -213,10 +219,12 @@ const catalogData = computed(() => ({
 
 async function loadValoraciones() {
   try {
-    const { apiFetch } = useApi()
+    const {apiFetch} = useApi()
     valSaved.value = await apiFetch<ValoracionActivo[]>('/valoraciones')
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
 }
+
 async function submitValoracion() {
   valSaving.value = true
   valSuccess.value = ''
@@ -260,26 +268,28 @@ async function submitValoracion() {
       const key = JSON.stringify([...(d.amenazaIds ?? []), ...(d.vulnerabilidadIds ?? [])].sort())
       if (!seen.has(key)) {
         seen.add(key)
-        riesgoRows.push({ amenazaIds: d.amenazaIds ?? [], vulnerabilidadIds: d.vulnerabilidadIds ?? [] })
+        riesgoRows.push({amenazaIds: d.amenazaIds ?? [], vulnerabilidadIds: d.vulnerabilidadIds ?? []})
       }
     })
     riesgoRows.forEach(row => {
       const matched = detallesRiesgo.value.find(d =>
-        JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
-        JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
+          JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
+          JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
       )
       if (!matched) return
       detallesRiesgo.value
-        .filter(d => d !== matched &&
-          JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
-          JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds))
-        .forEach(sibling => {
-          TREATMENT_FIELDS.forEach(f => { (sibling as any)[f] = (matched as any)[f] })
-        })
+          .filter(d => d !== matched &&
+              JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
+              JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds))
+          .forEach(sibling => {
+            TREATMENT_FIELDS.forEach(f => {
+              (sibling as any)[f] = (matched as any)[f]
+            })
+          })
     })
 
     // ── Phase 3: Fetch server-computed risk fields via calculate endpoint ──
-    const { apiFetch } = useApi()
+    const {apiFetch} = useApi()
     const nivelAmenaza = (() => {
       if (!e.amenazaRiesgoId) return 1
       const found = valRiesgos.value.find((r: CatalogoItem) => r.id === Number(e.amenazaRiesgoId))
@@ -296,12 +306,20 @@ async function submitValoracion() {
       const hasRiskInput = d.amenazaIds || d.vulnerabilidadIds
       if (hasRiskInput && valEditId.value && d.id) {
         // Only call calculate for existing rows during edit
-        const calculado = await apiFetch<{ evaluacionRiesgo: number; nivelRiesgo: string; metodoTratamiento: string; tipoControl: string; evaluacionRiesgoControl: number; nivelRiesgoControl: string; riesgoResidual: 'ACEPTABLE' | 'INACEPTABLE' }>(
-          `/valoraciones/${valEditId.value}/detalles-riesgo/${d.id}/calcular`,
-          {
-            method: 'PATCH',
-            body: JSON.stringify({ nivelAmenaza, nivelVulnerabilidad }),
-          },
+        const calculado = await apiFetch<{
+          evaluacionRiesgo: number;
+          nivelRiesgo: string;
+          metodoTratamiento: string;
+          tipoControl: string;
+          evaluacionRiesgoControl: number;
+          nivelRiesgoControl: string;
+          riesgoResidual: 'ACEPTABLE' | 'INACEPTABLE'
+        }>(
+            `/valoraciones/${valEditId.value}/detalles-riesgo/${d.id}/calcular`,
+            {
+              method: 'PATCH',
+              body: JSON.stringify({nivelAmenaza, nivelVulnerabilidad}),
+            },
         )
         Object.assign(d, {
           evaluacionRiesgo: calculado.evaluacionRiesgo,
@@ -346,10 +364,10 @@ async function submitValoracion() {
     }
 
     const url = valEditId.value
-      ? `/valoraciones/${valEditId.value}`
-      : '/valoraciones'
+        ? `/valoraciones/${valEditId.value}`
+        : '/valoraciones'
     const method = valEditId.value ? 'PATCH' : 'POST'
-    await apiFetch(url, { method, body: JSON.stringify(body) })
+    await apiFetch(url, {method, body: JSON.stringify(body)})
 
     valSuccess.value = valEditId.value ? 'Valoracion actualizada' : 'Valoracion guardada'
     showModalVal.value = false
@@ -361,6 +379,7 @@ async function submitValoracion() {
     valSaving.value = false
   }
 }
+
 function editValoracion(item: ValoracionActivo) {
   showModalVal.value = true
   activeTab.value = 0
@@ -425,25 +444,30 @@ function editValoracion(item: ValoracionActivo) {
     detallesRiesgo.value = []
   }
 }
+
 async function viewValoracion(item: ValoracionActivo) {
-  const { apiFetch } = useApi()
+  const {apiFetch} = useApi()
   const enriched = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
   viewItem.value = enriched
   showViewModal.value = true
 }
+
 async function deleteValoracion(id: number) {
   if (!confirm('¿Eliminar esta valoración?')) return
   try {
-    const { apiFetch } = useApi()
-    await apiFetch(`/valoraciones/${id}`, { method: 'DELETE' })
+    const {apiFetch} = useApi()
+    await apiFetch(`/valoraciones/${id}`, {method: 'DELETE'})
     await loadValoraciones()
-  } catch { /* ignore */ }
+  } catch { /* ignore */
+  }
 }
+
 function openNewValoracion() {
   resetForm()
   activeTab.value = 0
   showModalVal.value = true
 }
+
 function resetForm() {
   valEditId.value = null
   valForm.value = {
@@ -465,29 +489,41 @@ function resetForm() {
   }
   detallesRiesgo.value = []
   tratamientoForm.value = {
-    metodoTratamiento: '', tipoControl: '', controlesImplementar: '', nivelAmenazaControl: '', nivelVulnerabilidadControl: '',
+    metodoTratamiento: '',
+    tipoControl: '',
+    controlesImplementar: '',
+    nivelAmenazaControl: '',
+    nivelVulnerabilidadControl: '',
   }
   amenazaCategoria.value = ''
   vulnerabilidadCategoria.value = ''
   amenazaSeleccionada.value = '';
   vulnerabilidadSeleccionada.value = '';
 }
+
 function safeJsonParse(str: string | null, fallback: any[] = []): any[] {
   if (!str) return fallback
-  try { return JSON.parse(str) } catch { return fallback }
+  try {
+    return JSON.parse(str)
+  } catch {
+    return fallback
+  }
 }
+
 function getTipoControlName(id: number | string) {
   if (!id) return '—'
   const found = valTiposControl.value.find((tc: CatalogoItem) => tc.id === Number(id))
   return found ? found.nombre : `TC#${id}`
 }
+
 function getNivelStyle(nivel: string) {
   const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return { label: 'Critico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)' }
-  if (n.includes('alto')) return { label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)' }
-  if (n.includes('medio')) return { label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)' }
-  return { label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)' }
+  if (n.includes('critico')) return {label: 'Critico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)'}
+  if (n.includes('alto')) return {label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)'}
+  if (n.includes('medio')) return {label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)'}
+  return {label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)'}
 }
+
 function getMaxNivelIndex(nivel: string) {
   const n = (nivel || '').toLowerCase()
   if (n.includes('critico')) return 4
@@ -495,24 +531,27 @@ function getMaxNivelIndex(nivel: string) {
   if (n.includes('medio')) return 2
   return 1
 }
+
 function getNivelFromIndex(idx: number) {
   if (idx >= 4) return 'Crítico'
   if (idx >= 3) return 'Alto'
   if (idx >= 2) return 'Medio'
   return 'Bajo'
 }
+
 function resumenEvaluacionRiesgo(v: ValoracionActivo) {
   const detalles = v.detallesRiesgo || []
   if (detalles.length === 0) {
-    return { evaluacion: v.evaluacionRiesgo || 0, nivel: v.nivelRiesgo || '' }
+    return {evaluacion: v.evaluacionRiesgo || 0, nivel: v.nivelRiesgo || ''}
   }
   const conEval = detalles.filter((d: Record<string, unknown>) => d.evaluacionRiesgo > 0)
   const avg = conEval.length > 0
-    ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgo as number), 0) / conEval.length) * 100) / 100
-    : 0
+      ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgo as number), 0) / conEval.length) * 100) / 100
+      : 0
   const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgo as string)), 0)
-  return { evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : '' }
+  return {evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : ''}
 }
+
 function resumenControl(v: ValoracionActivo) {
   const detalles = v.detallesRiesgo || []
   if (detalles.length === 0) {
@@ -524,12 +563,12 @@ function resumenControl(v: ValoracionActivo) {
   }
   const conEval = detalles.filter((d: Record<string, unknown>) => d.evaluacionRiesgoControl > 0)
   const avg = conEval.length > 0
-    ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgoControl as number), 0) / conEval.length) * 100) / 100
-    : 0
+      ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgoControl as number), 0) / conEval.length) * 100) / 100
+      : 0
   const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgoControl as string)), 0)
   const tipos = new Set(detalles.filter((d: Record<string, unknown>) => d.tipoControlId).map((d: Record<string, unknown>) => getTipoControlName(d.tipoControlId as string)))
   const tipoControl = tipos.size > 1 ? 'Múltiple' : (Array.from(tipos)[0] || '—')
-  return { tipoControl, evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : '' }
+  return {tipoControl, evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : ''}
 }
 
 onMounted(() => {
@@ -540,14 +579,17 @@ onMounted(() => {
 
 <template>
   <div class="valoracion-section">
-    <div class="welcome-banner" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+    <div class="welcome-banner"
+         style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
       <div>
         <h2>Valoración de Activos</h2>
         <p>Gestione las valoraciones de activos de información registradas en el sistema.</p>
       </div>
-      <button type="button" class="btn-primary" @click="openNewValoracion" style="padding: 0.75rem 1.5rem; font-size: 1rem;">Nueva Valoración</button>
+      <button class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem;" type="button"
+              @click="openNewValoracion">Nueva Valoración
+      </button>
     </div>
-    
+
     <div v-if="valLoading" class="catalogo-placeholder">Cargando datos de catálogos...</div>
     <template v-else>
       <div v-if="valSuccess" class="val-success">{{ valSuccess }}</div>
@@ -557,56 +599,75 @@ onMounted(() => {
         <div v-if="valSaved.length === 0" class="val-empty-state">No hay valoraciones guardadas.</div>
         <table v-else class="val-table">
           <thead>
-            <tr>
-              <th style="width:60px;">Nro</th>
-              <th>Nombre de Activo</th>
-              <th>Macroproceso</th>
-              <th>Valoración CIA</th>
-              <th style="text-align: right;">Acciones</th>
-            </tr>
+          <tr>
+            <th style="width:60px;">Nro</th>
+            <th>Nombre de Activo</th>
+            <th>Macroproceso</th>
+            <th>Valoración CIA</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
           </thead>
           <tbody>
-            <tr v-for="v in valSaved" :key="v.id">
-              <td style="text-align:center;">{{ v.id }}</td>
-              <td>{{ v.nombreActivo || 'N/A' }}</td>
-              <td>{{ v.macroProceso?.nombre || `MP#${v.macroProcesoId}` }}</td>
-              <td>
-                <span class="cia-average-level" style="display:inline-block;" v-if="calculateRowCiaAverage(v) > 0">
+          <tr v-for="v in valSaved" :key="v.id">
+            <td style="text-align:center;">{{ v.id }}</td>
+            <td>{{ v.nombreActivo || 'N/A' }}</td>
+            <td>{{ v.macroProceso?.nombre || `MP#${v.macroProcesoId}` }}</td>
+            <td>
+                <span v-if="calculateRowCiaAverage(v) > 0" class="cia-average-level" style="display:inline-block;">
                   {{ calculateRowCiaAverage(v).toFixed(2) }}
                 </span>
-                <span v-else style="color:var(--text-muted); font-size:0.85rem;">Pendiente</span>
-              </td>
-              <td class="val-table-actions">
-                <button class="btn-icon btn-view" title="Ver" @click="viewValoracion(v)"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button>
-                <button class="btn-icon btn-edit" title="Editar" @click="editValoracion(v)"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg></button>
-                <button class="btn-icon btn-delete" title="Eliminar" @click="deleteValoracion(v.id)"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button>
-              </td>
-            </tr>
+              <span v-else style="color:var(--text-muted); font-size:0.85rem;">Pendiente</span>
+            </td>
+            <td class="val-table-actions">
+              <button class="btn-icon btn-view" title="Ver" @click="viewValoracion(v)">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" stroke-linecap="round"
+                        stroke-linejoin="round"/>
+                  <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button class="btn-icon btn-edit" title="Editar" @click="editValoracion(v)">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" stroke-linecap="round"
+                        stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button class="btn-icon btn-delete" title="Eliminar" @click="deleteValoracion(v.id)">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round"
+                        stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
           </tbody>
         </table>
       </div>
 
       <!-- MODAL: ValoracionModal.vue -->
       <ValoracionModal
-        v-model="showModalVal"
-        :edit-id="valEditId"
-        :catalog-data="catalogData"
-        :val-form="valForm"
-        :analisis-form="analisisForm"
-        :evaluacion-form="evaluacionForm"
-        :tratamiento-form="tratamientoForm"
-        :detalles-riesgo="detallesRiesgo"
-        :val-saving="valSaving"
-        @update:model-value="showModalVal = $event"
-        @submit="submitValoracion"
-        @reset-form="rebuildDetalles"
+          v-model="showModalVal"
+          :analisis-form="analisisForm"
+          :catalog-data="catalogData"
+          :detalles-riesgo="detallesRiesgo"
+          :edit-id="valEditId"
+          :evaluacion-form="evaluacionForm"
+          :tratamiento-form="tratamientoForm"
+          :val-form="valForm"
+          :val-saving="valSaving"
+          @submit="submitValoracion"
+          @update:model-value="showModalVal = $event"
+          @reset-form="rebuildDetalles"
       />
 
       <!-- VIEW MODAL -->
       <ValoracionViewModal
-        v-model="showViewModal"
-        :view-item="viewItem"
-        :catalog-data="catalogData"
+          v-model="showViewModal"
+          :catalog-data="catalogData"
+          :view-item="viewItem"
       />
     </template>
   </div>

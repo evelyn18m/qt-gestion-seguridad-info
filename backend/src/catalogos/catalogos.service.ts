@@ -1,7 +1,7 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCatalogoDto } from './dto/create-catalogo.dto';
@@ -42,12 +42,6 @@ const FIELD_MAP: Record<string, readonly string[]> = {
 @Injectable()
 export class CatalogosService {
   constructor(private readonly prisma: PrismaService) {}
-
-  private delegate(model: string) {
-    const key = (model.charAt(0).toLowerCase() +
-      model.slice(1)) as keyof typeof this.prisma;
-    return this.prisma[key] as never;
-  }
 
   findAll(tipo: string) {
     const model = TIPO_MAP[tipo];
@@ -135,5 +129,11 @@ export class CatalogosService {
       tipo: key,
       modelo: TIPO_MAP[key],
     }));
+  }
+
+  private delegate(model: string) {
+    const key = (model.charAt(0).toLowerCase() +
+      model.slice(1)) as keyof typeof this.prisma;
+    return this.prisma[key] as never;
   }
 }

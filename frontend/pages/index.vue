@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 </script>
 
 <template>
@@ -8,7 +8,7 @@
       <p>Selecciona una opción del menú para comenzar.</p>
     </div>
     <div class="dashboard-grid">
-      
+
     </div>
   </div>
 </template>

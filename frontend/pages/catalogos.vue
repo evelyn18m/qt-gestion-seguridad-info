@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import type { CatalogoItem } from '~/types/api'
+<script lang="ts" setup>
+import type {CatalogoItem} from '~/types/api'
 
 const route = useRoute()
 const catalogoTipos = ref<CatalogoItem[]>([])
@@ -8,7 +8,7 @@ const catalogoItems = ref<CatalogoItem[]>([])
 const catalogoLoading = ref(false)
 const catalogosError = ref('')
 
-const { fetchCatalog } = useCatalog()
+const {fetchCatalog} = useCatalog()
 
 const loadCatalogoTipos = async () => {
   catalogosError.value = ''
@@ -18,7 +18,7 @@ const loadCatalogoTipos = async () => {
     const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
     await Promise.all(tipos.map(t => fetchCatalog(t)))
     // Also load the tipo list itself
-    const { apiFetch } = useApi()
+    const {apiFetch} = useApi()
     catalogoTipos.value = await apiFetch<CatalogoItem[]>('/catalogos')
   } catch (e: any) {
     catalogosError.value = `Error al cargar catálogos: ${e.message}`
@@ -98,7 +98,7 @@ function openEditForm(item: CatalogoItem) {
 }
 
 async function loadMacroprocesos() {
-  const { fetchCatalog } = useCatalog()
+  const {fetchCatalog} = useCatalog()
   macroprocesos.value = await fetchCatalog('macroprocesos')
 }
 
@@ -111,13 +111,13 @@ function closeCatalogoForm() {
 async function saveCatalogoItem() {
   catalogoSaving.value = true
   try {
-    const { apiFetch } = useApi()
+    const {apiFetch} = useApi()
     const tipo = (selectedCatalogo.value as any).tipo || selectedCatalogo.value
     const url = catalogoEditingItem.value
-      ? `/catalogos/${tipo}/${catalogoEditingItem.value.id}`
-      : `/catalogos/${tipo}`
+        ? `/catalogos/${tipo}/${catalogoEditingItem.value.id}`
+        : `/catalogos/${tipo}`
     const method = catalogoEditingItem.value ? 'PATCH' : 'POST'
-    await apiFetch(url, { method, body: JSON.stringify(catalogoFormData.value) })
+    await apiFetch(url, {method, body: JSON.stringify(catalogoFormData.value)})
     closeCatalogoForm()
     await selectCatalogo(selectedCatalogo.value!)
   } catch (e: any) {
@@ -136,8 +136,8 @@ async function deleteCatalogoItem() {
   if (!item || !selectedCatalogo.value) return
   try {
     const tipo = (selectedCatalogo.value as any).tipo || selectedCatalogo.value
-    const { apiFetch } = useApi()
-    await apiFetch(`/catalogos/${tipo}/${item.id}`, { method: 'DELETE' })
+    const {apiFetch} = useApi()
+    await apiFetch(`/catalogos/${tipo}/${item.id}`, {method: 'DELETE'})
     catalogoConfirmDelete.value = null
     await selectCatalogo(selectedCatalogo.value)
   } catch (e: any) {
@@ -185,29 +185,40 @@ function checkTipoFromRoute() {
         </div>
         <table v-else class="catalogo-table">
           <thead>
-            <tr>
-              <th>#</th>
-              <th v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))" :key="col">{{ col }}</th>
-              <th class="th-actions">Acciones</th>
-            </tr>
+          <tr>
+            <th>#</th>
+            <th v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))"
+                :key="col">{{ col }}
+            </th>
+            <th class="th-actions">Acciones</th>
+          </tr>
           </thead>
           <tbody>
-            <tr v-for="item in catalogoItems" :key="item.id">
-              <td>{{ item.id }}</td>
-              <td v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))" :key="col">
-                <div class="cell-text">{{ item[col] }}</div>
-              </td>
-              <td>
-                <div class="row-actions">
-                  <button class="btn-icon btn-edit" title="Editar" @click="openEditForm(item)">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
-                  </button>
-                  <button class="btn-icon btn-delete" title="Eliminar" @click="confirmDelete(item)">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
+          <tr v-for="item in catalogoItems" :key="item.id">
+            <td>{{ item.id }}</td>
+            <td v-for="col in Object.keys(catalogoItems[0] || {}).filter(c => c !== 'id' && !c.includes('At'))"
+                :key="col">
+              <div class="cell-text">{{ item[col] }}</div>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-icon btn-edit" title="Editar" @click="openEditForm(item)">
+                  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" stroke-linecap="round"
+                          stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button class="btn-icon btn-delete" title="Eliminar" @click="confirmDelete(item)">
+                  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                       xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round"
+                          stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
           </tbody>
         </table>
       </template>
@@ -225,10 +236,10 @@ function checkTipoFromRoute() {
           <div v-for="field in getFormFields()" :key="field" class="form-group">
             <label :for="'f-' + field">{{ field }}</label>
             <select
-              v-if="field === 'macroProcesoId'"
-              :id="'f-' + field"
-              v-model="catalogoFormData[field]"
-              required
+                v-if="field === 'macroProcesoId'"
+                :id="'f-' + field"
+                v-model="catalogoFormData[field]"
+                required
             >
               <option value="">Seleccionar MacroProceso...</option>
               <option v-for="mp in macroprocesos" :key="mp.id" :value="mp.id">
@@ -236,24 +247,24 @@ function checkTipoFromRoute() {
               </option>
             </select>
             <input
-              v-else-if="field !== 'criterio' && field !== 'descripcion' && field !== 'detalle'"
-              :id="'f-' + field"
-              v-model="catalogoFormData[field]"
-              :type="field === 'valor' ? 'number' : 'text'"
-              :placeholder="field"
+                v-else-if="field !== 'criterio' && field !== 'descripcion' && field !== 'detalle'"
+                :id="'f-' + field"
+                v-model="catalogoFormData[field]"
+                :placeholder="field"
+                :type="field === 'valor' ? 'number' : 'text'"
             />
             <textarea
-              v-else
-              :id="'f-' + field"
-              v-model="catalogoFormData[field]"
-              :placeholder="field"
-              rows="3"
+                v-else
+                :id="'f-' + field"
+                v-model="catalogoFormData[field]"
+                :placeholder="field"
+                rows="3"
             ></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" @click="closeCatalogoForm">Cancelar</button>
-          <button class="btn-primary" :disabled="catalogoSaving" @click="saveCatalogoItem">
+          <button :disabled="catalogoSaving" class="btn-primary" @click="saveCatalogoItem">
             {{ catalogoSaving ? 'Guardando...' : 'Guardar' }}
           </button>
         </div>
@@ -268,7 +279,9 @@ function checkTipoFromRoute() {
         </div>
         <div class="modal-body">
           <p>¿Eliminar este registro de <strong>{{ selectedCatalogo?.tipo }}</strong>?</p>
-          <p class="confirm-detail">#{{ catalogoConfirmDelete.id }} — {{ getFormFields().map(f => catalogoConfirmDelete && catalogoConfirmDelete[f]).filter(Boolean).join(' — ') }}</p>
+          <p class="confirm-detail">#{{ catalogoConfirmDelete.id }} — {{
+              getFormFields().map(f => catalogoConfirmDelete && catalogoConfirmDelete[f]).filter(Boolean).join(' — ')
+            }}</p>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" @click="catalogoConfirmDelete = null">Cancelar</button>
@@ -336,7 +349,7 @@ function checkTipoFromRoute() {
 
 .catalogo-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .catalogo-table tr:hover td {
@@ -376,7 +389,7 @@ function checkTipoFromRoute() {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -390,7 +403,7 @@ function checkTipoFromRoute() {
   border-radius: 20px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -467,7 +480,13 @@ function checkTipoFromRoute() {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

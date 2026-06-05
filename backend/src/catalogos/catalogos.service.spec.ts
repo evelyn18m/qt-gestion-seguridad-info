@@ -198,7 +198,12 @@ describe('CatalogosService', () => {
         nivel: 'Alto',
         valor: 3,
       };
-      mockPrisma.riesgo.findUnique.mockResolvedValue({ id: 1, tipo: 'Amenaza', nivel: 'Medio', valor: 2 });
+      mockPrisma.riesgo.findUnique.mockResolvedValue({
+        id: 1,
+        tipo: 'Amenaza',
+        nivel: 'Medio',
+        valor: 2,
+      });
       mockPrisma.riesgo.update.mockResolvedValue(updatedRiesgo);
 
       const result = await service.update('riesgos', 1, {
@@ -216,13 +221,20 @@ describe('CatalogosService', () => {
 
     it('RED: should remove riesgo by id', async () => {
       const deletedRiesgo = { id: 1, tipo: 'Amenaza', nivel: 'Alto', valor: 3 };
-      mockPrisma.riesgo.findUnique.mockResolvedValue({ id: 1, tipo: 'Amenaza', nivel: 'Alto', valor: 3 });
+      mockPrisma.riesgo.findUnique.mockResolvedValue({
+        id: 1,
+        tipo: 'Amenaza',
+        nivel: 'Alto',
+        valor: 3,
+      });
       mockPrisma.riesgo.delete.mockResolvedValue(deletedRiesgo);
 
       const result = await service.remove('riesgos', 1);
 
       expect(result).toEqual(deletedRiesgo);
-      expect(mockPrisma.riesgo.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(mockPrisma.riesgo.delete).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
     });
   });
 });

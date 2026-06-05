@@ -29,9 +29,21 @@ describe('parseRiesgoRows — section-aware Riesgo seed parser', () => {
       const result = parseRiesgoRows(input);
 
       expect(result).toHaveLength(3);
-      expect(result[0]).toEqual({ tipo: 'Vulnerabilidad', nivel: 'Alto', valor: 3 });
-      expect(result[1]).toEqual({ tipo: 'Vulnerabilidad', nivel: 'Medio', valor: 2 });
-      expect(result[2]).toEqual({ tipo: 'Vulnerabilidad', nivel: 'Bajo', valor: 1 });
+      expect(result[0]).toEqual({
+        tipo: 'Vulnerabilidad',
+        nivel: 'Alto',
+        valor: 3,
+      });
+      expect(result[1]).toEqual({
+        tipo: 'Vulnerabilidad',
+        nivel: 'Medio',
+        valor: 2,
+      });
+      expect(result[2]).toEqual({
+        tipo: 'Vulnerabilidad',
+        nivel: 'Bajo',
+        valor: 1,
+      });
     });
 
     it('RED: returns empty array for empty input', () => {
@@ -99,9 +111,21 @@ describe('parseRiesgoRows — section-aware Riesgo seed parser', () => {
       expect(result[2]).toEqual({ tipo: 'Amenaza', nivel: 'Bajo', valor: 1 });
 
       // Next 3 are Vulnerabilidad
-      expect(result[3]).toEqual({ tipo: 'Vulnerabilidad', nivel: 'Alto', valor: 3 });
-      expect(result[4]).toEqual({ tipo: 'Vulnerabilidad', nivel: 'Medio', valor: 2 });
-      expect(result[5]).toEqual({ tipo: 'Vulnerabilidad', nivel: 'Bajo', valor: 1 });
+      expect(result[3]).toEqual({
+        tipo: 'Vulnerabilidad',
+        nivel: 'Alto',
+        valor: 3,
+      });
+      expect(result[4]).toEqual({
+        tipo: 'Vulnerabilidad',
+        nivel: 'Medio',
+        valor: 2,
+      });
+      expect(result[5]).toEqual({
+        tipo: 'Vulnerabilidad',
+        nivel: 'Bajo',
+        valor: 1,
+      });
     });
   });
 });
