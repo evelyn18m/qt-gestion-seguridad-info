@@ -301,7 +301,6 @@ function resumenControl(v: ValoracionActivo) {
   border: 1px solid var(--border);
   border-radius: 16px;
   width: 100%;
-  max-width: 900px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;

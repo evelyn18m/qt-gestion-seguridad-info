@@ -431,7 +431,7 @@ function getAmenazaLabelNum(id: number) {
 
 function getVulnerabilidadLabelNum(id: number) {
   const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === id)
-  return v ? `${v.categoria} — ${v.descripcion}` : `V#${id}`
+  return v ? `${v.categoria}- — ${v.descripcion}` : `V#${id}`
 }
 
 // ── Pure risk calculation (mirrors backend calculo-riesgo.service.ts) ────────
@@ -1116,7 +1116,6 @@ const controlesImplementarGrupos = computed(() => {
   border: 1px solid var(--border);
   border-radius: 16px;
   width: 100%;
-  max-width: 900px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
