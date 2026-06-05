@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type {CatalogoItem, DetalleRiesgo} from '~/types/api'
+import type {CatalogoItem, ControlesImplementarItem, DetalleRiesgo} from '~/types/api'
 
 // ── Catalog Data ──────────────────────────────────────────────────────────────
 interface CatalogData {
@@ -15,6 +15,7 @@ interface CatalogData {
   valRiesgos: CatalogoItem[]
   valProbabilidades: CatalogoItem[]
   valTiposControl: CatalogoItem[]
+  valControlesImplementar: ControlesImplementarItem[]
 }
 
 // ── Form Data ─────────────────────────────────────────────────────────────────
@@ -151,12 +152,13 @@ const currentStep = ref(0)
 const TOTAL_STEPS = 4
 
 // ── Tab 2 Row State ─────────────────────────────────────────────────────────
-// Each row: { amenazaIds: string[], vulnerabilidadIds: string[], controlesImplementados: string, controlesArea: string }
+// Each row: { amenazaIds, vulnerabilidadIds, controlesImplementados, controlesArea, controlesImplementarId }
 export interface RiskRow {
   amenazaIds: string[]
   vulnerabilidadIds: string[]
   controlesImplementados: string
   controlesArea: string
+  controlesImplementarId?: number | null
   tempId?: number
 }
 
@@ -169,6 +171,7 @@ function agregarFila() {
     vulnerabilidadIds: [],
     controlesImplementados: '',
     controlesArea: '',
+    controlesImplementarId: null,
     tempId: ++rowCounter,
   })
 }
@@ -252,6 +255,7 @@ function syncRowsToDetalles() {
         vulnerabilidadIds: [...row.vulnerabilidadIds],
         controlesImplementados: row.controlesImplementados,
         controlesArea: row.controlesArea,
+        controlesImplementarId: row.controlesImplementarId ?? null,
       })
     })
     // Create one entry per vulnerabilidad in this row (with acceso to all row's arrays)
@@ -271,6 +275,7 @@ function syncRowsToDetalles() {
         vulnerabilidadIds: [...row.vulnerabilidadIds],
         controlesImplementados: row.controlesImplementados,
         controlesArea: row.controlesArea,
+        controlesImplementarId: row.controlesImplementarId ?? null,
       })
     })
   })
@@ -295,6 +300,7 @@ function loadExistingRows() {
         vulnerabilidadIds: vIds,
         controlesImplementados: d.controlesImplementados || '',
         controlesArea: d.controlesArea || '',
+        controlesImplementarId: d.controlesImplementarId ?? null,
         tempId: ++rowCounter,
       })
     }
@@ -541,6 +547,18 @@ const tabs = [
   {label: 'Evaluación de Riesgo'},
   {label: 'Tratamiento de Riesgo'},
 ]
+
+// ── Tab 4: Controles a Implementar grouped by category ───────────────────────
+const controlesImplementarGrupos = computed(() => {
+  const map = new Map<number, { categoriaId: number; categoriaNombre: string; items: ControlesImplementarItem[] }>()
+  props.catalogData.valControlesImplementar.forEach(c => {
+    if (!map.has(c.categoriaId)) {
+      map.set(c.categoriaId, { categoriaId: c.categoriaId, categoriaNombre: c.categoria.nombre, items: [] })
+    }
+    map.get(c.categoriaId)!.items.push(c)
+  })
+  return Array.from(map.values())
+})
 </script>
 
 <template>
@@ -1011,9 +1029,16 @@ const tabs = [
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <textarea v-model="findMatchedDetalle(row)!.controlesImplementados"
-                                  placeholder="Controles a implementar..." rows="2"
-                                  style="resize:vertical; min-width:140px;"></textarea>
+                        <select v-model.number="findMatchedDetalle(row)!.controlesImplementarId"
+                                style="min-width:200px;">
+                          <option :value="null">— Ninguno —</option>
+                          <optgroup v-for="grupo in controlesImplementarGrupos" :key="grupo.categoriaId"
+                                    :label="grupo.categoriaNombre">
+                            <option v-for="ctrl in grupo.items" :key="ctrl.id" :value="ctrl.id">
+                              {{ ctrl.seccion }} — {{ ctrl.descripcion }}
+                            </option>
+                          </optgroup>
+                        </select>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>

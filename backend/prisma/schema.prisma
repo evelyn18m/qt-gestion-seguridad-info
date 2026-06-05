@@ -153,8 +153,11 @@ model DetalleRiesgo {
   // Tab 2 new fields (row-based per-row model)
   amenazaIds              String?  @db.Text // JSON array, e.g. "[3,7]"
   vulnerabilidadIds       String?  @db.Text // JSON array, e.g. "[5]"
-  controlesImplementados  String?  @db.Text // per-row controls
+  controlesImplementados  String?  @db.Text // per-row controls (Tab 2 free-text — keep for backward compat)
   controlesArea           String?  @db.Text // per-row controls area (Tab 3 only)
+  // Tab 4 FK: selected catalog control to implement
+  controlesImplementarId  Int?
+  controlesImplementar    ControlesImplementar? @relation(fields: [controlesImplementarId], references: [id])
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 }
@@ -189,9 +192,10 @@ model CategoriaControlesImplementar {
 }
 
 model ControlesImplementar {
-  id          Int                           @id @default(autoincrement())
-  seccion     String                        @unique
-  descripcion String
-  categoriaId Int
-  categoria   CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
+  id             Int                           @id @default(autoincrement())
+  seccion        String                        @unique
+  descripcion    String
+  categoriaId    Int
+  categoria      CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
+  detallesRiesgo DetalleRiesgo[]
 }

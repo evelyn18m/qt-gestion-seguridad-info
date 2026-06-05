@@ -329,3 +329,292 @@ describe('AtLeastOneConstraint', () => {
     expect(constraint.validate(true, mockArgs('[3]', null))).toBe(true);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// mapDetalleRiesgo() — controlesImplementarId passthrough (Task 6.2)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('mapDetalleRiesgo() with controlesImplementarId', () => {
+  let service: ValoracionesService;
+
+  const baseDto: CreateValoracionDto = {
+    nombreActivo: 'Test Activo',
+    tipoActivoId: 1,
+    formatoId: 1,
+    macroProcesoId: 1,
+    subProcesoId: 1,
+    propietarioId: 1,
+    custodioId: 1,
+    descripcion: 'Test desc',
+    controlSeguridad: 'Test ctrl',
+    ubicacion: 'Test loc',
+    confidencialidadId: 1,
+    integridadId: 1,
+    disponibilidadId: 1,
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED→GREEN: should pass controlesImplementarId to detalleRiesgo.create when set', async () => {
+    // mapDetalleRiesgo() doesn't map controlesImplementarId yet → RED
+    // After Task 3.2 implementation → GREEN
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 10 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 10 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          amenazaIds: '[3]',
+          controlesImplementarId: 42,
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    expect(mockPrisma.detalleRiesgo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          controlesImplementarId: 42,
+        }),
+      }),
+    );
+  });
+
+  it('TRIANGULATE: should NOT include controlesImplementarId when undefined', async () => {
+    // Triangulation: different input (no controlesImplementarId) → different output (field absent)
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 11 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 11 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          amenazaIds: '[3]',
+          // no controlesImplementarId
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    const callData = mockPrisma.detalleRiesgo.create.mock
+      .calls[0][0] as { data: Record<string, unknown> };
+    expect(callData.data.controlesImplementarId).toBeUndefined();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// enrich() — includes controlesImplementar relation (Task 6.3)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () => {
+  let service: ValoracionesService;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    // Setup all findUnique mocks to return null (enrich() tolerates null relations)
+    mockPrisma.tipoActivo.findUnique.mockResolvedValue(null);
+    mockPrisma.formato.findUnique.mockResolvedValue(null);
+    mockPrisma.macroProceso.findUnique.mockResolvedValue(null);
+    mockPrisma.subproceso.findUnique.mockResolvedValue(null);
+    mockPrisma.area.findUnique.mockResolvedValue(null);
+    mockPrisma.funcionario.findUnique.mockResolvedValue(null);
+    mockPrisma.impacto.findUnique.mockResolvedValue(null);
+    mockPrisma.tipoControl.findUnique.mockResolvedValue(null);
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED→GREEN: should pass include.controlesImplementar to detalleRiesgo.findMany', async () => {
+    // enrich() doesn't have the include yet → RED
+    // After Task 3.3 implementation → GREEN
+    const item = {
+      id: 1,
+      nombreActivo: 'Test',
+      tipoActivoId: 1,
+      formatoId: 1,
+      macroProcesoId: 1,
+      subProcesoId: 1,
+      propietarioId: 1,
+      custodioId: 1,
+      descripcion: 'Test',
+      controlSeguridad: 'Test',
+      ubicacion: 'Test',
+      observaciones: null,
+      confidencialidadId: 1,
+      integridadId: 1,
+      disponibilidadId: 1,
+      tieneDatosPersonales: false,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      tipoControl: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    mockPrisma.valoracionActivo.findUnique.mockResolvedValue(item);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    await service.findOne(1);
+
+    expect(mockPrisma.detalleRiesgo.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          controlesImplementar: expect.objectContaining({
+            include: { categoria: true },
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('TRIANGULATE: response should include controlesImplementar field when set', async () => {
+    // Triangulation: when detalleRiesgo has controlesImplementar data, it appears in response
+    const item = {
+      id: 2,
+      nombreActivo: 'Test2',
+      tipoActivoId: 1,
+      formatoId: 1,
+      macroProcesoId: 1,
+      subProcesoId: 1,
+      propietarioId: 1,
+      custodioId: 1,
+      descripcion: 'Test',
+      controlSeguridad: 'Test',
+      ubicacion: 'Test',
+      observaciones: null,
+      confidencialidadId: 1,
+      integridadId: 1,
+      disponibilidadId: 1,
+      tieneDatosPersonales: false,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      tipoControl: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const enrichedDetalle = {
+      id: 10,
+      valoracionActivoId: 2,
+      tipo: 'amenaza',
+      catalogoId: 1,
+      controlesImplementarId: 5,
+      controlesImplementar: {
+        id: 5,
+        seccion: 'A.1',
+        descripcion: 'Politica de acceso',
+        categoriaId: 1,
+        categoria: { id: 1, nombre: 'Control de Acceso' },
+      },
+    };
+
+    mockPrisma.valoracionActivo.findUnique.mockResolvedValue(item);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([enrichedDetalle]);
+
+    const result = await service.findOne(2);
+
+    expect(result.detallesRiesgo).toHaveLength(1);
+    const detalle = result.detallesRiesgo[0] as typeof enrichedDetalle;
+    expect(detalle.controlesImplementar).not.toBeNull();
+    expect(detalle.controlesImplementar.descripcion).toBe('Politica de acceso');
+    expect(detalle.controlesImplementar.categoria.nombre).toBe(
+      'Control de Acceso',
+    );
+  });
+});

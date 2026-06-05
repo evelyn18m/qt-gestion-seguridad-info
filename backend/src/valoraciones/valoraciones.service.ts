@@ -132,8 +132,8 @@ export class ValoracionesService {
     d: DetalleRiesgoDto,
     valoracionActivoId: number,
     nivelRiesgoValor?: number,
-  ): Prisma.DetalleRiesgoCreateInput {
-    const data: Prisma.DetalleRiesgoCreateInput = {
+  ): Prisma.DetalleRiesgoUncheckedCreateInput {
+    const data: Prisma.DetalleRiesgoUncheckedCreateInput = {
       valoracionActivoId,
       tipo: d.tipo ?? 'amenaza',
       catalogoId: d.catalogoId ?? 0,
@@ -169,6 +169,10 @@ export class ValoracionesService {
       }),
       ...(d.controlesArea !== undefined && {
         controlesArea: d.controlesArea,
+      }),
+      // Tab 4 FK: selected catalog control to implement
+      ...(d.controlesImplementarId !== undefined && {
+        controlesImplementarId: d.controlesImplementarId,
       }),
     };
 
@@ -227,6 +231,7 @@ export class ValoracionesService {
     const detallesRiesgo = await this.prisma.detalleRiesgo.findMany({
       where: { valoracionActivoId: item.id },
       orderBy: { id: 'asc' },
+      include: { controlesImplementar: { include: { categoria: true } } },
     });
     return {
       ...item,

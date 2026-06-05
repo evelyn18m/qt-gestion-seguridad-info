@@ -21,6 +21,11 @@ export class CatalogosController {
     return this.catalogosService.getTipos();
   }
 
+  @Get('controles-implementar')
+  findAllControlesImplementar() {
+    return this.catalogosService.findAllControlesImplementar();
+  }
+
   @Get(':tipo')
   findAll(@Param('tipo') tipo: string) {
     return this.catalogosService.findAll(tipo);

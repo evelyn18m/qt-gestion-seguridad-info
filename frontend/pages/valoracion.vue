@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type {CatalogoItem, DetalleRiesgo, ValoracionActivo} from '~/types/api'
+import type {CatalogoItem, ControlesImplementarItem, DetalleRiesgo, ValoracionActivo} from '~/types/api'
 import ValoracionModal from '~/components/ValoracionModal.vue'
 import ValoracionViewModal from '~/components/ValoracionViewModal.vue'
 
@@ -15,6 +15,7 @@ const valAreas = ref<CatalogoItem[]>([])
 const valRiesgos = ref<CatalogoItem[]>([])
 const valProbabilidades = ref<CatalogoItem[]>([])
 const valTiposControl = ref<CatalogoItem[]>([])
+const valControlesImplementar = ref<ControlesImplementarItem[]>([])
 const valLoading = ref(false)
 
 const valForm = ref({
@@ -151,7 +152,11 @@ const loadValoracionData = async () => {
   valLoading.value = true
   const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
   try {
-    const results = await Promise.all(tipos.map(t => fetchCatalog(t)))
+    const {apiFetch} = useApi()
+    const [results, controlesItems] = await Promise.all([
+      Promise.all(tipos.map(t => fetchCatalog(t))),
+      apiFetch<ControlesImplementarItem[]>('/catalogos/controles-implementar').catch(() => [] as ControlesImplementarItem[]),
+    ])
     valTipoActivo.value = results[0] as CatalogoItem[]
     valFormatos.value = results[1] as CatalogoItem[]
     valMacroprocesos.value = results[2] as CatalogoItem[]
@@ -164,6 +169,7 @@ const loadValoracionData = async () => {
     valRiesgos.value = results[9] as CatalogoItem[]
     valProbabilidades.value = results[10] as CatalogoItem[]
     valTiposControl.value = results[11] as CatalogoItem[]
+    valControlesImplementar.value = controlesItems
   } catch (e) {
     console.error('Error cargando datos de valoración', e)
   } finally {
@@ -215,6 +221,7 @@ const catalogData = computed(() => ({
   valRiesgos: valRiesgos.value,
   valProbabilidades: valProbabilidades.value,
   valTiposControl: valTiposControl.value,
+  valControlesImplementar: valControlesImplementar.value,
 }))
 
 async function loadValoraciones() {
@@ -257,6 +264,8 @@ async function submitValoracion() {
       vulnerabilidadIds: d.vulnerabilidadIds && d.vulnerabilidadIds.length > 0 ? JSON.stringify(d.vulnerabilidadIds) : null,
       controlesImplementados: d.controlesImplementados || null,
       controlesArea: d.controlesArea || null,
+      // Tab 4 FK: selected catalog control
+      controlesImplementarId: d.controlesImplementarId ?? null,
     }))
 
     // ── Propagation: copy treatment fields from first-matched entry to all row siblings ──

@@ -237,7 +237,7 @@ function resumenControl(v: ValoracionActivo) {
               class="view-label">Controles a Implementar:</span> <span
               class="view-value">{{ viewItem.controlesImplementar }}</span></div>
           <div
-              v-if="viewItem.detallesRiesgo && viewItem.detallesRiesgo.some((d: any) => d.metodoTratamiento || d.tipoControlId)"
+              v-if="viewItem.detallesRiesgo && viewItem.detallesRiesgo.some((d: any) => d.metodoTratamiento || d.tipoControlId || d.controlesImplementarId)"
               style="margin-top:1rem;">
             <h4 style="font-size:0.9rem; color:var(--text-muted); margin:0 0 0.75rem 0;">Controles por Item</h4>
             <table class="val-table">
@@ -246,16 +246,18 @@ function resumenControl(v: ValoracionActivo) {
                 <th>Item</th>
                 <th>Método</th>
                 <th>Tipo Control</th>
+                <th>Control a Implementar</th>
                 <th>Eval. Control</th>
                 <th>Nivel Control</th>
               </tr>
               </thead>
               <tbody>
-              <tr v-for="d in viewItem.detallesRiesgo.filter((d: any) => d.metodoTratamiento || d.tipoControlId)"
+              <tr v-for="d in viewItem.detallesRiesgo.filter((d: any) => d.metodoTratamiento || d.tipoControlId || d.controlesImplementarId)"
                   :key="d.id">
                 <td>{{ getCatalogoLabel(d.tipo, d.catalogoId) }}</td>
                 <td>{{ d.metodoTratamiento || '—' }}</td>
                 <td>{{ d.tipoControlId ? getTipoControlName(d.tipoControlId) : '—' }}</td>
+                <td>{{ (d as any).controlesImplementar?.descripcion ?? '—' }}</td>
                 <td>{{ (d.evaluacionRiesgoControl ?? 0) > 0 ? (d.evaluacionRiesgoControl ?? 0).toFixed(2) : '—' }}</td>
                 <td>
                     <span v-if="d.nivelRiesgoControl" :style="{ color: getNivelStyle(d.nivelRiesgoControl).color, background: getNivelStyle(d.nivelRiesgoControl).bg }"

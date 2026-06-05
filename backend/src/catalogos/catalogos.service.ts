@@ -131,6 +131,13 @@ export class CatalogosService {
     }));
   }
 
+  findAllControlesImplementar() {
+    return this.prisma.controlesImplementar.findMany({
+      include: { categoria: true },
+      orderBy: { categoriaId: 'asc' },
+    });
+  }
+
   private delegate(model: string) {
     const key = (model.charAt(0).toLowerCase() +
       model.slice(1)) as keyof typeof this.prisma;

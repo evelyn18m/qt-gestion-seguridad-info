@@ -24,6 +24,9 @@ const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
+  controlesImplementar: {
+    findMany: jest.fn(),
+  },
 };
 
 describe('CatalogosService', () => {
@@ -236,5 +239,66 @@ describe('CatalogosService', () => {
         where: { id: 1 },
       });
     });
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// findAllControlesImplementar — TDD: RED → GREEN → TRIANGULATE
+// ──────────────────────────────────────────────────────────────────────────────
+describe('CatalogosService.findAllControlesImplementar()', () => {
+  let service: CatalogosService;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CatalogosService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+    service = module.get<CatalogosService>(CatalogosService);
+  });
+
+  it('RED→GREEN: should call prisma.controlesImplementar.findMany with include categoria and orderBy', async () => {
+    // References service.findAllControlesImplementar() which does NOT exist yet → RED
+    mockPrisma.controlesImplementar.findMany.mockResolvedValue([]);
+
+    const result = await service.findAllControlesImplementar();
+
+    expect(mockPrisma.controlesImplementar.findMany).toHaveBeenCalledWith({
+      include: { categoria: true },
+      orderBy: { categoriaId: 'asc' },
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('TRIANGULATE: should return items preserving nested categoria shape', async () => {
+    // Forces real logic: mock returns 2 items with different categories
+    const mockItems = [
+      {
+        id: 1,
+        seccion: 'A.1',
+        descripcion: 'Politica de control de acceso',
+        categoriaId: 1,
+        categoria: { id: 1, nombre: 'Control de Acceso' },
+      },
+      {
+        id: 2,
+        seccion: 'B.1',
+        descripcion: 'Clasificacion de la informacion',
+        categoriaId: 2,
+        categoria: { id: 2, nombre: 'Activos de Informacion' },
+      },
+    ];
+    mockPrisma.controlesImplementar.findMany.mockResolvedValue(mockItems);
+
+    const result = await service.findAllControlesImplementar();
+
+    expect(result).toHaveLength(2);
+    const first = result[0] as typeof mockItems[0];
+    const second = result[1] as typeof mockItems[0];
+    expect(first.categoria.nombre).toBe('Control de Acceso');
+    expect(second.categoria.nombre).toBe('Activos de Informacion');
+    expect(first.descripcion).toBe('Politica de control de acceso');
   });
 });

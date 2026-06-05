@@ -17,6 +17,19 @@ export interface CatalogoItem {
     [key: string]: any
 }
 
+export interface CategoriaControlesImplementar {
+    id: number
+    nombre: string
+}
+
+export interface ControlesImplementarItem {
+    id: number
+    seccion: string
+    descripcion: string
+    categoriaId: number
+    categoria: CategoriaControlesImplementar
+}
+
 export interface ValoracionActivo {
     id: number
     nombreActivo: string
@@ -79,6 +92,9 @@ export interface DetalleRiesgo {
     vulnerabilidadIds?: string[]
     controlesImplementados?: string
     controlesArea?: string
+    // Tab 4 FK: selected catalog control to implement
+    controlesImplementarId?: number | null
+    controlesImplementar?: ControlesImplementarItem | null
 }
 
 export interface ApiError {
