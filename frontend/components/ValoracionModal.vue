@@ -352,6 +352,12 @@ function loadExistingRows() {
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
     loadExistingRows()
+    nextTick(() => {
+      riskRows.value.forEach(row => {
+        const d = findMatchedDetalle(row)
+        if (d) updateEvaluacionDetalle(d)
+      })
+    })
   }
   if (!isOpen) {
     currentStep.value = 0
@@ -500,6 +506,10 @@ function deriveNivelRiesgo(evaluacion: number): string {
   if (evaluacion <= 27) return 'ALTO'
 }
 
+function deriveMetodoTratamiento(evaluacion: number): string {
+  return evaluacion <= 3 ? 'RETENER / ACEPTAR' : 'MODIFICAR / PREVENIR / COMPARTIR'
+}
+
 function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number): PreviewRiesgo {
   const evaluacionRiesgo = va * nivelAmenaza * nivelVulnerabilidad
   const nivelRiesgo = deriveNivelRiesgo(evaluacionRiesgo)
@@ -573,8 +583,13 @@ function quitarVulnerabilidad(id: number) {
 }
 
 function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
-  // No longer emit reset-form — Tab 2 manages its own riskRows which syncs to detallesRiesgo
-  // Tab 3 riesgo changes are tracked directly in detallesRiesgo entries
+  if (!_d) return
+  const preview = getRowPreview(_d)
+  _d.evaluacionRiesgo = preview.evaluacionRiesgo
+  _d.nivelRiesgo = preview.nivelRiesgo
+  _d.metodoTratamiento = preview.evaluacionRiesgo > 0
+    ? deriveMetodoTratamiento(preview.evaluacionRiesgo)
+    : ''
 }
 
 /** @deprecated Use updateControlDetalleRow instead — dead code, no template call-sites */
@@ -1101,8 +1116,10 @@ const controlesImplementarGrupos = computed(() => {
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <input v-model="findMatchedDetalle(row)!.metodoTratamiento" placeholder="Método" style="min-width:100px;"
-                               type="text"/>
+                        <span v-if="getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo > 0">{{
+                            deriveMetodoTratamiento(getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo)
+                          }}</span>
+                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
