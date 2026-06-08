@@ -389,12 +389,24 @@ function canAdvanceFromStep2(): boolean {
 
 const tipoControlErrors = ref(false)
 
+interface Step3RowIssue {
+  rowIndex: number
+  missingFields: string[]
+}
+
 function canAdvanceFromStep3(): boolean {
-  const allGood = riskRows.value.every(row => {
+  const issues: Step3RowIssue[] = []
+  const allGood = riskRows.value.every((row, i) => {
     const det = findMatchedDetalle(row)
-    return det?.riesgoId && det?.vulnerabilidadRiesgoId && det?.tipoControlId
+    const missing: string[] = []
+    if (!det?.riesgoId) missing.push('Nivel Amenaza')
+    if (!det?.vulnerabilidadRiesgoId) missing.push('Nivel Vulnerabilidad')
+    if (!det?.tipoControlId) missing.push('Tipo de Control')
+    if (missing.length > 0) issues.push({ rowIndex: i, missingFields: missing })
+    return missing.length === 0
   })
   tipoControlErrors.value = !allGood
+  if (!allGood) console.table(issues)
   return allGood
 }
 
