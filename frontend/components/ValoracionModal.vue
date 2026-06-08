@@ -874,6 +874,8 @@ const controlesImplementarGrupos = computed(() => {
               <table v-else class="val-table" style="margin-top:1rem;">
                 <thead>
                 <tr>
+                  <th style="min-width:160px;">Nombre del Activo</th>
+                  <th style="min-width:180px;">Macroproceso</th>
                   <th>Amenaza</th>
                   <th>Vulnerabilidad</th>
                   <th>Nivel Amenaza</th>
@@ -885,6 +887,16 @@ const controlesImplementarGrupos = computed(() => {
                 </thead>
                 <tbody>
                 <tr v-for="row in riskRows" :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
+                  <!-- Nombre del Activo (readonly) -->
+                  <td>
+                    <input :value="analisisForm.nombreActivo" readonly type="text"
+                      style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
+                  </td>
+                  <!-- Macroproceso (readonly) -->
+                  <td>
+                    <input :value="macroProcesoName" readonly type="text"
+                      style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
+                  </td>
                   <td>
                     <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected"
                           style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
@@ -969,6 +981,8 @@ const controlesImplementarGrupos = computed(() => {
               <table v-else class="val-table">
                 <thead>
                 <tr>
+                  <th style="min-width:160px;">Nombre del Activo</th>
+                  <th style="min-width:180px;">Macroproceso</th>
                   <th>Amenaza</th>
                   <th>Vulnerabilidad</th>
                   <th>Nivel Amenaza</th>
@@ -985,6 +999,16 @@ const controlesImplementarGrupos = computed(() => {
                 <template v-for="row in riskRows"
                           :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
                   <tr v-if="row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0">
+                    <!-- Nombre del Activo (readonly) -->
+                    <td>
+                      <input :value="analisisForm.nombreActivo" readonly type="text"
+                        style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
+                    </td>
+                    <!-- Macroproceso (readonly) -->
+                    <td>
+                      <input :value="macroProcesoName" readonly type="text"
+                        style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
+                    </td>
                     <td>
                       <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected"
                             style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
