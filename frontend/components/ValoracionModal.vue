@@ -399,25 +399,36 @@ function canAdvanceFromStep3(): boolean {
 }
 
 function nextStep() {
+  console.log(`[nextStep] Attempting from step ${currentStep.value}`)
   if (currentStep.value === 0) {
     if (!canAdvanceFromStep1()) {
       const fields = Object.keys(fieldErrors)
+      const emptyFields = fields.filter((f) => !props.valForm[f])
+      console.warn('[nextStep] Step 0 blocked — empty fields:', emptyFields)
       fields.forEach((f) => { fieldErrors[f] = !props.valForm[f] })
       void nextTick().then(() => scrollToFirstError())
       return
     }
+    console.log('[nextStep] Step 0 passed, clearing errors')
     Object.keys(fieldErrors).forEach((f) => { fieldErrors[f] = false })
   }
   if (currentStep.value === 1 && !canAdvanceFromStep2()) {
+    console.warn('[nextStep] Step 1 blocked — no risk rows')
     alert('Agregue al menos una fila de riesgo')
     return
   }
   if (currentStep.value === 2 && !canAdvanceFromStep3()) {
+    const failedRows = riskRows.value.filter(row => {
+      const det = findMatchedDetalle(row)
+      return !det?.riesgoId || !det?.vulnerabilidadRiesgoId || !det?.tipoControlId
+    })
+    console.warn(`[nextStep] Step 2 blocked — ${failedRows.length} rows incomplete`, failedRows)
     void nextTick().then(() => scrollToFirstError())
     return
   }
   if (currentStep.value < TOTAL_STEPS - 1) {
     if (currentStep.value === 2) tipoControlErrors.value = false
+    console.log(`[nextStep] Advancing: ${currentStep.value} → ${currentStep.value + 1}`)
     currentStep.value++
   }
 }
@@ -425,6 +436,7 @@ function nextStep() {
 function prevStep() {
   if (currentStep.value > 0) {
     if (currentStep.value === 2) tipoControlErrors.value = false
+    console.log(`[prevStep] Going back: ${currentStep.value} → ${currentStep.value - 1}`)
     currentStep.value--
   }
 }
