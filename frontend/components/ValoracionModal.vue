@@ -151,6 +151,31 @@ const vulnerabilidadSeleccionada = ref('')
 const currentStep = ref(0)
 const TOTAL_STEPS = 4
 
+const fieldErrors = reactive<Record<string, boolean>>({
+  nombreActivo: false,
+  tipoActivo: false,
+  formato: false,
+  macroProceso: false,
+  subProceso: false,
+  propietario: false,
+  custodio: false,
+  descripcion: false,
+  controlSeguridad: false,
+  ubicacion: false,
+  confidencialidad: false,
+  integridad: false,
+  disponibilidad: false,
+})
+
+const REQUIRED_FIELDS_WITH_ASTERISK = new Set([
+  'formato',
+  'macroProceso',
+  'propietario',
+  'custodio',
+  'descripcion',
+  'ubicacion',
+])
+
 // ── Tab 2 Row State ─────────────────────────────────────────────────────────
 // Each row: { amenazaIds, vulnerabilidadIds, controlesImplementados, controlesArea, controlesImplementarId }
 export interface RiskRow {
@@ -364,9 +389,14 @@ function canAdvanceFromStep3(): boolean {
 }
 
 function nextStep() {
-  if (currentStep.value === 0 && !canAdvanceFromStep1()) {
-    alert('Complete todos los campos requeridos en Valoración de Activo')
-    return
+  if (currentStep.value === 0) {
+    if (!canAdvanceFromStep1()) {
+      const fields = Object.keys(fieldErrors)
+      fields.forEach((f) => { fieldErrors[f] = !props.valForm[f] })
+      void nextTick().then(() => scrollToFirstError())
+      return
+    }
+    Object.keys(fieldErrors).forEach((f) => { fieldErrors[f] = false })
   }
   if (currentStep.value === 1 && !canAdvanceFromStep2()) {
     alert('Agregue al menos una fila de riesgo')
@@ -383,6 +413,14 @@ function nextStep() {
 
 function prevStep() {
   if (currentStep.value > 0) currentStep.value--
+}
+
+function scrollToFirstError() {
+  document.querySelector('.form-group.has-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function clearFieldError(field: string) {
+  fieldErrors[field] = false
 }
 
 // ── Helper Functions ─────────────────────────────────────────────────────────
@@ -606,69 +644,79 @@ const controlesImplementarGrupos = computed(() => {
             <div class="val-grid">
               <div class="val-card" style="border:none; padding:0; background:transparent;">
                 <h3 class="val-card-title">Identificación del Activo</h3>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.nombreActivo }">
                   <label>Nombre del Activo</label>
                   <input v-model="valForm.nombreActivo" placeholder="Nombre del activo de información" required
-                         type="text"/>
+                         type="text" @input="clearFieldError('nombreActivo')"/>
+                  <span v-if="fieldErrors.nombreActivo" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.tipoActivo }">
                   <label>Tipo de Activo</label>
-                  <select v-model="valForm.tipoActivo" required>
+                  <select v-model="valForm.tipoActivo" required @change="clearFieldError('tipoActivo')">
                     <option value="">Seleccionar...</option>
                     <option v-for="t in catalogData.valTipoActivo" :key="t.id" :value="t.id">{{ t.nombre }} —
                       {{ t.detalle }}
                     </option>
                   </select>
+                  <span v-if="fieldErrors.tipoActivo" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Formato</label>
-                  <select v-model="valForm.formato" required>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.formato }">
+                  <label>Formato <span class="required-asterisk">*</span></label>
+                  <select v-model="valForm.formato" required @change="clearFieldError('formato')">
                     <option value="">Seleccionar...</option>
                     <option v-for="f in catalogData.valFormatos" :key="f.id" :value="f.id">{{ f.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.formato" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Macro Proceso</label>
-                  <select v-model="valForm.macroProceso" required>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.macroProceso }">
+                  <label>Macro Proceso <span class="required-asterisk">*</span></label>
+                  <select v-model="valForm.macroProceso" required @change="clearFieldError('macroProceso')">
                     <option value="">Seleccionar...</option>
                     <option v-for="m in catalogData.valMacroprocesos" :key="m.id" :value="m.id">{{ m.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.macroProceso" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.subProceso }">
                   <label>Sub Proceso</label>
-                  <select v-model="valForm.subProceso" required>
+                  <select v-model="valForm.subProceso" required @change="clearFieldError('subProceso')">
                     <option value="">Seleccionar...</option>
                     <option v-for="s in subprocesosFiltrados" :key="s.id" :value="s.id">{{ s.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.subProceso" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Propietario del Activo</label>
-                  <select v-model="valForm.propietario" required>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.propietario }">
+                  <label>Propietario del Activo <span class="required-asterisk">*</span></label>
+                  <select v-model="valForm.propietario" required @change="clearFieldError('propietario')">
                     <option value="">Seleccionar...</option>
                     <option v-for="a in catalogData.valAreas" :key="a.id" :value="a.id">{{ a.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.propietario" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Custodio del Activo</label>
-                  <select v-model="valForm.custodio" required>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.custodio }">
+                  <label>Custodio del Activo <span class="required-asterisk">*</span></label>
+                  <select v-model="valForm.custodio" required @change="clearFieldError('custodio')">
                     <option value="">Seleccionar...</option>
                     <option v-for="f in catalogData.valFuncionarios" :key="f.id" :value="f.id">{{ f.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.custodio" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Descripción del Activo</label>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.descripcion }">
+                  <label>Descripción del Activo <span class="required-asterisk">*</span></label>
                   <textarea v-model="valForm.descripcion" placeholder="Describa el activo de información" required
-                            rows="2"></textarea>
+                            rows="2" @input="clearFieldError('descripcion')"></textarea>
+                  <span v-if="fieldErrors.descripcion" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.controlSeguridad }">
                   <label>Control de Seguridad Implementado</label>
                   <textarea v-model="valForm.controlSeguridad" placeholder="Controles de seguridad existentes" required
-                            rows="2"></textarea>
+                            rows="2" @input="clearFieldError('controlSeguridad')"></textarea>
+                  <span v-if="fieldErrors.controlSeguridad" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Ubicación</label>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.ubicacion }">
+                  <label>Ubicación <span class="required-asterisk">*</span></label>
                   <input v-model="valForm.ubicacion" placeholder="Ubicación física o lógica del activo" required
-                         type="text"/>
+                         type="text" @input="clearFieldError('ubicacion')"/>
+                  <span v-if="fieldErrors.ubicacion" class="field-error">Este campo es obligatorio</span>
                 </div>
                 <div class="form-group">
                   <label>¿Tiene Datos Personales?</label>
@@ -685,32 +733,35 @@ const controlesImplementarGrupos = computed(() => {
 
               <div class="val-card" style="border:none; padding:0; background:transparent;">
                 <h3 class="val-card-title">Valoración CIA</h3>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.confidencialidad }">
                   <label>Confidencialidad</label>
-                  <select v-model="valForm.confidencialidad" required>
+                  <select v-model="valForm.confidencialidad" required @change="clearFieldError('confidencialidad')">
                     <option value="">Seleccionar...</option>
                     <option v-for="n in getNivelesImpacto('confidencialidad')" :key="n.id" :value="n.id">{{ n.nivel }}
                       ({{ n.valor }}) — {{ n.criterio }}
                     </option>
                   </select>
+                  <span v-if="fieldErrors.confidencialidad" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.integridad }">
                   <label>Integridad</label>
-                  <select v-model="valForm.integridad" required>
+                  <select v-model="valForm.integridad" required @change="clearFieldError('integridad')">
                     <option value="">Seleccionar...</option>
                     <option v-for="n in getNivelesImpacto('integridad')" :key="n.id" :value="n.id">{{ n.nivel }}
                       ({{ n.valor }}) — {{ n.criterio }}
                     </option>
                   </select>
+                  <span v-if="fieldErrors.integridad" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.disponibilidad }">
                   <label>Disponibilidad</label>
-                  <select v-model="valForm.disponibilidad" required>
+                  <select v-model="valForm.disponibilidad" required @change="clearFieldError('disponibilidad')">
                     <option value="">Seleccionar...</option>
                     <option v-for="n in getNivelesImpacto('disponibilidad')" :key="n.id" :value="n.id">{{ n.nivel }}
                       ({{ n.valor }}) — {{ n.criterio }}
                     </option>
                   </select>
+                  <span v-if="fieldErrors.disponibilidad" class="field-error">Este campo es obligatorio</span>
                 </div>
                 <div v-if="ciaAverage > 0" class="cia-average">
                   <span class="cia-average-label">Promedio CIA</span>
@@ -1481,5 +1532,26 @@ const controlesImplementarGrupos = computed(() => {
 
 .val-tab-panel {
   min-height: 200px;
+}
+
+/* ── Required Field Validation Indicators ────────────────────────────────── */
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.2);
+}
+
+.required-asterisk {
+  color: #dc2626;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
 }
 </style>
