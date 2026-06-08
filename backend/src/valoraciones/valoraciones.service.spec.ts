@@ -343,6 +343,7 @@ describe('DetalleRiesgoDto — vulnerabilidadRiesgoId validation', () => {
     const dto = Object.assign(new DetalleRiesgoDto(), {
       riesgoId: 2,
       vulnerabilidadRiesgoId: 3,
+      tipoControlId: 1,
     });
     const errors = validateSync(dto, {
       whitelist: true,
@@ -352,7 +353,10 @@ describe('DetalleRiesgoDto — vulnerabilidadRiesgoId validation', () => {
   });
 
   it('should tolerate missing vulnerabilidadRiesgoId (optional field)', () => {
-    const dto = Object.assign(new DetalleRiesgoDto(), { riesgoId: 1 });
+    const dto = Object.assign(new DetalleRiesgoDto(), {
+      riesgoId: 1,
+      tipoControlId: 1,
+    });
     const errors = validateSync(dto, {
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -792,6 +796,7 @@ describe('DetalleRiesgoDto — vulnerabilidadControlId validation', () => {
     const dto = Object.assign(new DetalleRiesgoDto(), {
       riesgoControlId: 2,
       vulnerabilidadControlId: 5,
+      tipoControlId: 1,
     });
     const errors = validateSync(dto, {
       whitelist: true,
@@ -801,7 +806,10 @@ describe('DetalleRiesgoDto — vulnerabilidadControlId validation', () => {
   });
 
   it('should tolerate missing vulnerabilidadControlId (optional field)', () => {
-    const dto = Object.assign(new DetalleRiesgoDto(), { riesgoControlId: 1 });
+    const dto = Object.assign(new DetalleRiesgoDto(), {
+      riesgoControlId: 1,
+      tipoControlId: 1,
+    });
     const errors = validateSync(dto, {
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -813,12 +821,56 @@ describe('DetalleRiesgoDto — vulnerabilidadControlId validation', () => {
     const dto = Object.assign(new DetalleRiesgoDto(), {
       riesgoControlId: 3,
       vulnerabilidadControlId: 7,
+      tipoControlId: 1,
     });
     const errors = validateSync(dto, {
       whitelist: true,
       forbidNonWhitelisted: true,
     });
     expect(errors).toHaveLength(0);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DetalleRiesgoDto — tipoControlId validation (required field)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('DetalleRiesgoDto — tipoControlId validation (required)', () => {
+  it('RED: should reject missing tipoControlId (required field)', () => {
+    const dto = Object.assign(new DetalleRiesgoDto(), {
+      riesgoId: 1,
+      vulnerabilidadRiesgoId: 2,
+    });
+    const errors = validateSync(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('TRIANGULATE: should accept when tipoControlId is provided', () => {
+    const dto = Object.assign(new DetalleRiesgoDto(), {
+      riesgoId: 1,
+      vulnerabilidadRiesgoId: 2,
+      tipoControlId: 5,
+    });
+    const errors = validateSync(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors).toHaveLength(0);
+  });
+
+  it('TRIANGULATE: should reject non-number tipoControlId', () => {
+    const dto = Object.assign(new DetalleRiesgoDto(), {
+      riesgoId: 1,
+      vulnerabilidadRiesgoId: 2,
+      tipoControlId: 'not-a-number',
+    });
+    const errors = validateSync(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    expect(errors.length).toBeGreaterThan(0);
   });
 });
 

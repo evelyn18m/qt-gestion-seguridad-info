@@ -79,9 +79,8 @@ export class DetalleRiesgoDto {
   @IsString()
   metodoTratamiento?: string;
 
-  @IsOptional()
   @IsNumber()
-  tipoControlId?: number;
+  tipoControlId: number;
 
   @IsOptional()
   @IsNumber()

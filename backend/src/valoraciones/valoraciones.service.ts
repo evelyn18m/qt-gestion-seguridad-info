@@ -75,8 +75,12 @@ export class ValoracionesService {
             : Promise.resolve(null),
         ),
       );
-      const nivelControlAmenaza = riesgoControlResults.map((r) => r?.valor ?? undefined);
-      const nivelControlVuln = vulnControlResults.map((r) => r?.valor ?? undefined);
+      const nivelControlAmenaza = riesgoControlResults.map(
+        (r) => r?.valor ?? undefined,
+      );
+      const nivelControlVuln = vulnControlResults.map(
+        (r) => r?.valor ?? undefined,
+      );
 
       await this.prisma.$transaction(
         detallesRiesgo.map((d, i) =>
@@ -147,8 +151,12 @@ export class ValoracionesService {
             : Promise.resolve(null),
         ),
       );
-      const nivelControlAmenaza = riesgoControlResults.map((r) => r?.valor ?? undefined);
-      const nivelControlVuln = vulnControlResults.map((r) => r?.valor ?? undefined);
+      const nivelControlAmenaza = riesgoControlResults.map(
+        (r) => r?.valor ?? undefined,
+      );
+      const nivelControlVuln = vulnControlResults.map(
+        (r) => r?.valor ?? undefined,
+      );
 
       await this.prisma.$transaction([
         this.prisma.detalleRiesgo.deleteMany({

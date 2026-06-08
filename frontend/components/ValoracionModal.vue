@@ -387,11 +387,15 @@ function canAdvanceFromStep2(): boolean {
   return riskRows.value.length > 0
 }
 
+const tipoControlErrors = ref(false)
+
 function canAdvanceFromStep3(): boolean {
-  return riskRows.value.every(row =>
-      findMatchedDetalle(row)?.riesgoId &&
-      findMatchedDetalle(row)?.vulnerabilidadRiesgoId
-  )
+  const allGood = riskRows.value.every(row => {
+    const det = findMatchedDetalle(row)
+    return det?.riesgoId && det?.vulnerabilidadRiesgoId && det?.tipoControlId
+  })
+  tipoControlErrors.value = !allGood
+  return allGood
 }
 
 function nextStep() {
@@ -409,16 +413,20 @@ function nextStep() {
     return
   }
   if (currentStep.value === 2 && !canAdvanceFromStep3()) {
-    alert('Complete la evaluación de riesgo en todas las filas')
+    void nextTick().then(() => scrollToFirstError())
     return
   }
   if (currentStep.value < TOTAL_STEPS - 1) {
+    if (currentStep.value === 2) tipoControlErrors.value = false
     currentStep.value++
   }
 }
 
 function prevStep() {
-  if (currentStep.value > 0) currentStep.value--
+  if (currentStep.value > 0) {
+    if (currentStep.value === 2) tipoControlErrors.value = false
+    currentStep.value--
+  }
 }
 
 function scrollToFirstError() {
@@ -1125,13 +1133,22 @@ const controlesImplementarGrupos = computed(() => {
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <select v-model="findMatchedDetalle(row)!.tipoControlId" style="min-width:110px;">
-                          <option value="">Seleccionar...</option>
-                          <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{
-                              tc.nombre
-                            }}
-                          </option>
-                        </select>
+                        <div
+                          class="form-group"
+                          :class="{ 'has-error': tipoControlErrors && !findMatchedDetalle(row)?.tipoControlId }"
+                        >
+                          <select v-model="findMatchedDetalle(row)!.tipoControlId" style="min-width:110px;">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{
+                                tc.nombre
+                              }}
+                            </option>
+                          </select>
+                          <span
+                            v-if="tipoControlErrors && !findMatchedDetalle(row)?.tipoControlId"
+                            class="field-error"
+                          >Este campo es obligatorio</span>
+                        </div>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
