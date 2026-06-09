@@ -102,3 +102,51 @@ export interface ApiError {
     message: string
     statusCode: number
 }
+
+// ── Reportes module ───────────────────────────────────────────────────────────
+
+export interface NivelCount {
+    Alto: number
+    Medio: number
+    Bajo: number
+}
+
+export interface ReporteResumen {
+    totalActivos: number
+    conRiesgo: number
+    sinRiesgo: number
+    distribucionRiesgos: NivelCount
+    distribucionControles: NivelCount
+}
+
+export interface RiesgoPorActivo {
+    activoId: number
+    nombre: string
+    tipoActivo: string
+    macroproceso: string
+    evaluacionRiesgo: number | null
+    nivelRiesgo: string | null
+    metodoTratamiento: string | null
+    riesgoResidual: string | null
+}
+
+export interface RiesgoPorMacroProceso {
+    macroprocesoId: number
+    macroproceso: string
+    totalActivos: number
+    riesgosBajo: number
+    riesgosMedio: number
+    riesgosAlto: number
+    promedioEvaluacion: number
+}
+
+export interface ReporteTratamiento {
+    distribucionMetodos: Record<string, number>
+    distribucionResidual: { ACEPTABLE: number; INACEPTABLE: number }
+}
+
+export interface ReporteCIA {
+    confidencialidad: NivelCount
+    integridad: NivelCount
+    disponibilidad: NivelCount
+}
