@@ -145,7 +145,7 @@ model DetalleRiesgo {
   evaluacionRiesgo        Float?
   nivelRiesgo             String?
   metodoTratamiento       String?  @db.Text
-  tipoControlId           Int?
+  tipoControlId           Int
   riesgoControlId         Int? // id del catálogo Riesgo para control
   vulnerabilidadControlId Int? // id del catálogo Riesgo para vulnerabilidad en control
   evaluacionRiesgoControl Float?

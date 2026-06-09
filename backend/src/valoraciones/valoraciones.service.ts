@@ -240,7 +240,7 @@ export class ValoracionesService {
       ...(d.metodoTratamiento !== undefined && {
         metodoTratamiento: d.metodoTratamiento,
       }),
-      ...(d.tipoControlId !== undefined && { tipoControlId: d.tipoControlId }),
+      tipoControlId: d.tipoControlId,
       ...(d.riesgoControlId !== undefined && {
         riesgoControlId: d.riesgoControlId,
       }),

@@ -255,7 +255,7 @@ async function submitValoracion() {
       evaluacionRiesgo: (d.evaluacionRiesgo || 0) > 0 ? d.evaluacionRiesgo : null,
       nivelRiesgo: d.nivelRiesgo || null,
       metodoTratamiento: d.metodoTratamiento || null,
-      tipoControlId: d.tipoControlId ? Number(d.tipoControlId) : null,
+      tipoControlId: Number(d.tipoControlId),
       riesgoControlId: d.riesgoControlId ? Number(d.riesgoControlId) : null,
       vulnerabilidadControlId: d.vulnerabilidadControlId ? Number(d.vulnerabilidadControlId) : null,
       evaluacionRiesgoControl: (d.evaluacionRiesgoControl || 0) > 0 ? d.evaluacionRiesgoControl : null,

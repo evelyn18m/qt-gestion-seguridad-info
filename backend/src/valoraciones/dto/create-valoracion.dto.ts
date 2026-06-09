@@ -3,10 +3,12 @@ import {
   IsOptional,
   IsString,
   Validate,
+  ValidateNested,
   ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 // Tab 2: at least one of amenazaIds / vulnerabilidadIds must be non-empty
 @ValidatorConstraint()
@@ -245,5 +247,7 @@ export class CreateValoracionDto {
 
   // Detalles individuales de riesgo
   @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => DetalleRiesgoDto)
   detallesRiesgo?: DetalleRiesgoDto[];
 }

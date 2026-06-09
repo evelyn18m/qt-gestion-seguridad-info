@@ -401,12 +401,20 @@ function canAdvanceFromStep3(): boolean {
     const missing: string[] = []
     if (!det?.riesgoId) missing.push('Nivel Amenaza')
     if (!det?.vulnerabilidadRiesgoId) missing.push('Nivel Vulnerabilidad')
-    if (!det?.tipoControlId) missing.push('Tipo de Control')
+    
     if (missing.length > 0) issues.push({ rowIndex: i, missingFields: missing })
     return missing.length === 0
   })
-  tipoControlErrors.value = !allGood
   if (!allGood) console.table(issues)
+  return allGood
+}
+
+function canAdvanceFromStep4(): boolean {
+  const allGood = riskRows.value.every(row => {
+    const det = findMatchedDetalle(row)
+    return !!det?.tipoControlId
+  })
+  tipoControlErrors.value = !allGood
   return allGood
 }
 
@@ -1235,7 +1243,7 @@ const controlesImplementarGrupos = computed(() => {
         <button v-if="currentStep > 0" class="btn-secondary" type="button" @click="prevStep">Atrás</button>
         <button v-if="currentStep < TOTAL_STEPS - 1" class="btn-primary" type="button" @click="nextStep">Siguiente
         </button>
-        <button v-else :disabled="valSaving" class="btn-primary" type="button" @click="emit('submit')">
+        <button v-else :disabled="valSaving" class="btn-primary" type="button" @click="if (canAdvanceFromStep4()) emit('submit'); else alert('Complete el campo \'Tipo de Control\' en todas las filas antes de guardar.')">
           {{ valSaving ? 'Guardando...' : editId ? 'Actualizar' : 'Guardar' }}
         </button>
       </div>
