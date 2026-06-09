@@ -346,8 +346,6 @@ async function submitValoracion() {
           evaluacionRiesgo: calculado.evaluacionRiesgo,
           nivelRiesgo: calculado.nivelRiesgo,
           metodoTratamiento: calculado.metodoTratamiento,
-          tipoControlId: null,
-          riesgoControlId: null,
           evaluacionRiesgoControl: calculado.evaluacionRiesgoControl,
           nivelRiesgoControl: calculado.nivelRiesgoControl,
           riesgoResidual: calculado.riesgoResidual,
