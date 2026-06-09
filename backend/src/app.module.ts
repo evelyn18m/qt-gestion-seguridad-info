@@ -6,9 +6,10 @@ import { CatalogosModule } from './catalogos/catalogos.module';
 import { ValoracionesModule } from './valoraciones/valoraciones.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/auth.guard';
+import { ReportesModule } from './reportes/reportes.module';
 
 @Module({
-  imports: [CatalogosModule, ValoracionesModule, AuthModule],
+  imports: [CatalogosModule, ValoracionesModule, AuthModule, ReportesModule],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: AuthGuard }],
 })
