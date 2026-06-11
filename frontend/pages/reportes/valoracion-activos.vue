@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { ValoracionActivoReporte, CatalogoItem } from '~/types/api'
 
-definePageMeta({ layout: 'reportes' })
+definePageMeta({ layout: 'default' })
 
 const loadingValoracion = ref(false)
 const errorValoracion = ref('')
@@ -147,6 +147,7 @@ onMounted(() => {
 
 <template>
   <div class="reportes-page">
+    <ReportesTabs />
     <!-- Sidebar: Filtros verticales -->
     <aside class="filters-sidebar">
       <div class="sidebar-header">

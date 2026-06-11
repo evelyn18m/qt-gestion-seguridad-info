@@ -2,28 +2,17 @@
 </script>
 
 <template>
-  <div class="reportes-layout">
-    <div class="tabs-horizontal">
-      <NuxtLink to="/reportes/valoracion-activos" class="tab-btn" active-class="active">
-        Valoración de Activos
-      </NuxtLink>
-      <NuxtLink to="/reportes/analisis-riesgo" class="tab-btn" active-class="active">
-        Análisis de Riesgo
-      </NuxtLink>
-    </div>
-    <div class="reportes-layout-content">
-      <slot />
-    </div>
+  <div class="tabs-horizontal">
+    <NuxtLink to="/reportes/valoracion-activos" class="tab-btn" active-class="active">
+      Valoración de Activos
+    </NuxtLink>
+    <NuxtLink to="/reportes/analisis-riesgo" class="tab-btn" active-class="active">
+      Análisis de Riesgo
+    </NuxtLink>
   </div>
 </template>
 
 <style scoped>
-.reportes-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
 /* ── Tabs Horizontal ─────────────────────────────────────────────────────────── */
 .tabs-horizontal {
   display: flex;
@@ -61,11 +50,5 @@
   color: var(--primary);
   border-bottom-color: var(--primary);
   font-weight: 600;
-}
-
-.reportes-layout-content {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
 }
 </style>

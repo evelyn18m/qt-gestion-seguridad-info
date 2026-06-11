@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { AnalisisRiesgoActivoReporte, CatalogoItem } from '~/types/api'
 
-definePageMeta({ layout: 'reportes' })
+definePageMeta({ layout: 'default' })
 
 const loadingAnalisis = ref(false)
 const errorAnalisis = ref('')
@@ -115,6 +115,7 @@ onMounted(() => {
 
 <template>
   <div class="reportes-page">
+    <ReportesTabs />
     <!-- Sidebar: Filtros verticales -->
     <aside class="filters-sidebar">
       <div class="sidebar-header">
