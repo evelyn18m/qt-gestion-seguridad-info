@@ -61,3 +61,13 @@ export class ValoracionActivoReporteDto {
 export class IndiceReporteDto {
   endpoints: { ruta: string; descripcion: string }[];
 }
+
+export class AnalisisRiesgoActivoDto {
+  id: number;
+  nombreActivo: string;
+  macroProceso: string;
+  amenaza: string;
+  vulnerabilidad: string;
+  controlesImplementados: string | null;
+  controlesArea: string | null;
+}

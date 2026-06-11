@@ -9,17 +9,21 @@ import {
   TratamientoReporteDto,
   CiaReporteDto,
   ValoracionActivoReporteDto,
+  AnalisisRiesgoActivoDto,
 } from './dto/reporte-response.dto';
-import * as XLSX from 'xlsx';
 import * as XLSX_STYLE from 'xlsx-js-style';
 
 @Injectable()
 export class ReportesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async fetchImpactoMap(): Promise<Map<number, { nivel: string; valor: number }>> {
+  private async fetchImpactoMap(): Promise<
+    Map<number, { nivel: string; valor: number }>
+  > {
     const impactos = await this.prisma.impacto.findMany();
-    return new Map(impactos.map((i) => [i.id, { nivel: i.nivel, valor: i.valor }]));
+    return new Map(
+      impactos.map((i) => [i.id, { nivel: i.nivel, valor: i.valor }]),
+    );
   }
 
   private nvlCero(): NivelCount {
@@ -100,7 +104,7 @@ export class ReportesService {
             nivelRiesgo: va.nivelRiesgo,
             metodoTratamiento: va.metodoTratamiento,
             riesgoResidual: residualMap.get(va.id) ?? null,
-          } as RiesgoPorActivoDto;
+          };
         }),
       );
 
@@ -128,7 +132,14 @@ export class ReportesService {
       // Group by macroProcesoId
       const groups = new Map<
         number,
-        { totalActivos: number; riesgosBajo: number; riesgosMedio: number; riesgosAlto: number; sumaEvaluacion: number; countEvaluacion: number }
+        {
+          totalActivos: number;
+          riesgosBajo: number;
+          riesgosMedio: number;
+          riesgosAlto: number;
+          sumaEvaluacion: number;
+          countEvaluacion: number;
+        }
       >();
 
       for (const va of vas) {
@@ -209,7 +220,10 @@ export class ReportesService {
 
       return {
         distribucionMetodos,
-        distribucionResidual: { ACEPTABLE: aceptable, INACEPTABLE: inaceptable },
+        distribucionResidual: {
+          ACEPTABLE: aceptable,
+          INACEPTABLE: inaceptable,
+        },
       };
     } catch (error) {
       throw new HttpException(
@@ -330,9 +344,7 @@ export class ReportesService {
       const macroProcesoMap = new Map(
         macroProcesos.map((m) => [m.id, m.nombre]),
       );
-      const funcionarioMap = new Map(
-        funcionarios.map((f) => [f.id, f.nombre]),
-      );
+      const funcionarioMap = new Map(funcionarios.map((f) => [f.id, f.nombre]));
       const impactoMap = new Map(impactos.map((i) => [i.id, i.nivel]));
 
       return valuations.map((va) => ({
@@ -354,6 +366,174 @@ export class ReportesService {
         `Error al obtener valoracion de activos: ${(error as Error).message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+
+  async getAnalisisRiesgoActivos(
+    filters: Record<string, string | undefined>,
+  ): Promise<AnalisisRiesgoActivoDto[]> {
+    try {
+      const {
+        q,
+        macroProcesoId,
+        categoriaAmenazaId,
+        amenazaId,
+        categoriaVulnerabilidadId,
+        vulnerabilidadId,
+      } = filters;
+
+      // Stage 1: resolve macroproceso filter into valoracionActivo IDs
+      let vaIds: number[] | undefined;
+      if (macroProcesoId) {
+        const matchingVas = await this.prisma.valoracionActivo.findMany({
+          where: { macroProcesoId: Number(macroProcesoId) },
+          select: { id: true },
+        });
+        vaIds = matchingVas.map((va) => va.id);
+        if (vaIds.length === 0) {
+          return [];
+        }
+      }
+
+      // Stage 2: fetch DetalleRiesgo records (with or without VA filter)
+      const detalleWhere = vaIds ? { valoracionActivoId: { in: vaIds } } : {};
+      const detalles = await this.prisma.detalleRiesgo.findMany({
+        where: detalleWhere,
+      });
+
+      if (detalles.length === 0) {
+        return [];
+      }
+
+      // Stage 3: fetch all enrichment catalogs in parallel
+      const [valoracionActivos, amenazas, vulnerabilidades, macroProcesos] =
+        await Promise.all([
+          this.prisma.valoracionActivo.findMany({
+            where: vaIds ? { id: { in: vaIds } } : {},
+          }),
+          this.prisma.amenaza.findMany(),
+          this.prisma.vulnerabilidad.findMany(),
+          this.prisma.macroProceso.findMany(),
+        ]);
+
+      // Build lookup maps
+      const vaMap = new Map(valoracionActivos.map((va) => [va.id, va]));
+      const amenazaMap = new Map(amenazas.map((a) => [a.id, a]));
+      const vulnerabilidadMap = new Map(vulnerabilidades.map((v) => [v.id, v]));
+      const macroProcesoMap = new Map(macroProcesos.map((m) => [m.id, m]));
+
+      // Stage 4: enrich and filter in-memory
+      const enriched = detalles
+        .map((dr): AnalisisRiesgoActivoDto | null => {
+          const va = vaMap.get(dr.valoracionActivoId);
+          if (!va) return null;
+
+          const mp = macroProcesoMap.get(va.macroProcesoId);
+
+          let parsedAmenazaIds: number[] = [];
+          let parsedVulnerabilidadIds: number[] = [];
+          try {
+            if (dr.amenazaIds) {
+              parsedAmenazaIds = JSON.parse(dr.amenazaIds) as number[];
+            }
+            if (dr.vulnerabilidadIds) {
+              parsedVulnerabilidadIds = JSON.parse(
+                dr.vulnerabilidadIds,
+              ) as number[];
+            }
+          } catch (error) {
+            // Malformed JSON: log and treat as empty arrays
+            console.error(`Malformed JSON in DetalleRiesgo ${dr.id}:`, error);
+          }
+
+          const amenazaNombres = parsedAmenazaIds
+            .map((id) => amenazaMap.get(id)?.nombre)
+            .filter((n): n is string => !!n);
+          const vulnerabilidadNombres = parsedVulnerabilidadIds
+            .map((id) => vulnerabilidadMap.get(id)?.descripcion)
+            .filter((n): n is string => !!n);
+
+          const amenaza = amenazaNombres.join(', ') || '';
+          const vulnerabilidad = vulnerabilidadNombres.join(', ') || '';
+
+          return {
+            id: dr.id,
+            nombreActivo: va.nombreActivo,
+            macroProceso: mp?.nombre ?? 'Desconocido',
+            amenaza,
+            vulnerabilidad,
+            controlesImplementados: dr.controlesImplementados ?? null,
+            controlesArea: dr.controlesArea ?? null,
+          };
+        })
+        .filter((item): item is AnalisisRiesgoActivoDto => item !== null)
+        .filter((item) => {
+          // In-memory filters
+          if (amenazaId) {
+            const ids = this.safeParseJsonArray(
+              detalles.find((d) => d.id === item.id)?.amenazaIds,
+            );
+            if (!ids.includes(Number(amenazaId))) return false;
+          }
+          if (vulnerabilidadId) {
+            const ids = this.safeParseJsonArray(
+              detalles.find((d) => d.id === item.id)?.vulnerabilidadIds,
+            );
+            if (!ids.includes(Number(vulnerabilidadId))) return false;
+          }
+          if (categoriaAmenazaId) {
+            const ids = this.safeParseJsonArray(
+              detalles.find((d) => d.id === item.id)?.amenazaIds,
+            );
+            const cats = ids
+              .map((id) => amenazaMap.get(id)?.categoria)
+              .filter((c): c is string => !!c);
+            if (!cats.includes(String(categoriaAmenazaId))) return false;
+          }
+          if (categoriaVulnerabilidadId) {
+            const ids = this.safeParseJsonArray(
+              detalles.find((d) => d.id === item.id)?.vulnerabilidadIds,
+            );
+            const cats = ids
+              .map((id) => vulnerabilidadMap.get(id)?.categoria)
+              .filter((c): c is string => !!c);
+            if (!cats.includes(String(categoriaVulnerabilidadId))) return false;
+          }
+          if (q) {
+            const qLower = q.toLowerCase();
+            const matchesActivo = item.nombreActivo
+              .toLowerCase()
+              .includes(qLower);
+            const matchesAmenaza = item.amenaza.toLowerCase().includes(qLower);
+            const matchesVulnerabilidad = item.vulnerabilidad
+              .toLowerCase()
+              .includes(qLower);
+            if (!matchesActivo && !matchesAmenaza && !matchesVulnerabilidad) {
+              return false;
+            }
+          }
+          return true;
+        });
+
+      // Sort by nombreActivo ascending
+      enriched.sort((a, b) => a.nombreActivo.localeCompare(b.nombreActivo));
+
+      return enriched;
+    } catch (error) {
+      throw new HttpException(
+        `Error al obtener análisis de riesgo de activos: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private safeParseJsonArray(value: string | null | undefined): number[] {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value) as number[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
   }
 

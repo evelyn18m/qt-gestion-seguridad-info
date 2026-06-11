@@ -3,6 +3,7 @@ const isSidebarOpen = ref(false)
 const catalogosOpen = ref(false)
 const route = useRoute()
 const {user, logout} = useAuth()
+const {secondsRemaining, isWarning, isExpired, refreshSession} = useSession()
 
 function closeSidebar() {
   isSidebarOpen.value = false
@@ -60,6 +61,13 @@ const catalogos = [
         </button>
       </div>
     </header>
+
+    <SessionWarning
+        :is-expired="isExpired"
+        :is-warning="isWarning"
+        :seconds-remaining="secondsRemaining"
+        @refresh="refreshSession"
+    />
 
     <div class="main-container">
       <!-- Sidebar -->

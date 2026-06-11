@@ -12,6 +12,7 @@ describe('ReportesController', () => {
     getCia: jest.Mock;
     getValoracionActivos: jest.Mock;
     exportValoracionActivos: jest.Mock;
+    getAnalisisRiesgoActivos: jest.Mock;
   };
 
   const mockResumen = {
@@ -73,6 +74,18 @@ describe('ReportesController', () => {
     },
   ];
 
+  const mockAnalisisRiesgoActivos = [
+    {
+      id: 1,
+      nombreActivo: 'Servidor A',
+      macroProceso: 'Gestión TI',
+      amenaza: 'Phishing, Robo',
+      vulnerabilidad: 'Falta de backups',
+      controlesImplementados: 'Firewall, Antivirus',
+      controlesArea: 'Seguridad física',
+    },
+  ];
+
   beforeEach(async () => {
     service = {
       getResumen: jest.fn().mockResolvedValue(mockResumen),
@@ -84,6 +97,9 @@ describe('ReportesController', () => {
       getCia: jest.fn().mockResolvedValue(mockCia),
       getValoracionActivos: jest.fn().mockResolvedValue(mockValoracionActivos),
       exportValoracionActivos: jest.fn().mockResolvedValue(Buffer.from('test')),
+      getAnalisisRiesgoActivos: jest
+        .fn()
+        .mockResolvedValue(mockAnalisisRiesgoActivos),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -175,6 +191,38 @@ describe('ReportesController', () => {
       );
       expect(mockRes.write).toHaveBeenCalled();
       expect(mockRes.end).toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /reportes/analisis-riesgo-activos', () => {
+    it('debe retornar 200 y lista de análisis de riesgo de activos', async () => {
+      const result = await controller.getAnalisisRiesgoActivos({});
+      expect(service.getAnalisisRiesgoActivos).toHaveBeenCalled();
+      expect(result).toEqual(mockAnalisisRiesgoActivos);
+    });
+
+    it('debe reenviar query params al servicio', async () => {
+      const query = {
+        q: 'phishing',
+        macroProcesoId: '1',
+        amenazaId: '2',
+        vulnerabilidadId: '3',
+      };
+      await controller.getAnalisisRiesgoActivos(query);
+      expect(service.getAnalisisRiesgoActivos).toHaveBeenCalledWith(query);
+    });
+
+    it('debe retornar DTO con shape correcto', async () => {
+      const result = await controller.getAnalisisRiesgoActivos({});
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('id');
+      expect(result[0]).toHaveProperty('nombreActivo');
+      expect(result[0]).toHaveProperty('macroProceso');
+      expect(result[0]).toHaveProperty('amenaza');
+      expect(result[0]).toHaveProperty('vulnerabilidad');
+      expect(result[0]).toHaveProperty('controlesImplementados');
+      expect(result[0]).toHaveProperty('controlesArea');
+      expect(result[0]).toEqual(mockAnalisisRiesgoActivos[0]);
     });
   });
 });
