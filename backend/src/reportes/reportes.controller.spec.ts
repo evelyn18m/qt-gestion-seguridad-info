@@ -164,6 +164,7 @@ describe('ReportesController', () => {
       const query = { q: 'test' };
       const mockRes = {
         setHeader: jest.fn(),
+        write: jest.fn(),
         end: jest.fn(),
       } as any;
       await controller.exportValoracionActivos(query, mockRes);
@@ -172,6 +173,7 @@ describe('ReportesController', () => {
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
+      expect(mockRes.write).toHaveBeenCalled();
       expect(mockRes.end).toHaveBeenCalled();
     });
   });

@@ -61,19 +61,28 @@ async function exportExcel() {
   const path = `/reportes/valoracion-activos/export${qs ? '?' + qs : ''}`
 
   try {
-    const response = await fetch(path)
+    const config = useRuntimeConfig()
+    const { token } = useAuth()
+    const url = `${config.public.apiBase}${path}`
+    const headers: Record<string, string> = {}
+    const currentToken = token.value
+    if (currentToken) {
+      headers['Authorization'] = `Bearer ${currentToken}`
+    }
+
+    const response = await fetch(url, { headers })
     if (!response.ok) {
       throw new Error(`Error del servidor: ${response.status}`)
     }
     const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
+    const urlBlob = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
+    a.href = urlBlob
     a.download = 'valoracion-activos.xlsx'
     document.body.appendChild(a)
     a.click()
     a.remove()
-    window.URL.revokeObjectURL(url)
+    window.URL.revokeObjectURL(urlBlob)
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Error al exportar Excel'
   }

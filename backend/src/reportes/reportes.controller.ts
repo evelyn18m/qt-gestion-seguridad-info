@@ -1,5 +1,5 @@
 import { Controller, Get, Query, Res } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { ReportesService } from './reportes.service';
 import {
   ResumenReporteDto,
@@ -74,6 +74,8 @@ export class ReportesController {
       'Content-Disposition',
       'attachment; filename="valoracion-activos.xlsx"',
     );
-    res.end(buffer);
+    res.setHeader('Content-Length', buffer.length);
+    res.write(buffer);
+    res.end();
   }
 }
