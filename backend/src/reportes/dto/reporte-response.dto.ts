@@ -55,6 +55,7 @@ export class ValoracionActivoReporteDto {
   confidencialidad: string;
   integridad: string;
   disponibilidad: string;
+  impacto: number | null;
 }
 
 export class IndiceReporteDto {

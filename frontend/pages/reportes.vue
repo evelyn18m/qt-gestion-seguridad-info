@@ -85,6 +85,11 @@ function nivelClass(nivel: string | null) {
   return 'nivel-bajo'
 }
 
+function formatNum(n: number | null | undefined) {
+  if (n == null) return '—'
+  return n.toFixed(2)
+}
+
 onMounted(() => {
   fetchValoracionActivos()
   fetchCatalogs()
@@ -206,6 +211,7 @@ onMounted(() => {
                 <th>Confidencialidad</th>
                 <th>Integridad</th>
                 <th>Disponibilidad</th>
+                <th>Impacto</th>
               </tr>
             </thead>
             <tbody>
@@ -234,6 +240,7 @@ onMounted(() => {
                   </span>
                   <span v-else>—</span>
                 </td>
+                <td>{{ formatNum(va.impacto) }}</td>
               </tr>
             </tbody>
           </table>

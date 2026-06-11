@@ -162,4 +162,5 @@ export interface ValoracionActivoReporte {
     confidencialidad: string
     integridad: string
     disponibilidad: string
+    impacto: number | null
 }

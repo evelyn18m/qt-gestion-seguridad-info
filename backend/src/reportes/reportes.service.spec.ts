@@ -530,6 +530,7 @@ describe('ReportesService', () => {
         confidencialidad: 'Alto',
         integridad: 'Medio',
         disponibilidad: 'Bajo',
+        impacto: null,
       });
     });
 

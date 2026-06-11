@@ -345,6 +345,7 @@ export class ReportesService {
           impactoMap.get(va.confidencialidadId) ?? 'Desconocido',
         integridad: impactoMap.get(va.integridadId) ?? 'Desconocido',
         disponibilidad: impactoMap.get(va.disponibilidadId) ?? 'Desconocido',
+        impacto: va.impacto ?? null,
       }));
     } catch (error) {
       throw new HttpException(
