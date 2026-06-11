@@ -9,6 +9,7 @@ import {
   CiaReporteDto,
   IndiceReporteDto,
   ValoracionActivoReporteDto,
+  AnalisisRiesgoActivoDto,
 } from './dto/reporte-response.dto';
 
 @Controller('reportes')
@@ -19,11 +20,27 @@ export class ReportesController {
   getIndice(): IndiceReporteDto {
     return {
       endpoints: [
-        { ruta: 'GET /reportes/resumen', descripcion: 'Resumen del dashboard con totales y distribuciones' },
-        { ruta: 'GET /reportes/riesgos-por-activo', descripcion: 'Riesgos por activo con datos enriquecidos' },
-        { ruta: 'GET /reportes/riesgos-por-macroproceso', descripcion: 'Riesgos agrupados por macroproceso' },
-        { ruta: 'GET /reportes/tratamiento', descripcion: 'Resumen de métodos de tratamiento y riesgo residual' },
-        { ruta: 'GET /reportes/cia', descripcion: 'Distribución de niveles CIA (Confidencialidad, Integridad, Disponibilidad)' },
+        {
+          ruta: 'GET /reportes/resumen',
+          descripcion: 'Resumen del dashboard con totales y distribuciones',
+        },
+        {
+          ruta: 'GET /reportes/riesgos-por-activo',
+          descripcion: 'Riesgos por activo con datos enriquecidos',
+        },
+        {
+          ruta: 'GET /reportes/riesgos-por-macroproceso',
+          descripcion: 'Riesgos agrupados por macroproceso',
+        },
+        {
+          ruta: 'GET /reportes/tratamiento',
+          descripcion: 'Resumen de métodos de tratamiento y riesgo residual',
+        },
+        {
+          ruta: 'GET /reportes/cia',
+          descripcion:
+            'Distribución de niveles CIA (Confidencialidad, Integridad, Disponibilidad)',
+        },
       ],
     };
   }
@@ -58,6 +75,13 @@ export class ReportesController {
     @Query() query: Record<string, string | undefined>,
   ): Promise<ValoracionActivoReporteDto[]> {
     return this.reportesService.getValoracionActivos(query);
+  }
+
+  @Get('analisis-riesgo-activos')
+  getAnalisisRiesgoActivos(
+    @Query() query: Record<string, string | undefined>,
+  ): Promise<AnalisisRiesgoActivoDto[]> {
+    return this.reportesService.getAnalisisRiesgoActivos(query);
   }
 
   @Get('valoracion-activos/export')
