@@ -146,9 +146,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="reportes-page">
+  <div>
     <ReportesTabs />
-    <!-- Sidebar: Filtros verticales -->
+    <div class="reportes-page">
+      <!-- Sidebar: Filtros verticales -->
     <aside class="filters-sidebar">
       <div class="sidebar-header">
         <h3>Filtros</h3>
@@ -305,6 +306,7 @@ onMounted(() => {
         </div>
       </template>
     </main>
+  </div>
   </div>
 </template>
 
