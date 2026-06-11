@@ -74,6 +74,6 @@ export class ReportesController {
       'Content-Disposition',
       'attachment; filename="valoracion-activos.xlsx"',
     );
-    res.send(buffer);
+    res.end(buffer);
   }
 }

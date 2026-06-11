@@ -379,8 +379,8 @@ export class ReportesService {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Valoración de Activos');
 
-      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-      return buffer as Buffer;
+      const array = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+      return Buffer.from(array);
     } catch (error) {
       throw new HttpException(
         `Error al exportar valoracion de activos: ${(error as Error).message}`,
