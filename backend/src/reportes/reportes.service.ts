@@ -282,9 +282,6 @@ export class ReportesService {
         macroProcesoId,
         formatoId,
         custodioId,
-        confidencialidadId,
-        integridadId,
-        disponibilidadId,
       } = filters;
 
       const andConditions: Prisma.ValoracionActivoWhereInput[] = [];
@@ -297,15 +294,6 @@ export class ReportesService {
       }
       if (custodioId) {
         andConditions.push({ custodioId: Number(custodioId) });
-      }
-      if (confidencialidadId) {
-        andConditions.push({ confidencialidadId: Number(confidencialidadId) });
-      }
-      if (integridadId) {
-        andConditions.push({ integridadId: Number(integridadId) });
-      }
-      if (disponibilidadId) {
-        andConditions.push({ disponibilidadId: Number(disponibilidadId) });
       }
 
       if (q) {
@@ -447,10 +435,10 @@ export class ReportesService {
           }
 
           const amenazaNombres = parsedAmenazaIds
-            .map((id) => amenazaMap.get(id)?.nombre)
+            .map((id) => amenazaMap.get(Number(id))?.nombre)
             .filter((n): n is string => !!n);
           const vulnerabilidadNombres = parsedVulnerabilidadIds
-            .map((id) => vulnerabilidadMap.get(id)?.descripcion)
+            .map((id) => vulnerabilidadMap.get(Number(id))?.descripcion)
             .filter((n): n is string => !!n);
 
           const amenaza = amenazaNombres.join(', ') || '';

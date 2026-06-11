@@ -473,9 +473,6 @@ describe('ReportesService', () => {
         macroProcesoId: '1',
         formatoId: '2',
         custodioId: '3',
-        confidencialidadId: '4',
-        integridadId: '5',
-        disponibilidadId: '6',
       });
 
       expect(prisma.valoracionActivo.findMany).toHaveBeenCalledWith(
@@ -485,9 +482,6 @@ describe('ReportesService', () => {
               expect.objectContaining({ macroProcesoId: 1 }),
               expect.objectContaining({ formatoId: 2 }),
               expect.objectContaining({ custodioId: 3 }),
-              expect.objectContaining({ confidencialidadId: 4 }),
-              expect.objectContaining({ integridadId: 5 }),
-              expect.objectContaining({ disponibilidadId: 6 }),
             ]),
           }),
         }),

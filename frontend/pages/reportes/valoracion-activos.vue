@@ -10,14 +10,10 @@ const qValoracion = ref('')
 const selectedMacroProcesoValoracion = ref<number | ''>('')
 const selectedFormato = ref<number | ''>('')
 const selectedCustodio = ref<number | ''>('')
-const selectedConfidencialidad = ref<number | ''>('')
-const selectedIntegridad = ref<number | ''>('')
-const selectedDisponibilidad = ref<number | ''>('')
 
 const macroProcesos = ref<CatalogoItem[]>([])
 const formatos = ref<CatalogoItem[]>([])
 const funcionarios = ref<CatalogoItem[]>([])
-const impactos = ref<CatalogoItem[]>([])
 
 let debounceTimerValoracion: ReturnType<typeof setTimeout> | null = null
 
@@ -33,9 +29,6 @@ async function fetchValoracionActivos() {
   if (selectedMacroProcesoValoracion.value) params.append('macroProcesoId', String(selectedMacroProcesoValoracion.value))
   if (selectedFormato.value) params.append('formatoId', String(selectedFormato.value))
   if (selectedCustodio.value) params.append('custodioId', String(selectedCustodio.value))
-  if (selectedConfidencialidad.value) params.append('confidencialidadId', String(selectedConfidencialidad.value))
-  if (selectedIntegridad.value) params.append('integridadId', String(selectedIntegridad.value))
-  if (selectedDisponibilidad.value) params.append('disponibilidadId', String(selectedDisponibilidad.value))
   const qs = params.toString()
   const path = `/reportes/valoracion-activos${qs ? '?' + qs : ''}`
   try {
@@ -55,9 +48,6 @@ async function exportExcel() {
   if (selectedMacroProcesoValoracion.value) params.append('macroProcesoId', String(selectedMacroProcesoValoracion.value))
   if (selectedFormato.value) params.append('formatoId', String(selectedFormato.value))
   if (selectedCustodio.value) params.append('custodioId', String(selectedCustodio.value))
-  if (selectedConfidencialidad.value) params.append('confidencialidadId', String(selectedConfidencialidad.value))
-  if (selectedIntegridad.value) params.append('integridadId', String(selectedIntegridad.value))
-  if (selectedDisponibilidad.value) params.append('disponibilidadId', String(selectedDisponibilidad.value))
   const qs = params.toString()
   const path = `/reportes/valoracion-activos/export${qs ? '?' + qs : ''}`
 
@@ -91,16 +81,14 @@ async function exportExcel() {
 
 async function fetchCatalogs() {
   const { fetchCatalog } = useCatalog()
-  const [mp, fo, fu, im] = await Promise.all([
+  const [mp, fo, fu] = await Promise.all([
     fetchCatalog('macroprocesos').catch(() => [] as CatalogoItem[]),
     fetchCatalog('formatos').catch(() => [] as CatalogoItem[]),
     fetchCatalog('funcionarios').catch(() => [] as CatalogoItem[]),
-    fetchCatalog('impactos').catch(() => [] as CatalogoItem[]),
   ])
   macroProcesos.value = mp
   formatos.value = fo
   funcionarios.value = fu
-  impactos.value = im
 }
 
 function clearFiltersValoracion() {
@@ -108,9 +96,6 @@ function clearFiltersValoracion() {
   selectedMacroProcesoValoracion.value = ''
   selectedFormato.value = ''
   selectedCustodio.value = ''
-  selectedConfidencialidad.value = ''
-  selectedIntegridad.value = ''
-  selectedDisponibilidad.value = ''
   fetchValoracionActivos()
 }
 
@@ -119,9 +104,6 @@ watch([
   selectedMacroProcesoValoracion,
   selectedFormato,
   selectedCustodio,
-  selectedConfidencialidad,
-  selectedIntegridad,
-  selectedDisponibilidad,
 ], () => {
   debouncedFetchValoracionActivos()
 }, { immediate: false })
@@ -153,7 +135,7 @@ onMounted(() => {
     <aside class="filters-sidebar">
       <div class="sidebar-header">
         <h3>Filtros</h3>
-        <button v-if="qValoracion || selectedMacroProcesoValoracion || selectedFormato || selectedCustodio || selectedConfidencialidad || selectedIntegridad || selectedDisponibilidad" class="btn-clear" @click="clearFiltersValoracion">
+        <button v-if="qValoracion || selectedMacroProcesoValoracion || selectedFormato || selectedCustodio" class="btn-clear" @click="clearFiltersValoracion">
           Limpiar
         </button>
       </div>
@@ -192,29 +174,6 @@ onMounted(() => {
         </select>
       </div>
 
-      <div class="filter-group">
-        <label class="filter-label">Confidencialidad</label>
-        <select v-model="selectedConfidencialidad" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label class="filter-label">Integridad</label>
-        <select v-model="selectedIntegridad" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label class="filter-label">Disponibilidad</label>
-        <select v-model="selectedDisponibilidad" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
-        </select>
-      </div>
     </aside>
 
     <!-- Main Content -->

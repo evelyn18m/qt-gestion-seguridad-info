@@ -220,7 +220,6 @@ onMounted(() => {
                 <th>Amenaza</th>
                 <th>Vulnerabilidad</th>
                 <th>Controles Implementados</th>
-                <th>Controles Área</th>
               </tr>
             </thead>
             <tbody>
@@ -230,7 +229,6 @@ onMounted(() => {
                 <td>{{ ar.amenaza || '—' }}</td>
                 <td>{{ ar.vulnerabilidad || '—' }}</td>
                 <td>{{ ar.controlesImplementados || '—' }}</td>
-                <td>{{ ar.controlesArea || '—' }}</td>
               </tr>
             </tbody>
           </table>
