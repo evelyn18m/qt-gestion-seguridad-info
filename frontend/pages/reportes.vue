@@ -1,35 +1,77 @@
 <script lang="ts" setup>
-import type { ValoracionActivoReporte, CatalogoItem } from '~/types/api'
+import type { ValoracionActivoReporte, AnalisisRiesgoActivoReporte, CatalogoItem } from '~/types/api'
 
-const loading = ref(false)
-const error = ref('')
+const activeTab = ref<'valoracion' | 'analisis'>('valoracion')
 
+// ── Valoración de Activos state ──────────────────────────────────────────────
+const loadingValoracion = ref(false)
+const errorValoracion = ref('')
 const valoracionActivos = ref<ValoracionActivoReporte[]>([])
-const q = ref('')
-const selectedMacroProceso = ref<number | ''>('')
+const qValoracion = ref('')
+const selectedMacroProcesoValoracion = ref<number | ''>('')
 const selectedFormato = ref<number | ''>('')
 const selectedCustodio = ref<number | ''>('')
 const selectedConfidencialidad = ref<number | ''>('')
 const selectedIntegridad = ref<number | ''>('')
 const selectedDisponibilidad = ref<number | ''>('')
 
+// ── Análisis de Riesgo de Activos state ──────────────────────────────────────
+const loadingAnalisis = ref(false)
+const errorAnalisis = ref('')
+const analisisRiesgoActivos = ref<AnalisisRiesgoActivoReporte[]>([])
+const qAnalisis = ref('')
+const selectedMacroProcesoAnalisis = ref<number | ''>('')
+const selectedCategoriaAmenaza = ref<string>('')
+const selectedAmenaza = ref<number | ''>('')
+const selectedCategoriaVulnerabilidad = ref<string>('')
+const selectedVulnerabilidad = ref<number | ''>('')
+
+// ── Catalogs ─────────────────────────────────────────────────────────────────
 const macroProcesos = ref<CatalogoItem[]>([])
 const formatos = ref<CatalogoItem[]>([])
 const funcionarios = ref<CatalogoItem[]>([])
 const impactos = ref<CatalogoItem[]>([])
+const amenazas = ref<CatalogoItem[]>([])
+const vulnerabilidades = ref<CatalogoItem[]>([])
 
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
+const categoriasAmenaza = computed(() => {
+  const set = new Set(amenazas.value.map((a) => a.categoria).filter(Boolean))
+  return Array.from(set)
+})
+
+const categoriasVulnerabilidad = computed(() => {
+  const set = new Set(vulnerabilidades.value.map((v) => v.categoria).filter(Boolean))
+  return Array.from(set)
+})
+
+const amenazasFiltradas = computed(() => {
+  if (!selectedCategoriaAmenaza.value) return amenazas.value
+  return amenazas.value.filter((a) => a.categoria === selectedCategoriaAmenaza.value)
+})
+
+const vulnerabilidadesFiltradas = computed(() => {
+  if (!selectedCategoriaVulnerabilidad.value) return vulnerabilidades.value
+  return vulnerabilidades.value.filter((v) => v.categoria === selectedCategoriaVulnerabilidad.value)
+})
+
+let debounceTimerValoracion: ReturnType<typeof setTimeout> | null = null
+let debounceTimerAnalisis: ReturnType<typeof setTimeout> | null = null
 
 function debouncedFetchValoracionActivos() {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => fetchValoracionActivos(), 300)
+  if (debounceTimerValoracion) clearTimeout(debounceTimerValoracion)
+  debounceTimerValoracion = setTimeout(() => fetchValoracionActivos(), 300)
+}
+
+function debouncedFetchAnalisisRiesgoActivos() {
+  if (debounceTimerAnalisis) clearTimeout(debounceTimerAnalisis)
+  debounceTimerAnalisis = setTimeout(() => fetchAnalisisRiesgoActivos(), 300)
 }
 
 async function fetchValoracionActivos() {
   const { apiFetch } = useApi()
   const params = new URLSearchParams()
-  if (q.value) params.append('q', q.value)
-  if (selectedMacroProceso.value) params.append('macroProcesoId', String(selectedMacroProceso.value))
+  if (qValoracion.value) params.append('q', qValoracion.value)
+  if (selectedMacroProcesoValoracion.value) params.append('macroProcesoId', String(selectedMacroProcesoValoracion.value))
   if (selectedFormato.value) params.append('formatoId', String(selectedFormato.value))
   if (selectedCustodio.value) params.append('custodioId', String(selectedCustodio.value))
   if (selectedConfidencialidad.value) params.append('confidencialidadId', String(selectedConfidencialidad.value))
@@ -38,20 +80,42 @@ async function fetchValoracionActivos() {
   const qs = params.toString()
   const path = `/reportes/valoracion-activos${qs ? '?' + qs : ''}`
   try {
-    loading.value = true
-    error.value = ''
+    loadingValoracion.value = true
+    errorValoracion.value = ''
     valoracionActivos.value = await apiFetch<ValoracionActivoReporte[]>(path)
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Error al cargar valoración de activos'
+    errorValoracion.value = e instanceof Error ? e.message : 'Error al cargar valoración de activos'
   } finally {
-    loading.value = false
+    loadingValoracion.value = false
+  }
+}
+
+async function fetchAnalisisRiesgoActivos() {
+  const { apiFetch } = useApi()
+  const params = new URLSearchParams()
+  if (qAnalisis.value) params.append('q', qAnalisis.value)
+  if (selectedMacroProcesoAnalisis.value) params.append('macroProcesoId', String(selectedMacroProcesoAnalisis.value))
+  if (selectedCategoriaAmenaza.value) params.append('categoriaAmenazaId', selectedCategoriaAmenaza.value)
+  if (selectedAmenaza.value) params.append('amenazaId', String(selectedAmenaza.value))
+  if (selectedCategoriaVulnerabilidad.value) params.append('categoriaVulnerabilidadId', selectedCategoriaVulnerabilidad.value)
+  if (selectedVulnerabilidad.value) params.append('vulnerabilidadId', String(selectedVulnerabilidad.value))
+  const qs = params.toString()
+  const path = `/reportes/analisis-riesgo-activos${qs ? '?' + qs : ''}`
+  try {
+    loadingAnalisis.value = true
+    errorAnalisis.value = ''
+    analisisRiesgoActivos.value = await apiFetch<AnalisisRiesgoActivoReporte[]>(path)
+  } catch (e: unknown) {
+    errorAnalisis.value = e instanceof Error ? e.message : 'Error al cargar análisis de riesgo de activos'
+  } finally {
+    loadingAnalisis.value = false
   }
 }
 
 async function exportExcel() {
   const params = new URLSearchParams()
-  if (q.value) params.append('q', q.value)
-  if (selectedMacroProceso.value) params.append('macroProcesoId', String(selectedMacroProceso.value))
+  if (qValoracion.value) params.append('q', qValoracion.value)
+  if (selectedMacroProcesoValoracion.value) params.append('macroProcesoId', String(selectedMacroProcesoValoracion.value))
   if (selectedFormato.value) params.append('formatoId', String(selectedFormato.value))
   if (selectedCustodio.value) params.append('custodioId', String(selectedCustodio.value))
   if (selectedConfidencialidad.value) params.append('confidencialidadId', String(selectedConfidencialidad.value))
@@ -84,27 +148,31 @@ async function exportExcel() {
     a.remove()
     window.URL.revokeObjectURL(urlBlob)
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Error al exportar Excel'
+    errorValoracion.value = e instanceof Error ? e.message : 'Error al exportar Excel'
   }
 }
 
 async function fetchCatalogs() {
   const { fetchCatalog } = useCatalog()
-  const [mp, fo, fu, im] = await Promise.all([
+  const [mp, fo, fu, im, am, vu] = await Promise.all([
     fetchCatalog('macroprocesos').catch(() => [] as CatalogoItem[]),
     fetchCatalog('formatos').catch(() => [] as CatalogoItem[]),
     fetchCatalog('funcionarios').catch(() => [] as CatalogoItem[]),
     fetchCatalog('impactos').catch(() => [] as CatalogoItem[]),
+    fetchCatalog('amenazas').catch(() => [] as CatalogoItem[]),
+    fetchCatalog('vulnerabilidades').catch(() => [] as CatalogoItem[]),
   ])
   macroProcesos.value = mp
   formatos.value = fo
   funcionarios.value = fu
   impactos.value = im
+  amenazas.value = am
+  vulnerabilidades.value = vu
 }
 
-function clearFilters() {
-  q.value = ''
-  selectedMacroProceso.value = ''
+function clearFiltersValoracion() {
+  qValoracion.value = ''
+  selectedMacroProcesoValoracion.value = ''
   selectedFormato.value = ''
   selectedCustodio.value = ''
   selectedConfidencialidad.value = ''
@@ -113,9 +181,46 @@ function clearFilters() {
   fetchValoracionActivos()
 }
 
-watch([q, selectedMacroProceso, selectedFormato, selectedCustodio, selectedConfidencialidad, selectedIntegridad, selectedDisponibilidad], () => {
+function clearFiltersAnalisis() {
+  qAnalisis.value = ''
+  selectedMacroProcesoAnalisis.value = ''
+  selectedCategoriaAmenaza.value = ''
+  selectedAmenaza.value = ''
+  selectedCategoriaVulnerabilidad.value = ''
+  selectedVulnerabilidad.value = ''
+  fetchAnalisisRiesgoActivos()
+}
+
+watch([
+  qValoracion,
+  selectedMacroProcesoValoracion,
+  selectedFormato,
+  selectedCustodio,
+  selectedConfidencialidad,
+  selectedIntegridad,
+  selectedDisponibilidad,
+], () => {
   debouncedFetchValoracionActivos()
 }, { immediate: false })
+
+watch([
+  qAnalisis,
+  selectedMacroProcesoAnalisis,
+  selectedCategoriaAmenaza,
+  selectedAmenaza,
+  selectedCategoriaVulnerabilidad,
+  selectedVulnerabilidad,
+], () => {
+  debouncedFetchAnalisisRiesgoActivos()
+}, { immediate: false })
+
+watch(activeTab, (tab) => {
+  if (tab === 'valoracion') {
+    fetchValoracionActivos()
+  } else {
+    fetchAnalisisRiesgoActivos()
+  }
+})
 
 function nivelClass(nivel: string | null) {
   if (!nivel) return ''
@@ -140,159 +245,302 @@ onMounted(() => {
   <div class="reportes-page">
     <!-- Sidebar: Filtros verticales -->
     <aside class="filters-sidebar">
-      <div class="sidebar-header">
-        <h3>Filtros</h3>
-        <button v-if="q || selectedMacroProceso || selectedFormato || selectedCustodio || selectedConfidencialidad || selectedIntegridad || selectedDisponibilidad" class="btn-clear" @click="clearFilters">
-          Limpiar
-        </button>
-      </div>
+      <template v-if="activeTab === 'valoracion'">
+        <div class="sidebar-header">
+          <h3>Filtros</h3>
+          <button v-if="qValoracion || selectedMacroProcesoValoracion || selectedFormato || selectedCustodio || selectedConfidencialidad || selectedIntegridad || selectedDisponibilidad" class="btn-clear" @click="clearFiltersValoracion">
+            Limpiar
+          </button>
+        </div>
 
-      <div class="filter-group">
-        <label class="filter-label">Búsqueda</label>
-        <input
-          v-model="q"
-          type="text"
-          placeholder="Nombre o ubicación..."
-          class="search-input"
-        />
-      </div>
+        <div class="filter-group">
+          <label class="filter-label">Búsqueda</label>
+          <input
+            v-model="qValoracion"
+            type="text"
+            placeholder="Nombre o ubicación..."
+            class="search-input"
+          />
+        </div>
 
-      <div class="filter-group">
-        <label class="filter-label">Macroproceso</label>
-        <select v-model="selectedMacroProceso" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="mp in macroProcesos" :key="mp.id" :value="mp.id">{{ mp.nombre }}</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label class="filter-label">Macroproceso</label>
+          <select v-model="selectedMacroProcesoValoracion" class="filter-select">
+            <option value="">Todos</option>
+            <option v-for="mp in macroProcesos" :key="mp.id" :value="mp.id">{{ mp.nombre }}</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label class="filter-label">Formato</label>
-        <select v-model="selectedFormato" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="fo in formatos" :key="fo.id" :value="fo.id">{{ fo.nombre }}</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label class="filter-label">Formato</label>
+          <select v-model="selectedFormato" class="filter-select">
+            <option value="">Todos</option>
+            <option v-for="fo in formatos" :key="fo.id" :value="fo.id">{{ fo.nombre }}</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label class="filter-label">Custodio</label>
-        <select v-model="selectedCustodio" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="fu in funcionarios" :key="fu.id" :value="fu.id">{{ fu.nombre }}</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label class="filter-label">Custodio</label>
+          <select v-model="selectedCustodio" class="filter-select">
+            <option value="">Todos</option>
+            <option v-for="fu in funcionarios" :key="fu.id" :value="fu.id">{{ fu.nombre }}</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label class="filter-label">Confidencialidad</label>
-        <select v-model="selectedConfidencialidad" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label class="filter-label">Confidencialidad</label>
+          <select v-model="selectedConfidencialidad" class="filter-select">
+            <option value="">Todos</option>
+            <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label class="filter-label">Integridad</label>
-        <select v-model="selectedIntegridad" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label class="filter-label">Integridad</label>
+          <select v-model="selectedIntegridad" class="filter-select">
+            <option value="">Todos</option>
+            <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label class="filter-label">Disponibilidad</label>
-        <select v-model="selectedDisponibilidad" class="filter-select">
-          <option value="">Todos</option>
-          <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label class="filter-label">Disponibilidad</label>
+          <select v-model="selectedDisponibilidad" class="filter-select">
+            <option value="">Todos</option>
+            <option v-for="im in impactos" :key="im.id" :value="im.id">{{ im.nombre }}</option>
+          </select>
+        </div>
+      </template>
+
+      <template v-if="activeTab === 'analisis'">
+        <div class="sidebar-header">
+          <h3>Filtros</h3>
+          <button v-if="qAnalisis || selectedMacroProcesoAnalisis || selectedCategoriaAmenaza || selectedAmenaza || selectedCategoriaVulnerabilidad || selectedVulnerabilidad" class="btn-clear" @click="clearFiltersAnalisis">
+            Limpiar
+          </button>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Búsqueda</label>
+          <input
+            v-model="qAnalisis"
+            type="text"
+            placeholder="Activo, amenaza o vulnerabilidad..."
+            class="search-input"
+          />
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Macroproceso</label>
+          <select v-model="selectedMacroProcesoAnalisis" class="filter-select">
+            <option value="">Todos</option>
+            <option v-for="mp in macroProcesos" :key="mp.id" :value="mp.id">{{ mp.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Categoría Amenaza</label>
+          <select v-model="selectedCategoriaAmenaza" class="filter-select">
+            <option value="">Todas</option>
+            <option v-for="cat in categoriasAmenaza" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Amenaza</label>
+          <select v-model="selectedAmenaza" class="filter-select">
+            <option value="">Todas</option>
+            <option v-for="am in amenazasFiltradas" :key="am.id" :value="am.id">{{ am.nombre }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Categoría Vulnerabilidad</label>
+          <select v-model="selectedCategoriaVulnerabilidad" class="filter-select">
+            <option value="">Todas</option>
+            <option v-for="cat in categoriasVulnerabilidad" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Vulnerabilidad</label>
+          <select v-model="selectedVulnerabilidad" class="filter-select">
+            <option value="">Todas</option>
+            <option v-for="vu in vulnerabilidadesFiltradas" :key="vu.id" :value="vu.id">{{ vu.descripcion }}</option>
+          </select>
+        </div>
+      </template>
     </aside>
 
     <!-- Main Content -->
     <main class="reportes-main">
-      <div class="main-header">
-        <div>
-          <h2>Valoración de Activos</h2>
-          <p class="subtitle">Consulte y filtre las valoraciones registradas en el sistema.</p>
-        </div>
-        <button class="btn-export" @click="exportExcel">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 9.75v6.75m0 0-3-3m3 3 3-3m-8.25 6a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Exportar Excel
+      <!-- Tabs horizontales -->
+      <div class="tabs-horizontal">
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'valoracion' }"
+          @click="activeTab = 'valoracion'"
+        >
+          Valoración de Activos
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'analisis' }"
+          @click="activeTab = 'analisis'"
+        >
+          Análisis de Riesgo
         </button>
       </div>
 
-      <div v-if="loading" class="reportes-loading">
-        <div class="spinner"></div>
-        <p>Cargando valoraciones...</p>
-      </div>
+      <!-- Valoración de Activos tab -->
+      <template v-if="activeTab === 'valoracion'">
+        <div class="main-header">
+          <div>
+            <h2>Valoración de Activos</h2>
+            <p class="subtitle">Consulte y filtre las valoraciones registradas en el sistema.</p>
+          </div>
+          <button class="btn-export" @click="exportExcel">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 9.75v6.75m0 0-3-3m3 3 3-3m-8.25 6a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Exportar Excel
+          </button>
+        </div>
 
-      <div v-else-if="error" class="reportes-error">
-        <div class="error-icon">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+        <div v-if="loadingValoracion" class="reportes-loading">
+          <div class="spinner"></div>
+          <p>Cargando valoraciones...</p>
         </div>
-        <p>Error al cargar</p>
-        <p class="error-detail">{{ error }}</p>
-        <button class="btn-retry" @click="fetchValoracionActivos()">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Reintentar
-        </button>
-      </div>
 
-      <template v-else>
-        <div v-if="valoracionActivos.length === 0" class="reportes-empty">
-          No hay valoraciones de activos registradas.
+        <div v-else-if="errorValoracion" class="reportes-error">
+          <div class="error-icon">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <p>Error al cargar</p>
+          <p class="error-detail">{{ errorValoracion }}</p>
+          <button class="btn-retry" @click="fetchValoracionActivos()">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Reintentar
+          </button>
         </div>
-        <div v-else class="table-wrapper">
-          <table class="reportes-table">
-            <thead>
-              <tr>
-                <th>Activo</th>
-                <th>Ubicación</th>
-                <th>Tipo</th>
-                <th>Formato</th>
-                <th>Macroproceso</th>
-                <th>Custodio</th>
-                <th>Confidencialidad</th>
-                <th>Integridad</th>
-                <th>Disponibilidad</th>
-                <th>Impacto</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="va in valoracionActivos" :key="va.id">
-                <td class="cell-name">{{ va.nombreActivo || `Activo #${va.id}` }}</td>
-                <td>{{ va.ubicacion || '—' }}</td>
-                <td>{{ va.tipoActivo || '—' }}</td>
-                <td>{{ va.formato || '—' }}</td>
-                <td>{{ va.macroProceso || '—' }}</td>
-                <td>{{ va.custodio || '—' }}</td>
-                <td>
-                  <span v-if="va.confidencialidad" class="nivel-badge" :class="nivelClass(va.confidencialidad)">
-                    {{ va.confidencialidad }}
-                  </span>
-                  <span v-else>—</span>
-                </td>
-                <td>
-                  <span v-if="va.integridad" class="nivel-badge" :class="nivelClass(va.integridad)">
-                    {{ va.integridad }}
-                  </span>
-                  <span v-else>—</span>
-                </td>
-                <td>
-                  <span v-if="va.disponibilidad" class="nivel-badge" :class="nivelClass(va.disponibilidad)">
-                    {{ va.disponibilidad }}
-                  </span>
-                  <span v-else>—</span>
-                </td>
-                <td>{{ formatNum(va.impacto) }}</td>
-              </tr>
-            </tbody>
-          </table>
+
+        <template v-else>
+          <div v-if="valoracionActivos.length === 0" class="reportes-empty">
+            No hay valoraciones de activos registradas.
+          </div>
+          <div v-else class="table-wrapper">
+            <table class="reportes-table">
+              <thead>
+                <tr>
+                  <th>Activo</th>
+                  <th>Ubicación</th>
+                  <th>Tipo</th>
+                  <th>Formato</th>
+                  <th>Macroproceso</th>
+                  <th>Custodio</th>
+                  <th>Confidencialidad</th>
+                  <th>Integridad</th>
+                  <th>Disponibilidad</th>
+                  <th>Impacto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="va in valoracionActivos" :key="va.id">
+                  <td class="cell-name">{{ va.nombreActivo || `Activo #${va.id}` }}</td>
+                  <td>{{ va.ubicacion || '—' }}</td>
+                  <td>{{ va.tipoActivo || '—' }}</td>
+                  <td>{{ va.formato || '—' }}</td>
+                  <td>{{ va.macroProceso || '—' }}</td>
+                  <td>{{ va.custodio || '—' }}</td>
+                  <td>
+                    <span v-if="va.confidencialidad" class="nivel-badge" :class="nivelClass(va.confidencialidad)">
+                      {{ va.confidencialidad }}
+                    </span>
+                    <span v-else>—</span>
+                  </td>
+                  <td>
+                    <span v-if="va.integridad" class="nivel-badge" :class="nivelClass(va.integridad)">
+                      {{ va.integridad }}
+                    </span>
+                    <span v-else>—</span>
+                  </td>
+                  <td>
+                    <span v-if="va.disponibilidad" class="nivel-badge" :class="nivelClass(va.disponibilidad)">
+                      {{ va.disponibilidad }}
+                    </span>
+                    <span v-else>—</span>
+                  </td>
+                  <td>{{ formatNum(va.impacto) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </template>
+
+      <!-- Análisis de Riesgo de Activos tab -->
+      <template v-if="activeTab === 'analisis'">
+        <div class="main-header">
+          <div>
+            <h2>Análisis de Riesgo de Activos</h2>
+            <p class="subtitle">Vista consolidada de amenazas, vulnerabilidades y controles por activo.</p>
+          </div>
         </div>
+
+        <div v-if="loadingAnalisis" class="reportes-loading">
+          <div class="spinner"></div>
+          <p>Cargando análisis de riesgo...</p>
+        </div>
+
+        <div v-else-if="errorAnalisis" class="reportes-error">
+          <div class="error-icon">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <p>Error al cargar</p>
+          <p class="error-detail">{{ errorAnalisis }}</p>
+          <button class="btn-retry" @click="fetchAnalisisRiesgoActivos()">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Reintentar
+          </button>
+        </div>
+
+        <template v-else>
+          <div v-if="analisisRiesgoActivos.length === 0" class="reportes-empty">
+            No hay registros de análisis de riesgo de activos.
+          </div>
+          <div v-else class="table-wrapper">
+            <table class="reportes-table">
+              <thead>
+                <tr>
+                  <th>Activo</th>
+                  <th>Macroproceso</th>
+                  <th>Amenaza</th>
+                  <th>Vulnerabilidad</th>
+                  <th>Controles Implementados</th>
+                  <th>Controles Área</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="ar in analisisRiesgoActivos" :key="ar.id">
+                  <td class="cell-name">{{ ar.nombreActivo || `Activo #${ar.id}` }}</td>
+                  <td>{{ ar.macroProceso || '—' }}</td>
+                  <td>{{ ar.amenaza || '—' }}</td>
+                  <td>{{ ar.vulnerabilidad || '—' }}</td>
+                  <td>{{ ar.controlesImplementados || '—' }}</td>
+                  <td>{{ ar.controlesArea || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </template>
     </main>
   </div>
@@ -318,6 +566,43 @@ onMounted(() => {
   flex-direction: column;
   gap: 1rem;
   overflow-y: auto;
+}
+
+/* ── Tabs Horizontal ─────────────────────────────────────────────────────────── */
+.tabs-horizontal {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: -1px;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
 }
 
 .sidebar-header {
