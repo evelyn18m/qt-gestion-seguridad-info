@@ -61,12 +61,11 @@ async function exportExcel() {
   const path = `/reportes/valoracion-activos/export${qs ? '?' + qs : ''}`
 
   try {
-    const { $fetch } = useNuxtApp()
-    const response = await $fetch.raw(path, {
-      method: 'GET',
-      responseType: 'blob',
-    })
-    const blob = new Blob([response._data as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const response = await fetch(path)
+    if (!response.ok) {
+      throw new Error(`Error del servidor: ${response.status}`)
+    }
+    const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
