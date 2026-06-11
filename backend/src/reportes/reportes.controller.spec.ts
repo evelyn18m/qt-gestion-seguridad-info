@@ -10,6 +10,7 @@ describe('ReportesController', () => {
     getRiesgosPorMacroproceso: jest.Mock;
     getTratamiento: jest.Mock;
     getCia: jest.Mock;
+    getValoracionActivos: jest.Mock;
   };
 
   const mockResumen = {
@@ -56,6 +57,21 @@ describe('ReportesController', () => {
     disponibilidad: { Alto: 4, Medio: 3, Bajo: 1 },
   };
 
+  const mockValoracionActivos = [
+    {
+      id: 1,
+      nombreActivo: 'Servidor A',
+      ubicacion: 'Oficina Principal',
+      tipoActivo: 'Hardware',
+      formato: 'Físico',
+      macroProceso: 'Gestión TI',
+      custodio: 'Juan Pérez',
+      confidencialidad: 'Alto',
+      integridad: 'Medio',
+      disponibilidad: 'Bajo',
+    },
+  ];
+
   beforeEach(async () => {
     service = {
       getResumen: jest.fn().mockResolvedValue(mockResumen),
@@ -65,6 +81,7 @@ describe('ReportesController', () => {
         .mockResolvedValue(mockRiesgosPorMacroproceso),
       getTratamiento: jest.fn().mockResolvedValue(mockTratamiento),
       getCia: jest.fn().mockResolvedValue(mockCia),
+      getValoracionActivos: jest.fn().mockResolvedValue(mockValoracionActivos),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -125,6 +142,20 @@ describe('ReportesController', () => {
       const result = await controller.getCia();
       expect(service.getCia).toHaveBeenCalled();
       expect(result).toEqual(mockCia);
+    });
+  });
+
+  describe('GET /reportes/valoracion-activos', () => {
+    it('debe retornar 200 y lista de valoraciones', async () => {
+      const result = await controller.getValoracionActivos({});
+      expect(service.getValoracionActivos).toHaveBeenCalled();
+      expect(result).toEqual(mockValoracionActivos);
+    });
+
+    it('debe reenviar query params al servicio', async () => {
+      const query = { q: 'oficina', macroProcesoId: '1', formatoId: '2' };
+      await controller.getValoracionActivos(query);
+      expect(service.getValoracionActivos).toHaveBeenCalledWith(query);
     });
   });
 });

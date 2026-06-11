@@ -1,4 +1,5 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ResumenReporteDto,
@@ -7,6 +8,7 @@ import {
   RiesgoPorMacroProcesoDto,
   TratamientoReporteDto,
   CiaReporteDto,
+  ValoracionActivoReporteDto,
 } from './dto/reporte-response.dto';
 
 @Injectable()
@@ -250,6 +252,103 @@ export class ReportesService {
     } catch (error) {
       throw new HttpException(
         `Error al obtener reporte CIA: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getValoracionActivos(
+    filters: Record<string, string | undefined>,
+  ): Promise<ValoracionActivoReporteDto[]> {
+    try {
+      const {
+        q,
+        macroProcesoId,
+        formatoId,
+        custodioId,
+        confidencialidadId,
+        integridadId,
+        disponibilidadId,
+      } = filters;
+
+      const andConditions: Prisma.ValoracionActivoWhereInput[] = [];
+
+      if (macroProcesoId) {
+        andConditions.push({ macroProcesoId: Number(macroProcesoId) });
+      }
+      if (formatoId) {
+        andConditions.push({ formatoId: Number(formatoId) });
+      }
+      if (custodioId) {
+        andConditions.push({ custodioId: Number(custodioId) });
+      }
+      if (confidencialidadId) {
+        andConditions.push({ confidencialidadId: Number(confidencialidadId) });
+      }
+      if (integridadId) {
+        andConditions.push({ integridadId: Number(integridadId) });
+      }
+      if (disponibilidadId) {
+        andConditions.push({ disponibilidadId: Number(disponibilidadId) });
+      }
+
+      if (q) {
+        const escapedQ = q.replace(/%/g, '\\%').replace(/_/g, '\\_');
+        andConditions.push({
+          OR: [
+            { nombreActivo: { contains: escapedQ } },
+            { ubicacion: { contains: escapedQ } },
+          ],
+        });
+      }
+
+      const where: Prisma.ValoracionActivoWhereInput =
+        andConditions.length > 0 ? { AND: andConditions } : {};
+
+      const valuations = await this.prisma.valoracionActivo.findMany({
+        where,
+        orderBy: { nombreActivo: 'asc' },
+      });
+
+      if (valuations.length === 0) {
+        return [];
+      }
+
+      const [tipoActivos, formatos, macroProcesos, funcionarios, impactos] =
+        await Promise.all([
+          this.prisma.tipoActivo.findMany(),
+          this.prisma.formato.findMany(),
+          this.prisma.macroProceso.findMany(),
+          this.prisma.funcionario.findMany(),
+          this.prisma.impacto.findMany(),
+        ]);
+
+      const tipoActivoMap = new Map(tipoActivos.map((t) => [t.id, t.nombre]));
+      const formatoMap = new Map(formatos.map((f) => [f.id, f.nombre]));
+      const macroProcesoMap = new Map(
+        macroProcesos.map((m) => [m.id, m.nombre]),
+      );
+      const funcionarioMap = new Map(
+        funcionarios.map((f) => [f.id, f.nombre]),
+      );
+      const impactoMap = new Map(impactos.map((i) => [i.id, i.nivel]));
+
+      return valuations.map((va) => ({
+        id: va.id,
+        nombreActivo: va.nombreActivo,
+        ubicacion: va.ubicacion,
+        tipoActivo: tipoActivoMap.get(va.tipoActivoId) ?? 'Desconocido',
+        formato: formatoMap.get(va.formatoId) ?? 'Desconocido',
+        macroProceso: macroProcesoMap.get(va.macroProcesoId) ?? 'Desconocido',
+        custodio: funcionarioMap.get(va.custodioId) ?? 'Desconocido',
+        confidencialidad:
+          impactoMap.get(va.confidencialidadId) ?? 'Desconocido',
+        integridad: impactoMap.get(va.integridadId) ?? 'Desconocido',
+        disponibilidad: impactoMap.get(va.disponibilidadId) ?? 'Desconocido',
+      }));
+    } catch (error) {
+      throw new HttpException(
+        `Error al obtener valoracion de activos: ${(error as Error).message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

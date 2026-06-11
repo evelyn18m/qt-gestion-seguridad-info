@@ -44,6 +44,19 @@ export class CiaReporteDto {
   disponibilidad: NivelCount;
 }
 
+export class ValoracionActivoReporteDto {
+  id: number;
+  nombreActivo: string;
+  ubicacion: string;
+  tipoActivo: string;
+  formato: string;
+  macroProceso: string;
+  custodio: string;
+  confidencialidad: string;
+  integridad: string;
+  disponibilidad: string;
+}
+
 export class IndiceReporteDto {
   endpoints: { ruta: string; descripcion: string }[];
 }

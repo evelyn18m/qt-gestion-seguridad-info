@@ -89,8 +89,10 @@ describe('ReportesService', () => {
     valoracionActivo: { findMany: jest.Mock };
     detalleRiesgo: { findMany: jest.Mock };
     impacto: { findMany: jest.Mock };
-    tipoActivo: { findUnique: jest.Mock };
-    macroProceso: { findUnique: jest.Mock };
+    tipoActivo: { findMany: jest.Mock; findUnique: jest.Mock };
+    formato: { findMany: jest.Mock };
+    macroProceso: { findMany: jest.Mock; findUnique: jest.Mock };
+    funcionario: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -98,8 +100,10 @@ describe('ReportesService', () => {
       valoracionActivo: { findMany: jest.fn().mockResolvedValue([]) },
       detalleRiesgo: { findMany: jest.fn().mockResolvedValue([]) },
       impacto: { findMany: jest.fn().mockResolvedValue([]) },
-      tipoActivo: { findUnique: jest.fn().mockResolvedValue(null) },
-      macroProceso: { findUnique: jest.fn().mockResolvedValue(null) },
+      tipoActivo: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn().mockResolvedValue(null) },
+      formato: { findMany: jest.fn().mockResolvedValue([]) },
+      macroProceso: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn().mockResolvedValue(null) },
+      funcionario: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -413,6 +417,137 @@ describe('ReportesService', () => {
         new Error('Connection lost'),
       );
       await expect(service.getCia()).rejects.toThrow(HttpException);
+    });
+  });
+
+  describe('getValoracionActivos', () => {
+    it('debe llamar findMany con where correcto para filtros exactos', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([]);
+
+      await service.getValoracionActivos({
+        macroProcesoId: '1',
+        formatoId: '2',
+        custodioId: '3',
+        confidencialidadId: '4',
+        integridadId: '5',
+        disponibilidadId: '6',
+      });
+
+      expect(prisma.valoracionActivo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({ macroProcesoId: 1 }),
+              expect.objectContaining({ formatoId: 2 }),
+              expect.objectContaining({ custodioId: 3 }),
+              expect.objectContaining({ confidencialidadId: 4 }),
+              expect.objectContaining({ integridadId: 5 }),
+              expect.objectContaining({ disponibilidadId: 6 }),
+            ]),
+          }),
+        }),
+      );
+    });
+
+    it('debe llamar findMany con where correcto para búsqueda de texto', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([]);
+
+      await service.getValoracionActivos({ q: 'oficina' });
+
+      expect(prisma.valoracionActivo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: [
+                  expect.objectContaining({ nombreActivo: { contains: 'oficina' } }),
+                  expect.objectContaining({ ubicacion: { contains: 'oficina' } }),
+                ],
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+
+    it('debe escapar % y _ en búsqueda de texto', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([]);
+
+      await service.getValoracionActivos({ q: '50%_off' });
+
+      expect(prisma.valoracionActivo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: [
+                  expect.objectContaining({ nombreActivo: { contains: '50\\%\\_off' } }),
+                  expect.objectContaining({ ubicacion: { contains: '50\\%\\_off' } }),
+                ],
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+
+    it('debe enriquecer nombres de relaciones correctamente', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        makeVa({
+          id: 1,
+          nombreActivo: 'Servidor A',
+          ubicacion: 'Oficina Principal',
+          tipoActivoId: 1,
+          formatoId: 2,
+          macroProcesoId: 3,
+          custodioId: 4,
+          confidencialidadId: 5,
+          integridadId: 6,
+          disponibilidadId: 7,
+        }),
+      ]);
+      prisma.tipoActivo.findMany.mockResolvedValue([{ id: 1, nombre: 'Hardware' }]);
+      prisma.formato.findMany.mockResolvedValue([{ id: 2, nombre: 'Físico' }]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 3, nombre: 'Gestión TI' }]);
+      prisma.funcionario.findMany.mockResolvedValue([{ id: 4, nombre: 'Juan Pérez' }]);
+      prisma.impacto.findMany.mockResolvedValue([
+        { id: 5, nombre: 'Alto', tipo: 'Confidencialidad', nivel: 'Alto', valor: 3, criterio: '' },
+        { id: 6, nombre: 'Medio', tipo: 'Integridad', nivel: 'Medio', valor: 2, criterio: '' },
+        { id: 7, nombre: 'Bajo', tipo: 'Disponibilidad', nivel: 'Bajo', valor: 1, criterio: '' },
+      ]);
+
+      const result = await service.getValoracionActivos({});
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: 1,
+        nombreActivo: 'Servidor A',
+        ubicacion: 'Oficina Principal',
+        tipoActivo: 'Hardware',
+        formato: 'Físico',
+        macroProceso: 'Gestión TI',
+        custodio: 'Juan Pérez',
+        confidencialidad: 'Alto',
+        integridad: 'Medio',
+        disponibilidad: 'Bajo',
+      });
+    });
+
+    it('debe retornar array vacío cuando no hay datos', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([]);
+
+      const result = await service.getValoracionActivos({});
+
+      expect(result).toEqual([]);
+    });
+
+    it('debe lanzar HttpException 500 si Prisma falla', async () => {
+      prisma.valoracionActivo.findMany.mockRejectedValue(
+        new Error('Connection lost'),
+      );
+      await expect(service.getValoracionActivos({})).rejects.toThrow(
+        HttpException,
+      );
     });
   });
 });

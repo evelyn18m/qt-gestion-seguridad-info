@@ -118,7 +118,7 @@ const ciaAverage = computed(() => {
   const c = getValorImpacto(props.valForm.confidencialidad)
   const i = getValorImpacto(props.valForm.integridad)
   const d = getValorImpacto(props.valForm.disponibilidad)
-  const selected = [c, i, d].filter(v => v > 0)
+  const selected: number[] = [c, i, d].filter((v): v is number => !!v && v > 0)
   if (selected.length === 0) return 0
   return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
 })
@@ -1201,9 +1201,9 @@ const controlesImplementarGrupos = computed(() => {
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <span v-if="findMatchedDetalle(row)!.evaluacionRiesgoControl > 0">{{
-                            findMatchedDetalle(row)!.evaluacionRiesgoControl.toFixed(2)
-                          }}</span>
+                        <span v-if="findMatchedDetalle(row)!.evaluacionRiesgoControl! > 0">
+                          {{ findMatchedDetalle(row)!.evaluacionRiesgoControl!.toFixed(2) }}
+                        </span>
                         <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                       </template>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>

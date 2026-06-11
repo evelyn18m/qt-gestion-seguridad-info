@@ -150,3 +150,16 @@ export interface ReporteCIA {
     integridad: NivelCount
     disponibilidad: NivelCount
 }
+
+export interface ValoracionActivoReporte {
+    id: number
+    nombreActivo: string
+    ubicacion: string
+    tipoActivo: string
+    formato: string
+    macroProceso: string
+    custodio: string
+    confidencialidad: string
+    integridad: string
+    disponibilidad: string
+}

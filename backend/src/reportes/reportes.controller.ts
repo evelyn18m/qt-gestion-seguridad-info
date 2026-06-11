@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ReportesService } from './reportes.service';
 import {
   ResumenReporteDto,
@@ -7,6 +7,7 @@ import {
   TratamientoReporteDto,
   CiaReporteDto,
   IndiceReporteDto,
+  ValoracionActivoReporteDto,
 } from './dto/reporte-response.dto';
 
 @Controller('reportes')
@@ -49,5 +50,12 @@ export class ReportesController {
   @Get('cia')
   getCia(): Promise<CiaReporteDto> {
     return this.reportesService.getCia();
+  }
+
+  @Get('valoracion-activos')
+  getValoracionActivos(
+    @Query() query: Record<string, string | undefined>,
+  ): Promise<ValoracionActivoReporteDto[]> {
+    return this.reportesService.getValoracionActivos(query);
   }
 }
