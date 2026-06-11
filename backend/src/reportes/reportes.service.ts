@@ -11,6 +11,7 @@ import {
   ValoracionActivoReporteDto,
 } from './dto/reporte-response.dto';
 import * as XLSX from 'xlsx';
+import * as XLSX_STYLE from 'xlsx-js-style';
 
 @Injectable()
 export class ReportesService {
@@ -362,24 +363,69 @@ export class ReportesService {
     try {
       const data = await this.getValoracionActivos(filters);
 
-      const rows = data.map((va) => ({
-        'Nombre del Activo': va.nombreActivo,
-        'Ubicación': va.ubicacion,
-        'Tipo': va.tipoActivo,
-        'Formato': va.formato,
-        'Macroproceso': va.macroProceso,
-        'Custodio': va.custodio,
-        'Confidencialidad': va.confidencialidad,
-        'Integridad': va.integridad,
-        'Disponibilidad': va.disponibilidad,
-        'Impacto': va.impacto ?? '',
-      }));
+      const headers = [
+        'Nombre del Activo',
+        'Ubicación',
+        'Tipo',
+        'Formato',
+        'Macroproceso',
+        'Custodio',
+        'Confidencialidad',
+        'Integridad',
+        'Disponibilidad',
+        'Impacto',
+      ];
 
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Valoración de Activos');
+      const rows = data.map((va) => [
+        va.nombreActivo,
+        va.ubicacion,
+        va.tipoActivo,
+        va.formato,
+        va.macroProceso,
+        va.custodio,
+        va.confidencialidad,
+        va.integridad,
+        va.disponibilidad,
+        va.impacto ?? '',
+      ]);
 
-      const array = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+      const ws = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX_STYLE.utils.book_new();
+      XLSX_STYLE.utils.book_append_sheet(wb, ws, 'Valoración de Activos');
+
+      // Header styles
+      const headerStyle = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '4F46E5' }, patternType: 'solid' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      };
+
+      const range = XLSX_STYLE.utils.decode_range(ws['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: col });
+        if (ws[cellRef]) {
+          ws[cellRef].s = headerStyle;
+        }
+      }
+
+      // Auto-filter
+      const lastRow = data.length + 1;
+      const lastCol = headers.length - 1;
+      const startRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: 0 });
+      const endRef = XLSX_STYLE.utils.encode_cell({ r: lastRow, c: lastCol });
+      ws['!autofilter'] = { ref: `${startRef}:${endRef}` };
+
+      // Auto-width columns
+      const colWidths = headers.map((h, idx) => {
+        const maxDataLen = Math.max(
+          h.length,
+          ...rows.map((r) => String(r[idx] ?? '').length),
+        );
+        return { wch: Math.min(Math.max(maxDataLen + 2, 10), 40) };
+      });
+      ws['!cols'] = colWidths;
+
+      const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
       return Buffer.from(array);
     } catch (error) {
       throw new HttpException(
