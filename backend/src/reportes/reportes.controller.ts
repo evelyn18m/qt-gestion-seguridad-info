@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { ReportesService } from './reportes.service';
 import {
   ResumenReporteDto,
@@ -57,5 +58,22 @@ export class ReportesController {
     @Query() query: Record<string, string | undefined>,
   ): Promise<ValoracionActivoReporteDto[]> {
     return this.reportesService.getValoracionActivos(query);
+  }
+
+  @Get('valoracion-activos/export')
+  async exportValoracionActivos(
+    @Query() query: Record<string, string | undefined>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.reportesService.exportValoracionActivos(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="valoracion-activos.xlsx"',
+    );
+    res.send(buffer);
   }
 }

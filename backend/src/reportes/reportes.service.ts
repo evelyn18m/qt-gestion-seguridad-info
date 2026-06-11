@@ -10,6 +10,7 @@ import {
   CiaReporteDto,
   ValoracionActivoReporteDto,
 } from './dto/reporte-response.dto';
+import * as XLSX from 'xlsx';
 
 @Injectable()
 export class ReportesService {
@@ -350,6 +351,39 @@ export class ReportesService {
     } catch (error) {
       throw new HttpException(
         `Error al obtener valoracion de activos: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async exportValoracionActivos(
+    filters: Record<string, string | undefined>,
+  ): Promise<Buffer> {
+    try {
+      const data = await this.getValoracionActivos(filters);
+
+      const rows = data.map((va) => ({
+        'Nombre del Activo': va.nombreActivo,
+        'Ubicación': va.ubicacion,
+        'Tipo': va.tipoActivo,
+        'Formato': va.formato,
+        'Macroproceso': va.macroProceso,
+        'Custodio': va.custodio,
+        'Confidencialidad': va.confidencialidad,
+        'Integridad': va.integridad,
+        'Disponibilidad': va.disponibilidad,
+        'Impacto': va.impacto ?? '',
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Valoración de Activos');
+
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      return buffer as Buffer;
+    } catch (error) {
+      throw new HttpException(
+        `Error al exportar valoracion de activos: ${(error as Error).message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

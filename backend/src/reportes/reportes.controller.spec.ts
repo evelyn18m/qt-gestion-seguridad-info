@@ -11,6 +11,7 @@ describe('ReportesController', () => {
     getTratamiento: jest.Mock;
     getCia: jest.Mock;
     getValoracionActivos: jest.Mock;
+    exportValoracionActivos: jest.Mock;
   };
 
   const mockResumen = {
@@ -82,6 +83,7 @@ describe('ReportesController', () => {
       getTratamiento: jest.fn().mockResolvedValue(mockTratamiento),
       getCia: jest.fn().mockResolvedValue(mockCia),
       getValoracionActivos: jest.fn().mockResolvedValue(mockValoracionActivos),
+      exportValoracionActivos: jest.fn().mockResolvedValue(Buffer.from('test')),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -156,6 +158,21 @@ describe('ReportesController', () => {
       const query = { q: 'oficina', macroProcesoId: '1', formatoId: '2' };
       await controller.getValoracionActivos(query);
       expect(service.getValoracionActivos).toHaveBeenCalledWith(query);
+    });
+
+    it('debe exportar a Excel con filtros aplicados', async () => {
+      const query = { q: 'test' };
+      const mockRes = {
+        setHeader: jest.fn(),
+        send: jest.fn(),
+      } as any;
+      await controller.exportValoracionActivos(query, mockRes);
+      expect(service.exportValoracionActivos).toHaveBeenCalledWith(query);
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      expect(mockRes.send).toHaveBeenCalled();
     });
   });
 });

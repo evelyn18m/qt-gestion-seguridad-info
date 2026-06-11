@@ -48,6 +48,38 @@ async function fetchValoracionActivos() {
   }
 }
 
+async function exportExcel() {
+  const params = new URLSearchParams()
+  if (q.value) params.append('q', q.value)
+  if (selectedMacroProceso.value) params.append('macroProcesoId', String(selectedMacroProceso.value))
+  if (selectedFormato.value) params.append('formatoId', String(selectedFormato.value))
+  if (selectedCustodio.value) params.append('custodioId', String(selectedCustodio.value))
+  if (selectedConfidencialidad.value) params.append('confidencialidadId', String(selectedConfidencialidad.value))
+  if (selectedIntegridad.value) params.append('integridadId', String(selectedIntegridad.value))
+  if (selectedDisponibilidad.value) params.append('disponibilidadId', String(selectedDisponibilidad.value))
+  const qs = params.toString()
+  const path = `/reportes/valoracion-activos/export${qs ? '?' + qs : ''}`
+
+  try {
+    const { $fetch } = useNuxtApp()
+    const response = await $fetch.raw(path, {
+      method: 'GET',
+      responseType: 'blob',
+    })
+    const blob = new Blob([response._data as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'valoracion-activos.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Error al exportar Excel'
+  }
+}
+
 async function fetchCatalogs() {
   const { fetchCatalog } = useCatalog()
   const [mp, fo, fu, im] = await Promise.all([
@@ -169,8 +201,16 @@ onMounted(() => {
     <!-- Main Content -->
     <main class="reportes-main">
       <div class="main-header">
-        <h2>Valoración de Activos</h2>
-        <p class="subtitle">Consulte y filtre las valoraciones registradas en el sistema.</p>
+        <div>
+          <h2>Valoración de Activos</h2>
+          <p class="subtitle">Consulte y filtre las valoraciones registradas en el sistema.</p>
+        </div>
+        <button class="btn-export" @click="exportExcel">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9.75v6.75m0 0-3-3m3 3 3-3m-8.25 6a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Exportar Excel
+        </button>
       </div>
 
       <div v-if="loading" class="reportes-loading">
@@ -357,6 +397,10 @@ onMounted(() => {
 
 .main-header {
   margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .main-header h2 {
@@ -369,6 +413,33 @@ onMounted(() => {
   color: var(--text-muted);
   font-size: 0.95rem;
   margin: 0;
+}
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--primary);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-export svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-export:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
 }
 
 /* ── Loading ───────────────────────────────────────────────────────────────── */
