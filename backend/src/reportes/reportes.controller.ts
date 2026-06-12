@@ -10,6 +10,7 @@ import {
   IndiceReporteDto,
   ValoracionActivoReporteDto,
   AnalisisRiesgoActivoDto,
+  EvaluacionRiesgoReporteDto,
 } from './dto/reporte-response.dto';
 
 @Controller('reportes')
@@ -116,6 +117,32 @@ export class ReportesController {
     res.setHeader(
       'Content-Disposition',
       'attachment; filename="analisis-riesgo-activos.xlsx"',
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.write(buffer);
+    res.end();
+  }
+
+  @Get('evaluacion-riesgo')
+  getEvaluacionRiesgo(
+    @Query() query: Record<string, string | undefined>,
+  ): Promise<EvaluacionRiesgoReporteDto[]> {
+    return this.reportesService.getEvaluacionRiesgo(query);
+  }
+
+  @Get('evaluacion-riesgo/export')
+  async exportEvaluacionRiesgo(
+    @Query() query: Record<string, string | undefined>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.reportesService.exportEvaluacionRiesgo(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="evaluacion-riesgo-${new Date().toISOString().split('T')[0]}.xlsx"`,
     );
     res.setHeader('Content-Length', buffer.length);
     res.write(buffer);

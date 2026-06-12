@@ -173,3 +173,17 @@ export interface AnalisisRiesgoActivoReporte {
     vulnerabilidad: string
     controlesImplementados: string | null
 }
+
+export interface EvaluacionRiesgoReporte {
+    id: number
+    nombreActivo: string
+    macroProceso: string
+    amenaza: string
+    vulnerabilidad: string
+    impacto: number | null
+    nivelAmenaza: string | null
+    nivelVulnerabilidad: string | null
+    evaluacionRiesgo: number | null
+    nivelRiesgo: string | null
+    controlesArea: string | null
+}

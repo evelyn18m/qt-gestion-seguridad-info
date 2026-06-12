@@ -10,6 +10,7 @@ import {
   CiaReporteDto,
   ValoracionActivoReporteDto,
   AnalisisRiesgoActivoDto,
+  EvaluacionRiesgoReporteDto,
 } from './dto/reporte-response.dto';
 import * as XLSX_STYLE from 'xlsx-js-style';
 
@@ -514,11 +515,240 @@ export class ReportesService {
     }
   }
 
+  async getEvaluacionRiesgo(
+    filters: Record<string, string | undefined>,
+  ): Promise<EvaluacionRiesgoReporteDto[]> {
+    try {
+      const {
+        q,
+        macroProcesoId,
+        categoriaAmenazaId,
+        amenazaId,
+        categoriaVulnerabilidadId,
+        vulnerabilidadId,
+        nivelRiesgo,
+      } = filters;
+
+      // Stage 1: resolve macroproceso filter into valoracionActivo IDs
+      let vaIds: number[] | undefined;
+      if (macroProcesoId) {
+        const matchingVas = await this.prisma.valoracionActivo.findMany({
+          where: { macroProcesoId: Number(macroProcesoId) },
+          select: { id: true },
+        });
+        vaIds = matchingVas.map((va) => va.id);
+        if (vaIds.length === 0) {
+          return [];
+        }
+      }
+
+      // Stage 2: fetch DetalleRiesgo records
+      const detalleWhere = vaIds ? { valoracionActivoId: { in: vaIds } } : {};
+      const detalles = await this.prisma.detalleRiesgo.findMany({
+        where: detalleWhere,
+      });
+
+      if (detalles.length === 0) {
+        return [];
+      }
+
+      // Stage 3: batch fetch all enrichment catalogs
+      const [valoracionActivos, riesgos, amenazas, vulnerabilidades, macroProcesos] =
+        await Promise.all([
+          this.prisma.valoracionActivo.findMany({
+            where: vaIds ? { id: { in: vaIds } } : {},
+          }),
+          this.prisma.riesgo.findMany(),
+          this.prisma.amenaza.findMany(),
+          this.prisma.vulnerabilidad.findMany(),
+          this.prisma.macroProceso.findMany(),
+        ]);
+
+      const vaMap = new Map(valoracionActivos.map((va) => [va.id, va]));
+      const riesgoMap = new Map(riesgos.map((r) => [r.id, r.nivel]));
+      const amenazaMap = new Map(amenazas.map((a) => [a.id, a]));
+      const vulnerabilidadMap = new Map(
+        vulnerabilidades.map((v) => [v.id, v]),
+      );
+      const macroProcesoMap = new Map(
+        macroProcesos.map((m) => [m.id, m.nombre]),
+      );
+
+      // Stage 4: enrich + filter in-memory
+      const enriched = detalles
+        .map((dr) => {
+          const va = vaMap.get(dr.valoracionActivoId);
+          if (!va) return null;
+
+          const amenazaIds = this.safeParseJsonArray(dr.amenazaIds);
+          const vulnIds = this.safeParseJsonArray(dr.vulnerabilidadIds);
+
+          return {
+            id: dr.id,
+            nombreActivo: va.nombreActivo,
+            macroProceso:
+              macroProcesoMap.get(va.macroProcesoId) ?? 'Desconocido',
+            amenaza: amenazaIds
+              .map((id) => amenazaMap.get(Number(id))?.nombre)
+              .filter(Boolean)
+              .join(', '),
+            vulnerabilidad: vulnIds
+              .map((id) => vulnerabilidadMap.get(Number(id))?.descripcion)
+              .filter(Boolean)
+              .join(', '),
+            impacto: va.impacto ?? null,
+            nivelAmenaza: riesgoMap.get(dr.riesgoId ?? -1) ?? null,
+            nivelVulnerabilidad: riesgoMap.get(dr.vulnerabilidadRiesgoId ?? -1) ?? null,
+            evaluacionRiesgo: dr.evaluacionRiesgo,
+            nivelRiesgo: dr.nivelRiesgo,
+            controlesArea: dr.controlesArea ?? null,
+            // Internal fields for filtering
+            _amenazaIds: amenazaIds,
+            _vulnIds: vulnIds,
+          };
+        })
+        .filter(Boolean)
+        .filter((item) => {
+          // In-memory filters (case-insensitive where applicable)
+          if (amenazaId && !item!._amenazaIds.includes(Number(amenazaId)))
+            return false;
+          if (
+            vulnerabilidadId &&
+            !item!._vulnIds.includes(Number(vulnerabilidadId))
+          )
+            return false;
+          if (categoriaAmenazaId) {
+            const cats = item!._amenazaIds
+              .map((id) => amenazaMap.get(id)?.categoria)
+              .filter((c): c is string => !!c);
+            if (!cats.includes(String(categoriaAmenazaId))) return false;
+          }
+          if (categoriaVulnerabilidadId) {
+            const cats = item!._vulnIds
+              .map((id) => vulnerabilidadMap.get(id)?.categoria)
+              .filter((c): c is string => !!c);
+            if (!cats.includes(String(categoriaVulnerabilidadId))) return false;
+          }
+          if (nivelRiesgo) {
+            if (
+              !item!.nivelRiesgo ||
+              item!.nivelRiesgo.toLowerCase() !== nivelRiesgo.toLowerCase()
+            )
+              return false;
+          }
+          if (q) {
+            const qLower = q.toLowerCase();
+            if (!item!.nombreActivo.toLowerCase().includes(qLower)) return false;
+          }
+          return true;
+        });
+
+      // Sort by nombreActivo ASC
+      (enriched as Array<{
+        _amenazaIds: number[];
+        _vulnIds: number[];
+        [key: string]: unknown;
+      }>).sort((a, b) =>
+        String(a.nombreActivo).localeCompare(String(b.nombreActivo)),
+      );
+
+      // Strip internal fields before return
+      return (enriched as Array<Record<string, unknown>>).map(
+        ({ _amenazaIds, _vulnIds, ...rest }) =>
+          rest as unknown as EvaluacionRiesgoReporteDto,
+      );
+    } catch (error) {
+      throw new HttpException(
+        `Error al obtener evaluación de riesgo: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async exportEvaluacionRiesgo(
+    filters: Record<string, string | undefined>,
+  ): Promise<Buffer> {
+    try {
+      const data = await this.getEvaluacionRiesgo(filters);
+
+      const headers = [
+        'Activo',
+        'Macroproceso',
+        'Amenaza',
+        'Vulnerabilidad',
+        'Nivel Amenaza',
+        'Nivel Vulnerabilidad',
+        'Impacto',
+        'Evaluación de Riesgo',
+        'Nivel de Riesgo',
+        'Controles de Área',
+      ];
+
+      const rows = data.map((er) => [
+        er.nombreActivo,
+        er.macroProceso,
+        er.amenaza,
+        er.vulnerabilidad,
+        er.nivelAmenaza ?? '',
+        er.nivelVulnerabilidad ?? '',
+        er.impacto ?? '',
+        er.evaluacionRiesgo ?? '',
+        er.nivelRiesgo ?? '',
+        er.controlesArea ?? '',
+      ]);
+
+      const ws = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX_STYLE.utils.book_new();
+      XLSX_STYLE.utils.book_append_sheet(wb, ws, 'Evaluación de Riesgo');
+
+      // Header styles
+      const headerStyle = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '4F46E5' }, patternType: 'solid' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      };
+
+      const range = XLSX_STYLE.utils.decode_range(ws['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: col });
+        if (ws[cellRef]) {
+          ws[cellRef].s = headerStyle;
+        }
+      }
+
+      // Auto-filter
+      const lastRow = data.length;
+      const lastCol = headers.length - 1;
+      const startRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: 0 });
+      const endRef = XLSX_STYLE.utils.encode_cell({ r: lastRow, c: lastCol });
+      ws['!autofilter'] = { ref: `${startRef}:${endRef}` };
+
+      // Auto-width columns
+      const colWidths = headers.map((h, idx) => {
+        const maxDataLen = Math.max(
+          h.length,
+          ...rows.map((r) => String(r[idx] ?? '').length),
+        );
+        return { wch: Math.min(Math.max(maxDataLen + 2, 10), 40) };
+      });
+      ws['!cols'] = colWidths;
+
+      const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
+      return Buffer.from(array);
+    } catch (error) {
+      throw new HttpException(
+        `Error al exportar evaluación de riesgo: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   private safeParseJsonArray(value: string | null | undefined): number[] {
     if (!value) return [];
     try {
-      const parsed = JSON.parse(value) as number[];
-      return Array.isArray(parsed) ? parsed : [];
+      const parsed = JSON.parse(value);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((v) => Number(v)).filter((n) => !isNaN(n));
     } catch {
       return [];
     }

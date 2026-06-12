@@ -70,3 +70,17 @@ export class AnalisisRiesgoActivoDto {
   vulnerabilidad: string;
   controlesImplementados: string | null;
 }
+
+export class EvaluacionRiesgoReporteDto {
+  id: number;
+  nombreActivo: string;
+  macroProceso: string;
+  amenaza: string;
+  vulnerabilidad: string;
+  impacto: number | null;
+  nivelAmenaza: string | null;
+  nivelVulnerabilidad: string | null;
+  evaluacionRiesgo: number | null;
+  nivelRiesgo: string | null;
+  controlesArea: string | null;
+}

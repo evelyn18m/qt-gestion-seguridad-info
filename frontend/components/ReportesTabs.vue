@@ -9,6 +9,9 @@
     <NuxtLink to="/reportes/analisis-riesgo" class="tab-btn" active-class="active">
       Análisis de Riesgo
     </NuxtLink>
+    <NuxtLink to="/reportes/evaluacion-riesgo" class="tab-btn" active-class="active">
+      Evaluación de Riesgo
+    </NuxtLink>
   </div>
 </template>
 

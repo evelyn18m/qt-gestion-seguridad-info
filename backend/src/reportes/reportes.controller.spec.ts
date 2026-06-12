@@ -13,6 +13,9 @@ describe('ReportesController', () => {
     getValoracionActivos: jest.Mock;
     exportValoracionActivos: jest.Mock;
     getAnalisisRiesgoActivos: jest.Mock;
+    exportAnalisisRiesgoActivos: jest.Mock;
+    getEvaluacionRiesgo: jest.Mock;
+    exportEvaluacionRiesgo: jest.Mock;
   };
 
   const mockResumen = {
@@ -85,6 +88,22 @@ describe('ReportesController', () => {
     },
   ];
 
+  const mockEvaluacionRiesgo = [
+    {
+      id: 1,
+      nombreActivo: 'Servidor A',
+      macroProceso: 'Gestión TI',
+      amenaza: 'Phishing',
+      vulnerabilidad: 'Sin backups',
+      impacto: 3.5,
+      nivelAmenaza: 'Alto',
+      nivelVulnerabilidad: 'Bajo',
+      evaluacionRiesgo: 4.5,
+      nivelRiesgo: 'Medio',
+      controlesArea: 'Firewall',
+    },
+  ];
+
   beforeEach(async () => {
     service = {
       getResumen: jest.fn().mockResolvedValue(mockResumen),
@@ -100,6 +119,8 @@ describe('ReportesController', () => {
         .fn()
         .mockResolvedValue(mockAnalisisRiesgoActivos),
       exportAnalisisRiesgoActivos: jest.fn().mockResolvedValue(Buffer.from('test')),
+      getEvaluacionRiesgo: jest.fn().mockResolvedValue(mockEvaluacionRiesgo),
+      exportEvaluacionRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -239,6 +260,72 @@ describe('ReportesController', () => {
       );
       expect(mockRes.write).toHaveBeenCalled();
       expect(mockRes.end).toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /reportes/evaluacion-riesgo', () => {
+    it('debe retornar 200 y lista con shape correcto de EvaluacionRiesgoReporteDto', async () => {
+      const result = await controller.getEvaluacionRiesgo({});
+      expect(service.getEvaluacionRiesgo).toHaveBeenCalled();
+      expect(result).toEqual(mockEvaluacionRiesgo);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('id');
+      expect(result[0]).toHaveProperty('nombreActivo');
+      expect(result[0]).toHaveProperty('macroProceso');
+      expect(result[0]).toHaveProperty('amenaza');
+      expect(result[0]).toHaveProperty('vulnerabilidad');
+      expect(result[0]).toHaveProperty('impacto');
+      expect(result[0]).toHaveProperty('nivelAmenaza');
+      expect(result[0]).toHaveProperty('nivelVulnerabilidad');
+      expect(result[0]).toHaveProperty('evaluacionRiesgo');
+      expect(result[0]).toHaveProperty('nivelRiesgo');
+      expect(result[0]).toHaveProperty('controlesArea');
+    });
+
+    it('debe reenviar todos los query params al servicio', async () => {
+      const query = {
+        q: 'servidor',
+        macroProcesoId: '1',
+        categoriaAmenazaId: 'Técnica',
+        amenazaId: '2',
+        categoriaVulnerabilidadId: 'Operativa',
+        vulnerabilidadId: '3',
+        nivelRiesgo: 'Alto',
+      };
+      await controller.getEvaluacionRiesgo(query);
+      expect(service.getEvaluacionRiesgo).toHaveBeenCalledWith(query);
+    });
+
+    it('debe exportar Excel con Content-Type y buffer correctos', async () => {
+      const query = { macroProcesoId: '1' };
+      const mockRes = {
+        setHeader: jest.fn(),
+        write: jest.fn(),
+        end: jest.fn(),
+      } as any;
+      await controller.exportEvaluacionRiesgo(query, mockRes);
+      expect(service.exportEvaluacionRiesgo).toHaveBeenCalledWith(query);
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Disposition',
+        expect.stringContaining('evaluacion-riesgo'),
+      );
+      expect(mockRes.write).toHaveBeenCalled();
+      expect(mockRes.end).toHaveBeenCalled();
+    });
+
+    it('debe pasar los filtros al export', async () => {
+      const query = { q: 'test', nivelRiesgo: 'Medio' };
+      const mockRes = {
+        setHeader: jest.fn(),
+        write: jest.fn(),
+        end: jest.fn(),
+      } as any;
+      await controller.exportEvaluacionRiesgo(query, mockRes);
+      expect(service.exportEvaluacionRiesgo).toHaveBeenCalledWith(query);
     });
   });
 });
