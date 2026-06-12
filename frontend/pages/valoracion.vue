@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import type {CatalogoItem, ControlesImplementarItem, DetalleRiesgo, ValoracionActivo} from '~/types/api'
+import {SessionExpiredError} from '~/composables/useApi'
+import SessionWarning from '~/components/SessionWarning.vue'
 import ValoracionModal from '~/components/ValoracionModal.vue'
 import ValoracionViewModal from '~/components/ValoracionViewModal.vue'
 
@@ -73,6 +75,19 @@ const ciaAverage = computed(() => {
 })
 
 const {fetchCatalog} = useCatalog()
+const {login} = useAuth()
+const {secondsRemaining, isWarning, isExpired, isRefreshing, refreshSession} = useSession()
+const showSessionExpired = ref(false)
+
+async function handleRefreshSession() {
+    try {
+        await refreshSession()
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'No se pudo refrescar la sesión'
+        alert(message)
+        showSessionExpired.value = true
+    }
+}
 
 // Sincronizar Pestaña 1 → Pestaña 2 (macroproceso y nombre activo)
 watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([macro, nombre]) => {
@@ -171,7 +186,11 @@ const loadValoracionData = async () => {
     valTiposControl.value = results[11] as CatalogoItem[]
     valControlesImplementar.value = controlesItems
   } catch (e) {
-    console.error('Error cargando datos de valoración', e)
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+    } else {
+      console.error('Error cargando datos de valoración', e)
+    }
   } finally {
     valLoading.value = false
   }
@@ -228,7 +247,10 @@ async function loadValoraciones() {
   try {
     const {apiFetch} = useApi()
     valSaved.value = await apiFetch<ValoracionActivo[]>('/valoraciones')
-  } catch { /* ignore */
+  } catch (e) {
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+    }
   }
 }
 
@@ -393,6 +415,10 @@ async function submitValoracion() {
     resetForm()
     await loadValoraciones()
   } catch (e: unknown) {
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+      return
+    }
     alert('Error: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
     valSaving.value = false
@@ -466,10 +492,16 @@ function editValoracion(item: ValoracionActivo) {
 }
 
 async function viewValoracion(item: ValoracionActivo) {
-  const {apiFetch} = useApi()
-  const enriched = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
-  viewItem.value = enriched
-  showViewModal.value = true
+  try {
+    const {apiFetch} = useApi()
+    const enriched = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
+    viewItem.value = enriched
+    showViewModal.value = true
+  } catch (e) {
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+    }
+  }
 }
 
 async function deleteValoracion(id: number) {
@@ -478,7 +510,10 @@ async function deleteValoracion(id: number) {
     const {apiFetch} = useApi()
     await apiFetch(`/valoraciones/${id}`, {method: 'DELETE'})
     await loadValoraciones()
-  } catch { /* ignore */
+  } catch (e) {
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+    }
   }
 }
 
@@ -591,6 +626,10 @@ function resumenControl(v: ValoracionActivo) {
   return {tipoControl, evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : ''}
 }
 
+function handleLoginRedirect() {
+  login()
+}
+
 onMounted(() => {
   loadValoracionData()
   loadValoraciones()
@@ -599,6 +638,14 @@ onMounted(() => {
 
 <template>
   <div class="valoracion-section">
+    <SessionWarning
+        :is-expired="isExpired"
+        :is-warning="isWarning"
+        :is-refreshing="isRefreshing"
+        :seconds-remaining="secondsRemaining"
+        @refresh="handleRefreshSession"
+    />
+
     <div class="welcome-banner"
          style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
       <div>
@@ -689,6 +736,17 @@ onMounted(() => {
           :catalog-data="catalogData"
           :view-item="viewItem"
       />
+
+      <!-- SESSION EXPIRED MODAL -->
+      <div v-if="showSessionExpired" class="session-expired-overlay" @click.self="showSessionExpired = false">
+        <div class="session-expired-modal">
+          <h3>Session Expired</h3>
+          <p>Your session has expired. Please log in again to continue.</p>
+          <div class="session-expired-actions">
+            <button class="btn-primary" type="button" @click="handleLoginRedirect">Log In Again</button>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -906,5 +964,45 @@ onMounted(() => {
 .btn-view:hover {
   background: rgba(56, 189, 248, 0.1);
   color: #7dd3fc;
+}
+
+.session-expired-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.session-expired-modal {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.session-expired-modal h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  color: #ef4444;
+}
+
+.session-expired-modal p {
+  color: var(--text-muted);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.session-expired-actions {
+  display: flex;
+  justify-content: center;
 }
 </style>
