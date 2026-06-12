@@ -652,7 +652,6 @@ describe('ReportesService', () => {
           amenazaIds: '[1,2]',
           vulnerabilidadIds: '[3,4]',
           controlesImplementados: 'Firewall',
-          controlesArea: 'Seguridad',
         }),
       ]);
       prisma.macroProceso.findMany.mockResolvedValue([
@@ -677,7 +676,6 @@ describe('ReportesService', () => {
         amenaza: 'Robo, Incendio',
         vulnerabilidad: 'Falta de backups, Personal sin capacitar',
         controlesImplementados: 'Firewall',
-        controlesArea: 'Seguridad',
       });
     });
 

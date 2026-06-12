@@ -69,5 +69,4 @@ export class AnalisisRiesgoActivoDto {
   amenaza: string;
   vulnerabilidad: string;
   controlesImplementados: string | null;
-  controlesArea: string | null;
 }

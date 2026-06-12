@@ -172,5 +172,4 @@ export interface AnalisisRiesgoActivoReporte {
     amenaza: string
     vulnerabilidad: string
     controlesImplementados: string | null
-    controlesArea: string | null
 }

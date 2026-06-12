@@ -495,6 +495,33 @@ onMounted(() => {
   color: #fecaca;
 }
 
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--primary);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-export svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-export:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
 /* ── Empty state ───────────────────────────────────────────────────────────── */
 .reportes-empty {
   display: flex;

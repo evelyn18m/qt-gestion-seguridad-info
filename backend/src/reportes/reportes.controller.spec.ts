@@ -82,7 +82,6 @@ describe('ReportesController', () => {
       amenaza: 'Phishing, Robo',
       vulnerabilidad: 'Falta de backups',
       controlesImplementados: 'Firewall, Antivirus',
-      controlesArea: 'Seguridad física',
     },
   ];
 
@@ -222,7 +221,6 @@ describe('ReportesController', () => {
       expect(result[0]).toHaveProperty('amenaza');
       expect(result[0]).toHaveProperty('vulnerabilidad');
       expect(result[0]).toHaveProperty('controlesImplementados');
-      expect(result[0]).toHaveProperty('controlesArea');
       expect(result[0]).toEqual(mockAnalisisRiesgoActivos[0]);
     });
 

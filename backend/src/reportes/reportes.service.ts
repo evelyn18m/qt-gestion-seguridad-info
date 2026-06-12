@@ -451,7 +451,6 @@ export class ReportesService {
             amenaza,
             vulnerabilidad,
             controlesImplementados: dr.controlesImplementados ?? null,
-            controlesArea: dr.controlesArea ?? null,
           };
         })
         .filter((item): item is AnalisisRiesgoActivoDto => item !== null)
@@ -615,7 +614,6 @@ export class ReportesService {
         'Amenaza',
         'Vulnerabilidad',
         'Controles Implementados',
-        'Controles Área',
       ];
 
       const rows = data.map((ar) => [
@@ -624,7 +622,6 @@ export class ReportesService {
         ar.amenaza,
         ar.vulnerabilidad,
         ar.controlesImplementados ?? '',
-        ar.controlesArea ?? '',
       ]);
 
       const ws = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
