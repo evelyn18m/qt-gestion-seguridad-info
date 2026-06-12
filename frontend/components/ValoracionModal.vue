@@ -255,14 +255,13 @@ function parseIds(jsonStr: string | null | undefined): string[] {
 }
 
 // Sync riskRows to detallesRiesgo (for Tabs 3/4 backward compat)
-// Creates ONE combined entry per RiskRow (not separate amenaza + vulnerabilidad entries)
-// This ensures grouping is preserved when loading existing data
+// Creates exactly ONE combined entry per RiskRow (not N+M separate entries)
 function syncRowsToDetalles() {
   // Build lookup from existing entries to preserve control field values
   const prevMap = new Map<string, DetalleRiesgo>()
   props.detallesRiesgo.forEach(e => {
     if (!e.amenazaIds?.length && !e.vulnerabilidadIds?.length) return
-    const key = `${e.tipo}:${e.catalogoId}:${JSON.stringify(e.amenazaIds)}:${JSON.stringify(e.vulnerabilidadIds)}`
+    const key = `${JSON.stringify(e.amenazaIds)}:${JSON.stringify(e.vulnerabilidadIds)}`
     prevMap.set(key, e)
   })
 
@@ -271,53 +270,28 @@ function syncRowsToDetalles() {
     // Only create entries if the row has at least one amenaza or vulnerabilidad
     if (row.amenazaIds.length === 0 && row.vulnerabilidadIds.length === 0) return
 
-    // Create one entry per amenaza in this row (with access to all row's arrays)
-    row.amenazaIds.forEach(aId => {
-      const key = `amenaza:${aId}:${JSON.stringify(row.amenazaIds)}:${JSON.stringify(row.vulnerabilidadIds)}`
-      const prev = prevMap.get(key)
-      entries.push({
-        tipo: 'amenaza' as const,
-        catalogoId: Number(aId),
-        riesgoId: prev?.riesgoId ?? '',
-        vulnerabilidadRiesgoId: prev?.vulnerabilidadRiesgoId ?? undefined,
-        evaluacionRiesgo: 0,
-        nivelRiesgo: '',
-        metodoTratamiento: '',
-        tipoControlId: prev?.tipoControlId ?? '',
-        riesgoControlId: prev?.riesgoControlId ?? '',
-        vulnerabilidadControlId: prev?.vulnerabilidadControlId ?? undefined,
-        evaluacionRiesgoControl: 0,
-        nivelRiesgoControl: '',
-        amenazaIds: [...row.amenazaIds],
-        vulnerabilidadIds: [...row.vulnerabilidadIds],
-        controlesImplementados: row.controlesImplementados,
-        controlesArea: row.controlesArea,
-        controlesImplementarId: row.controlesImplementarId ?? null,
-      })
-    })
-    // Create one entry per vulnerabilidad in this row (with access to all row's arrays)
-    row.vulnerabilidadIds.forEach(vId => {
-      const key = `vulnerabilidad:${vId}:${JSON.stringify(row.amenazaIds)}:${JSON.stringify(row.vulnerabilidadIds)}`
-      const prev = prevMap.get(key)
-      entries.push({
-        tipo: 'vulnerabilidad' as const,
-        catalogoId: Number(vId),
-        riesgoId: prev?.riesgoId ?? '',
-        vulnerabilidadRiesgoId: prev?.vulnerabilidadRiesgoId ?? undefined,
-        evaluacionRiesgo: 0,
-        nivelRiesgo: '',
-        metodoTratamiento: '',
-        tipoControlId: prev?.tipoControlId ?? '',
-        riesgoControlId: prev?.riesgoControlId ?? '',
-        vulnerabilidadControlId: prev?.vulnerabilidadControlId ?? undefined,
-        evaluacionRiesgoControl: 0,
-        nivelRiesgoControl: '',
-        amenazaIds: [...row.amenazaIds],
-        vulnerabilidadIds: [...row.vulnerabilidadIds],
-        controlesImplementados: row.controlesImplementados,
-        controlesArea: row.controlesArea,
-        controlesImplementarId: row.controlesImplementarId ?? null,
-      })
+    const key = `${JSON.stringify(row.amenazaIds)}:${JSON.stringify(row.vulnerabilidadIds)}`
+    const prev = prevMap.get(key)
+
+    // Create ONE combined entry per RiskRow
+    entries.push({
+      tipo: 'amenaza' as const,
+      catalogoId: row.amenazaIds.length > 0 ? Number(row.amenazaIds[0]) : (row.vulnerabilidadIds.length > 0 ? Number(row.vulnerabilidadIds[0]) : 0),
+      riesgoId: prev?.riesgoId ?? '',
+      vulnerabilidadRiesgoId: prev?.vulnerabilidadRiesgoId ?? undefined,
+      evaluacionRiesgo: prev?.evaluacionRiesgo ?? 0,
+      nivelRiesgo: prev?.nivelRiesgo ?? '',
+      metodoTratamiento: prev?.metodoTratamiento ?? '',
+      tipoControlId: prev?.tipoControlId ?? '',
+      riesgoControlId: prev?.riesgoControlId ?? '',
+      vulnerabilidadControlId: prev?.vulnerabilidadControlId ?? undefined,
+      evaluacionRiesgoControl: prev?.evaluacionRiesgoControl ?? 0,
+      nivelRiesgoControl: prev?.nivelRiesgoControl ?? '',
+      amenazaIds: [...row.amenazaIds],
+      vulnerabilidadIds: [...row.vulnerabilidadIds],
+      controlesImplementados: row.controlesImplementados,
+      controlesArea: row.controlesArea,
+      controlesImplementarId: row.controlesImplementarId ?? null,
     })
   })
   // Preserve entries with legacy fields only (from Tab 3/4 edits — no new row fields)
@@ -569,10 +543,6 @@ function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
 function findMatchedDetalle(row: RiskRow): DetalleRiesgo | undefined {
   if (!row.amenazaIds.length && !row.vulnerabilidadIds.length) return undefined
   return props.detallesRiesgo.find(d =>
-      // Match by amenaza if present
-      (row.amenazaIds[0]
-          ? d.tipo === 'amenaza' && d.catalogoId === Number(row.amenazaIds[0])
-          : d.tipo === 'vulnerabilidad' && d.catalogoId === Number(row.vulnerabilidadIds[0])) &&
       JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
       JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
   )

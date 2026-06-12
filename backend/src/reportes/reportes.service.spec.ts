@@ -889,6 +889,45 @@ describe('ReportesService', () => {
       expect(result[0].vulnerabilidad).toBe('');
     });
 
+    it('debe deduplicar filas con mismo VA + amenazaIds/vulnerabilidadIds', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1, confidencialidadId: 1, integridadId: 1, disponibilidadId: 1 },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', evaluacionRiesgo: 4.5, nivelRiesgo: 'Medio', controlesArea: 'Firewall' }),
+        makeDr({ id: 2, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', evaluacionRiesgo: 4.5, nivelRiesgo: 'Medio', controlesArea: 'Firewall' }),
+      ]);
+      prisma.impacto.findMany.mockResolvedValue([makeImpacto(1, 'Conf', 'Medio', 2)]);
+      prisma.amenaza.findMany.mockResolvedValue([{ id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() }]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([{ id: 2, descripcion: 'V2', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() }]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+
+      const result = await service.getEvaluacionRiesgo({});
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('NO debe deduplicar filas con diferente amenazaIds/vulnerabilidadIds', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1, confidencialidadId: 1, integridadId: 1, disponibilidadId: 1 },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', evaluacionRiesgo: 4.5, nivelRiesgo: 'Medio', controlesArea: null }),
+        makeDr({ id: 2, valoracionActivoId: 1, amenazaIds: '[3]', vulnerabilidadIds: '[2]', evaluacionRiesgo: 4.5, nivelRiesgo: 'Medio', controlesArea: null }),
+      ]);
+      prisma.impacto.findMany.mockResolvedValue([makeImpacto(1, 'Conf', 'Medio', 2)]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+        { id: 3, nombre: 'A3', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([{ id: 2, descripcion: 'V2', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() }]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+
+      const result = await service.getEvaluacionRiesgo({});
+
+      expect(result).toHaveLength(2);
+    });
+
     it('debe retornar array vacío cuando no hay datos', async () => {
       prisma.valoracionActivo.findMany.mockResolvedValue([]);
       prisma.detalleRiesgo.findMany.mockResolvedValue([]);
@@ -1204,6 +1243,47 @@ describe('ReportesService', () => {
       expect(result[2].nombreActivo).toBe('Servidor B');
     });
 
+    it('debe deduplicar filas con mismo VA + amenazaIds/vulnerabilidadIds', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1, confidencialidadId: 1, integridadId: 1, disponibilidadId: 1, impacto: 2.5 },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        { ...makeDr({ id: 1, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', metodoTratamiento: 'MITIGAR', evaluacionRiesgoControl: 3.0, nivelRiesgoControl: 'Bajo', tipoControlId: 1, riesgoResidual: 'ACEPTABLE' }), controlesImplementar: null },
+        { ...makeDr({ id: 2, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', metodoTratamiento: 'MITIGAR', evaluacionRiesgoControl: 3.0, nivelRiesgoControl: 'Bajo', tipoControlId: 1, riesgoResidual: 'ACEPTABLE' }), controlesImplementar: null },
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([{ id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() }]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([{ id: 2, descripcion: 'V2', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() }]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([{ id: 1, nombre: 'Preventivo', createdAt: new Date(), updatedAt: new Date() }]);
+
+      const result = await service.getTratamientoRiesgo({});
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('NO debe deduplicar filas con diferente amenazaIds/vulnerabilidadIds', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1, confidencialidadId: 1, integridadId: 1, disponibilidadId: 1, impacto: 2.5 },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        { ...makeDr({ id: 1, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', metodoTratamiento: 'MITIGAR' }), controlesImplementar: null },
+        { ...makeDr({ id: 2, valoracionActivoId: 1, amenazaIds: '[3]', vulnerabilidadIds: '[2]', metodoTratamiento: 'MITIGAR' }), controlesImplementar: null },
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+        { id: 3, nombre: 'A3', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([{ id: 2, descripcion: 'V2', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() }]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({});
+
+      expect(result).toHaveLength(2);
+    });
+
     it('debe combinar los 5 filtros simultáneamente', async () => {
       prisma.valoracionActivo.findMany.mockResolvedValue([
         { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1,
@@ -1416,6 +1496,43 @@ describe('ReportesService', () => {
         q: 'xyz',
       });
       expect(resultNoMatch).toHaveLength(0);
+    });
+
+    it('debe deduplicar filas con mismo VA + amenazaIds/vulnerabilidadIds', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1 },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', controlesImplementados: 'Ctrl A' }),
+        makeDr({ id: 2, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', controlesImplementados: 'Ctrl B' }),
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'Gestión TI' }]);
+      prisma.amenaza.findMany.mockResolvedValue([{ id: 1, nombre: 'Phishing', categoria: 'Técnica' }]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([{ id: 2, descripcion: 'Sin backups', categoria: 'Operativa' }]);
+
+      const result = await service.getAnalisisRiesgoActivos({});
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('NO debe deduplicar filas con diferente amenazaIds/vulnerabilidadIds', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1 },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1, amenazaIds: '[1]', vulnerabilidadIds: '[2]', controlesImplementados: 'Ctrl A' }),
+        makeDr({ id: 2, valoracionActivoId: 1, amenazaIds: '[3]', vulnerabilidadIds: '[2]', controlesImplementados: 'Ctrl B' }),
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'Gestión TI' }]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Phishing', categoria: 'Técnica' },
+        { id: 3, nombre: 'Robo', categoria: 'Física' },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([{ id: 2, descripcion: 'Sin backups', categoria: 'Operativa' }]);
+
+      const result = await service.getAnalisisRiesgoActivos({});
+
+      expect(result).toHaveLength(2);
     });
 
     it('debe retornar array vacío cuando no hay datos', async () => {

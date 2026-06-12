@@ -504,10 +504,20 @@ export class ReportesService {
           return true;
         });
 
-      // Sort by nombreActivo ascending
-      enriched.sort((a, b) => a.nombreActivo.localeCompare(b.nombreActivo));
+      // Deduplicate by nombreActivo + amenazaIds/vulnerabilidadIds JSON arrays
+      const seenAnalisis = new Set<string>()
+      const dedupedAnalisis = enriched.filter((item) => {
+        const dr = detalles.find((d) => d.id === item.id)
+        const key = `${item.nombreActivo}|${dr?.amenazaIds ?? ''}|${dr?.vulnerabilidadIds ?? ''}`
+        if (seenAnalisis.has(key)) return false
+        seenAnalisis.add(key)
+        return true
+      })
 
-      return enriched;
+      // Sort by nombreActivo ascending
+      dedupedAnalisis.sort((a, b) => a.nombreActivo.localeCompare(b.nombreActivo));
+
+      return dedupedAnalisis;
     } catch (error) {
       throw new HttpException(
         `Error al obtener análisis de riesgo de activos: ${(error as Error).message}`,
@@ -644,17 +654,26 @@ export class ReportesService {
           return true;
         });
 
-      // Sort by nombreActivo ASC
-      (enriched as Array<{
+      // Deduplicate by nombreActivo + amenazaIds/vulnerabilidadIds JSON arrays
+      const seenEval = new Set<string>()
+      const dedupedEval = (enriched as Array<{
         _amenazaIds: number[];
         _vulnIds: number[];
         [key: string]: unknown;
-      }>).sort((a, b) =>
+      }>).filter((item) => {
+        const key = `${item.nombreActivo}|${JSON.stringify(item._amenazaIds)}|${JSON.stringify(item._vulnIds)}`
+        if (seenEval.has(key)) return false
+        seenEval.add(key)
+        return true
+      })
+
+      // Sort by nombreActivo ASC
+      dedupedEval.sort((a, b) =>
         String(a.nombreActivo).localeCompare(String(b.nombreActivo)),
       );
 
       // Strip internal fields before return
-      return (enriched as Array<Record<string, unknown>>).map(
+      return dedupedEval.map(
         ({ _amenazaIds, _vulnIds, ...rest }) =>
           rest as unknown as EvaluacionRiesgoReporteDto,
       );
@@ -774,6 +793,8 @@ export class ReportesService {
             controlesImplementar:
               dr.controlesImplementar?.descripcion ?? null,
             // Internal fields for filtering
+            _amenazaIds: amenazaIds,
+            _vulnIds: vulnIds,
             _tipoControlId: dr.tipoControlId,
           };
         })
@@ -811,19 +832,30 @@ export class ReportesService {
           return true;
         });
 
-      // Sort by nombreActivo ASC
-      (
+      // Deduplicate by nombreActivo + amenazaIds/vulnerabilidadIds JSON arrays
+      const seenTrat = new Set<string>()
+      const dedupedTrat = (
         enriched as Array<{
+          _amenazaIds: number[];
+          _vulnIds: number[];
           _tipoControlId: number;
           [key: string]: unknown;
         }>
-      ).sort((a, b) =>
+      ).filter((item) => {
+        const key = `${item.nombreActivo}|${JSON.stringify(item._amenazaIds)}|${JSON.stringify(item._vulnIds)}`
+        if (seenTrat.has(key)) return false
+        seenTrat.add(key)
+        return true
+      })
+
+      // Sort by nombreActivo ASC
+      dedupedTrat.sort((a, b) =>
         String(a.nombreActivo).localeCompare(String(b.nombreActivo)),
       );
 
       // Strip internal fields before return
-      return (enriched as Array<Record<string, unknown>>).map(
-        ({ _tipoControlId, ...rest }) =>
+      return dedupedTrat.map(
+        ({ _amenazaIds, _vulnIds, _tipoControlId, ...rest }) =>
           rest as unknown as TratamientoRiesgoReporteDto,
       );
     } catch (error) {
