@@ -602,4 +602,74 @@ export class ReportesService {
       );
     }
   }
+
+  async exportAnalisisRiesgoActivos(
+    filters: Record<string, string | undefined>,
+  ): Promise<Buffer> {
+    try {
+      const data = await this.getAnalisisRiesgoActivos(filters);
+
+      const headers = [
+        'Nombre del Activo',
+        'Macroproceso',
+        'Amenaza',
+        'Vulnerabilidad',
+        'Controles Implementados',
+        'Controles Área',
+      ];
+
+      const rows = data.map((ar) => [
+        ar.nombreActivo,
+        ar.macroProceso,
+        ar.amenaza,
+        ar.vulnerabilidad,
+        ar.controlesImplementados ?? '',
+        ar.controlesArea ?? '',
+      ]);
+
+      const ws = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX_STYLE.utils.book_new();
+      XLSX_STYLE.utils.book_append_sheet(wb, ws, 'Análisis de Riesgo de Activos');
+
+      // Header styles
+      const headerStyle = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '4F46E5' }, patternType: 'solid' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      };
+
+      const range = XLSX_STYLE.utils.decode_range(ws['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: col });
+        if (ws[cellRef]) {
+          ws[cellRef].s = headerStyle;
+        }
+      }
+
+      // Auto-filter
+      const lastRow = data.length + 1;
+      const lastCol = headers.length - 1;
+      const startRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: 0 });
+      const endRef = XLSX_STYLE.utils.encode_cell({ r: lastRow, c: lastCol });
+      ws['!autofilter'] = { ref: `${startRef}:${endRef}` };
+
+      // Auto-width columns
+      const colWidths = headers.map((h, idx) => {
+        const maxDataLen = Math.max(
+          h.length,
+          ...rows.map((r) => String(r[idx] ?? '').length),
+        );
+        return { wch: Math.min(Math.max(maxDataLen + 2, 10), 40) };
+      });
+      ws['!cols'] = colWidths;
+
+      const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
+      return Buffer.from(array);
+    } catch (error) {
+      throw new HttpException(
+        `Error al exportar análisis de riesgo de activos: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

@@ -99,6 +99,45 @@ watch([
   debouncedFetchAnalisisRiesgoActivos()
 }, { immediate: false })
 
+async function exportExcel() {
+  const params = new URLSearchParams()
+  if (qAnalisis.value) params.append('q', qAnalisis.value)
+  if (selectedMacroProcesoAnalisis.value) params.append('macroProcesoId', String(selectedMacroProcesoAnalisis.value))
+  if (selectedCategoriaAmenaza.value) params.append('categoriaAmenazaId', selectedCategoriaAmenaza.value)
+  if (selectedAmenaza.value) params.append('amenazaId', String(selectedAmenaza.value))
+  if (selectedCategoriaVulnerabilidad.value) params.append('categoriaVulnerabilidadId', selectedCategoriaVulnerabilidad.value)
+  if (selectedVulnerabilidad.value) params.append('vulnerabilidadId', String(selectedVulnerabilidad.value))
+  const qs = params.toString()
+  const path = `/reportes/analisis-riesgo-activos/export${qs ? '?' + qs : ''}`
+
+  try {
+    const config = useRuntimeConfig()
+    const { token } = useAuth()
+    const url = `${config.public.apiBase}${path}`
+    const headers: Record<string, string> = {}
+    const currentToken = token.value
+    if (currentToken) {
+      headers['Authorization'] = `Bearer ${currentToken}`
+    }
+
+    const response = await fetch(url, { headers })
+    if (!response.ok) {
+      throw new Error(`Error del servidor: ${response.status}`)
+    }
+    const blob = await response.blob()
+    const urlBlob = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = urlBlob
+    a.download = 'analisis-riesgo-activos.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(urlBlob)
+  } catch (e: unknown) {
+    errorAnalisis.value = e instanceof Error ? e.message : 'Error al exportar Excel'
+  }
+}
+
 function nivelClass(nivel: string | null) {
   if (!nivel) return ''
   const n = nivel.toLowerCase()
@@ -184,6 +223,12 @@ onMounted(() => {
           <h2>Análisis de Riesgo de Activos</h2>
           <p class="subtitle">Vista consolidada de amenazas, vulnerabilidades y controles por activo.</p>
         </div>
+        <button class="btn-export" @click="exportExcel">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9.75v6.75m0 0-3-3m3 3 3-3m-8.25 6a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Exportar Excel
+        </button>
       </div>
 
       <div v-if="loadingAnalisis" class="reportes-loading">

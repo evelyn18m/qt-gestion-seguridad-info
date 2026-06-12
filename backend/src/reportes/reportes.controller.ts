@@ -102,4 +102,23 @@ export class ReportesController {
     res.write(buffer);
     res.end();
   }
+
+  @Get('analisis-riesgo-activos/export')
+  async exportAnalisisRiesgoActivos(
+    @Query() query: Record<string, string | undefined>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.reportesService.exportAnalisisRiesgoActivos(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="analisis-riesgo-activos.xlsx"',
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.write(buffer);
+    res.end();
+  }
 }

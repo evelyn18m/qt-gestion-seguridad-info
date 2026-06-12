@@ -100,6 +100,7 @@ describe('ReportesController', () => {
       getAnalisisRiesgoActivos: jest
         .fn()
         .mockResolvedValue(mockAnalisisRiesgoActivos),
+      exportAnalisisRiesgoActivos: jest.fn().mockResolvedValue(Buffer.from('test')),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -223,6 +224,23 @@ describe('ReportesController', () => {
       expect(result[0]).toHaveProperty('controlesImplementados');
       expect(result[0]).toHaveProperty('controlesArea');
       expect(result[0]).toEqual(mockAnalisisRiesgoActivos[0]);
+    });
+
+    it('debe exportar a Excel con filtros aplicados', async () => {
+      const query = { q: 'test' };
+      const mockRes = {
+        setHeader: jest.fn(),
+        write: jest.fn(),
+        end: jest.fn(),
+      } as any;
+      await controller.exportAnalisisRiesgoActivos(query, mockRes);
+      expect(service.exportAnalisisRiesgoActivos).toHaveBeenCalledWith(query);
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      expect(mockRes.write).toHaveBeenCalled();
+      expect(mockRes.end).toHaveBeenCalled();
     });
   });
 });
