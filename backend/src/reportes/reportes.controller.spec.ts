@@ -16,6 +16,8 @@ describe('ReportesController', () => {
     exportAnalisisRiesgoActivos: jest.Mock;
     getEvaluacionRiesgo: jest.Mock;
     exportEvaluacionRiesgo: jest.Mock;
+    getTratamientoRiesgo: jest.Mock;
+    exportTratamientoRiesgo: jest.Mock;
   };
 
   const mockResumen = {
@@ -104,6 +106,25 @@ describe('ReportesController', () => {
     },
   ];
 
+  const mockTratamientoRiesgo = [
+    {
+      id: 1,
+      nombreActivo: 'Servidor A',
+      macroProceso: 'Gestión TI',
+      amenaza: 'Phishing',
+      vulnerabilidad: 'Sin backups',
+      nivelAmenaza: 'Alto',
+      nivelVulnerabilidad: 'Bajo',
+      impacto: 3.5,
+      metodoTratamiento: 'MITIGAR',
+      evaluacionRiesgoControl: 3.0,
+      nivelRiesgoControl: 'Bajo',
+      tipoControl: 'Preventivo',
+      riesgoResidual: 'ACEPTABLE',
+      controlesImplementar: 'Control de acceso',
+    },
+  ];
+
   beforeEach(async () => {
     service = {
       getResumen: jest.fn().mockResolvedValue(mockResumen),
@@ -121,6 +142,8 @@ describe('ReportesController', () => {
       exportAnalisisRiesgoActivos: jest.fn().mockResolvedValue(Buffer.from('test')),
       getEvaluacionRiesgo: jest.fn().mockResolvedValue(mockEvaluacionRiesgo),
       exportEvaluacionRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
+      getTratamientoRiesgo: jest.fn().mockResolvedValue(mockTratamientoRiesgo),
+      exportTratamientoRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -326,6 +349,75 @@ describe('ReportesController', () => {
       } as any;
       await controller.exportEvaluacionRiesgo(query, mockRes);
       expect(service.exportEvaluacionRiesgo).toHaveBeenCalledWith(query);
+    });
+  });
+
+  describe('GET /reportes/tratamiento-riesgo', () => {
+    it('debe retornar 200 y lista con shape correcto de TratamientoRiesgoReporteDto', async () => {
+      const result = await controller.getTratamientoRiesgo({});
+      expect(service.getTratamientoRiesgo).toHaveBeenCalled();
+      expect(result).toEqual(mockTratamientoRiesgo);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('id');
+      expect(result[0]).toHaveProperty('nombreActivo');
+      expect(result[0]).toHaveProperty('macroProceso');
+      expect(result[0]).toHaveProperty('amenaza');
+      expect(result[0]).toHaveProperty('vulnerabilidad');
+      expect(result[0]).toHaveProperty('nivelAmenaza');
+      expect(result[0]).toHaveProperty('nivelVulnerabilidad');
+      expect(result[0]).toHaveProperty('impacto');
+      expect(result[0]).toHaveProperty('metodoTratamiento');
+      expect(result[0]).toHaveProperty('evaluacionRiesgoControl');
+      expect(result[0]).toHaveProperty('nivelRiesgoControl');
+      expect(result[0]).toHaveProperty('tipoControl');
+      expect(result[0]).toHaveProperty('riesgoResidual');
+      expect(result[0]).toHaveProperty('controlesImplementar');
+    });
+
+    it('debe reenviar todos los query params al servicio', async () => {
+      const query = {
+        q: 'servidor',
+        macroProcesoId: '1',
+        tipoControlId: '2',
+        nivelRiesgoControl: 'Alto',
+        riesgoResidual: 'ACEPTABLE',
+      };
+      await controller.getTratamientoRiesgo(query);
+      expect(service.getTratamientoRiesgo).toHaveBeenCalledWith(query);
+    });
+  });
+
+  describe('GET /reportes/tratamiento-riesgo/export', () => {
+    it('debe exportar Excel con Content-Type y Content-Disposition correctos', async () => {
+      const query = { macroProcesoId: '1' };
+      const mockRes = {
+        setHeader: jest.fn(),
+        write: jest.fn(),
+        end: jest.fn(),
+      } as any;
+      await controller.exportTratamientoRiesgo(query, mockRes);
+      expect(service.exportTratamientoRiesgo).toHaveBeenCalledWith(query);
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Disposition',
+        expect.stringContaining('tratamiento-riesgo'),
+      );
+      expect(mockRes.write).toHaveBeenCalled();
+      expect(mockRes.end).toHaveBeenCalled();
+    });
+
+    it('debe pasar los filtros al export', async () => {
+      const query = { q: 'test', nivelRiesgoControl: 'Medio' };
+      const mockRes = {
+        setHeader: jest.fn(),
+        write: jest.fn(),
+        end: jest.fn(),
+      } as any;
+      await controller.exportTratamientoRiesgo(query, mockRes);
+      expect(service.exportTratamientoRiesgo).toHaveBeenCalledWith(query);
     });
   });
 });

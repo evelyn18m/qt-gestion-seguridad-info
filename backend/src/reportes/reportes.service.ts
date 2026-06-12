@@ -11,6 +11,7 @@ import {
   ValoracionActivoReporteDto,
   AnalisisRiesgoActivoDto,
   EvaluacionRiesgoReporteDto,
+  TratamientoRiesgoReporteDto,
 } from './dto/reporte-response.dto';
 import * as XLSX_STYLE from 'xlsx-js-style';
 
@@ -660,6 +661,262 @@ export class ReportesService {
     } catch (error) {
       throw new HttpException(
         `Error al obtener evaluación de riesgo: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getTratamientoRiesgo(
+    filters: Record<string, string | undefined>,
+  ): Promise<TratamientoRiesgoReporteDto[]> {
+    try {
+      const {
+        q,
+        macroProcesoId,
+        tipoControlId,
+        nivelRiesgoControl,
+        riesgoResidual,
+      } = filters;
+
+      // Stage 1: resolve macroproceso filter into valoracionActivo IDs
+      let vaIds: number[] | undefined;
+      if (macroProcesoId) {
+        const matchingVas = await this.prisma.valoracionActivo.findMany({
+          where: { macroProcesoId: Number(macroProcesoId) },
+          select: { id: true },
+        });
+        vaIds = matchingVas.map((va) => va.id);
+        if (vaIds.length === 0) {
+          return [];
+        }
+      }
+
+      // Stage 2: fetch DetalleRiesgo records with include for controlesImplementar
+      const detalleWhere = vaIds ? { valoracionActivoId: { in: vaIds } } : {};
+      const detalles = await this.prisma.detalleRiesgo.findMany({
+        where: detalleWhere,
+        include: {
+          controlesImplementar: {
+            include: { categoria: true },
+          },
+        },
+      });
+
+      if (detalles.length === 0) {
+        return [];
+      }
+
+      // Stage 3: batch fetch all enrichment catalogs
+      const [
+        valoracionActivos,
+        riesgos,
+        amenazas,
+        vulnerabilidades,
+        macroProcesos,
+        tipoControles,
+      ] = await Promise.all([
+        this.prisma.valoracionActivo.findMany({
+          where: vaIds ? { id: { in: vaIds } } : {},
+        }),
+        this.prisma.riesgo.findMany(),
+        this.prisma.amenaza.findMany(),
+        this.prisma.vulnerabilidad.findMany(),
+        this.prisma.macroProceso.findMany(),
+        this.prisma.tipoControl.findMany(),
+      ]);
+
+      const vaMap = new Map(valoracionActivos.map((va) => [va.id, va]));
+      const riesgoMap = new Map(riesgos.map((r) => [r.id, r.nivel]));
+      const amenazaMap = new Map(amenazas.map((a) => [a.id, a]));
+      const vulnerabilidadMap = new Map(
+        vulnerabilidades.map((v) => [v.id, v]),
+      );
+      const macroProcesoMap = new Map(
+        macroProcesos.map((m) => [m.id, m.nombre]),
+      );
+      const tipoControlMap = new Map(
+        tipoControles.map((t) => [t.id, t.nombre]),
+      );
+
+      // Stage 4: enrich + filter in-memory
+      const enriched = detalles
+        .map((dr) => {
+          const va = vaMap.get(dr.valoracionActivoId);
+          if (!va) return null;
+
+          const amenazaIds = this.safeParseJsonArray(dr.amenazaIds);
+          const vulnIds = this.safeParseJsonArray(dr.vulnerabilidadIds);
+
+          return {
+            id: dr.id,
+            nombreActivo: va.nombreActivo,
+            macroProceso:
+              macroProcesoMap.get(va.macroProcesoId) ?? 'Desconocido',
+            amenaza: amenazaIds
+              .map((id) => amenazaMap.get(Number(id))?.nombre)
+              .filter(Boolean)
+              .join(', '),
+            vulnerabilidad: vulnIds
+              .map((id) => vulnerabilidadMap.get(Number(id))?.descripcion)
+              .filter(Boolean)
+              .join(', '),
+            nivelAmenaza: riesgoMap.get(dr.riesgoId ?? -1) ?? null,
+            nivelVulnerabilidad:
+              riesgoMap.get(dr.vulnerabilidadRiesgoId ?? -1) ?? null,
+            impacto: va.impacto ?? null,
+            metodoTratamiento: dr.metodoTratamiento ?? null,
+            evaluacionRiesgoControl: dr.evaluacionRiesgoControl ?? null,
+            nivelRiesgoControl: dr.nivelRiesgoControl ?? null,
+            tipoControl: dr.tipoControlId != null
+              ? (tipoControlMap.get(dr.tipoControlId) ?? null)
+              : null,
+            riesgoResidual: dr.riesgoResidual ?? null,
+            controlesImplementar:
+              dr.controlesImplementar?.descripcion ?? null,
+            // Internal fields for filtering
+            _tipoControlId: dr.tipoControlId,
+          };
+        })
+        .filter(Boolean)
+        .filter((item) => {
+          // In-memory filters (case-insensitive where applicable)
+          if (tipoControlId && item!._tipoControlId !== Number(tipoControlId))
+            return false;
+          if (nivelRiesgoControl) {
+            if (
+              !item!.nivelRiesgoControl ||
+              item!.nivelRiesgoControl.toLowerCase() !==
+                nivelRiesgoControl.toLowerCase()
+            )
+              return false;
+          }
+          if (riesgoResidual) {
+            if (
+              !item!.riesgoResidual ||
+              item!.riesgoResidual.toLowerCase() !==
+                riesgoResidual.toLowerCase()
+            )
+              return false;
+          }
+          if (q) {
+            const qLower = q.toLowerCase();
+            const matchesActivo = item!.nombreActivo
+              .toLowerCase()
+              .includes(qLower);
+            const matchesResidual = (item!.riesgoResidual ?? '')
+              .toLowerCase()
+              .includes(qLower);
+            if (!matchesActivo && !matchesResidual) return false;
+          }
+          return true;
+        });
+
+      // Sort by nombreActivo ASC
+      (
+        enriched as Array<{
+          _tipoControlId: number;
+          [key: string]: unknown;
+        }>
+      ).sort((a, b) =>
+        String(a.nombreActivo).localeCompare(String(b.nombreActivo)),
+      );
+
+      // Strip internal fields before return
+      return (enriched as Array<Record<string, unknown>>).map(
+        ({ _tipoControlId, ...rest }) =>
+          rest as unknown as TratamientoRiesgoReporteDto,
+      );
+    } catch (error) {
+      throw new HttpException(
+        `Error al obtener tratamiento de riesgo: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async exportTratamientoRiesgo(
+    filters: Record<string, string | undefined>,
+  ): Promise<Buffer> {
+    try {
+      const data = await this.getTratamientoRiesgo(filters);
+
+      const headers = [
+        'Impacto',
+        'Macroproceso',
+        'Nombre del Activo',
+        'Amenaza',
+        'Vulnerabilidad',
+        'Nivel Amenaza',
+        'Nivel Vulnerabilidad',
+        'Método Tratamiento',
+        'Evaluación Riesgo Control',
+        'Nivel Riesgo Control',
+        'Tipo Control',
+        'Riesgo Residual',
+        'Controles a Implementar',
+      ];
+
+      const rows = data.map((tr) => [
+        tr.impacto ?? '',
+        tr.macroProceso,
+        tr.nombreActivo,
+        tr.amenaza,
+        tr.vulnerabilidad,
+        tr.nivelAmenaza ?? '',
+        tr.nivelVulnerabilidad ?? '',
+        tr.metodoTratamiento ?? '',
+        tr.evaluacionRiesgoControl ?? '',
+        tr.nivelRiesgoControl ?? '',
+        tr.tipoControl ?? '',
+        tr.riesgoResidual ?? '',
+        tr.controlesImplementar ?? '',
+      ]);
+
+      const ws = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX_STYLE.utils.book_new();
+      XLSX_STYLE.utils.book_append_sheet(
+        wb,
+        ws,
+        'Tratamiento de Riesgo',
+      );
+
+      // Header styles
+      const headerStyle = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '4F46E5' }, patternType: 'solid' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      };
+
+      const range = XLSX_STYLE.utils.decode_range(ws['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: col });
+        if (ws[cellRef]) {
+          ws[cellRef].s = headerStyle;
+        }
+      }
+
+      // Auto-filter
+      const lastRow = data.length;
+      const lastCol = headers.length - 1;
+      const startRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: 0 });
+      const endRef = XLSX_STYLE.utils.encode_cell({ r: lastRow, c: lastCol });
+      ws['!autofilter'] = { ref: `${startRef}:${endRef}` };
+
+      // Auto-width columns
+      const colWidths = headers.map((h, idx) => {
+        const maxDataLen = Math.max(
+          h.length,
+          ...rows.map((r) => String(r[idx] ?? '').length),
+        );
+        return { wch: Math.min(Math.max(maxDataLen + 2, 10), 40) };
+      });
+      ws['!cols'] = colWidths;
+
+      const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
+      return Buffer.from(array);
+    } catch (error) {
+      throw new HttpException(
+        `Error al exportar tratamiento de riesgo: ${(error as Error).message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

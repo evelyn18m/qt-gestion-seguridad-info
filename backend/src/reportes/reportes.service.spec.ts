@@ -96,6 +96,7 @@ describe('ReportesService', () => {
     amenaza: { findMany: jest.Mock };
     vulnerabilidad: { findMany: jest.Mock };
     riesgo: { findMany: jest.Mock };
+    tipoControl: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -116,6 +117,7 @@ describe('ReportesService', () => {
       amenaza: { findMany: jest.fn().mockResolvedValue([]) },
       vulnerabilidad: { findMany: jest.fn().mockResolvedValue([]) },
       riesgo: { findMany: jest.fn().mockResolvedValue([]) },
+      tipoControl: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -894,6 +896,358 @@ describe('ReportesService', () => {
       const result = await service.getEvaluacionRiesgo({});
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('getTratamientoRiesgo', () => {
+    it('debe resolver macroProcesoId → VA IDs y retornar [] si no hay coincidencias', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({ macroProcesoId: '999' });
+
+      expect(result).toEqual([]);
+      expect(prisma.valoracionActivo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ macroProcesoId: 999 }),
+          select: expect.objectContaining({ id: true }),
+        }),
+      );
+    });
+
+    it('debe filtrar en memoria por tipoControlId', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1, impacto: null },
+        { id: 2, nombreActivo: 'Servidor B', macroProcesoId: 1, impacto: null },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1, tipoControlId: 1,
+          amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+        makeDr({ id: 2, valoracionActivoId: 2, tipoControlId: 2,
+          amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Phishing', categoria: 'Técnica', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([
+        { id: 3, descripcion: 'Sin backups', categoria: 'Operativa', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Gestión TI' },
+      ]);
+      prisma.tipoControl.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Preventivo' },
+        { id: 2, nombre: 'Detectivo' },
+      ]);
+
+      const result = await service.getTratamientoRiesgo({ tipoControlId: '1' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
+      expect(result[0].tipoControl).toBe('Preventivo');
+    });
+
+    it('debe filtrar por nivelRiesgoControl de forma case-insensitive', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'A', macroProcesoId: 1, impacto: null },
+        { id: 2, nombreActivo: 'B', macroProcesoId: 1, impacto: null },
+        { id: 3, nombreActivo: 'C', macroProcesoId: 1, impacto: null },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1,
+          nivelRiesgoControl: 'Alto', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+        makeDr({ id: 2, valoracionActivoId: 2,
+          nivelRiesgoControl: 'ALTO', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+        makeDr({ id: 3, valoracionActivoId: 3,
+          nivelRiesgoControl: 'Bajo', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([
+        { id: 3, descripcion: 'V3', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({ nivelRiesgoControl: 'alto' });
+
+      expect(result).toHaveLength(2);
+      expect(result.map((r: { id: number }) => r.id).sort()).toEqual([1, 2]);
+    });
+
+    it('debe filtrar por riesgoResidual de forma case-insensitive', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'A', macroProcesoId: 1, impacto: null },
+        { id: 2, nombreActivo: 'B', macroProcesoId: 1, impacto: null },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1,
+          riesgoResidual: 'ACEPTABLE', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+        makeDr({ id: 2, valoracionActivoId: 2,
+          riesgoResidual: 'INACEPTABLE', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([
+        { id: 3, descripcion: 'V3', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({ riesgoResidual: 'aceptable' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].riesgoResidual).toBe('ACEPTABLE');
+    });
+
+    it('debe filtrar por q en nombreActivo (OR search)', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor Producción', macroProcesoId: 1, impacto: null },
+        { id: 2, nombreActivo: 'Estación Trabajo', macroProcesoId: 1, impacto: null },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1,
+          riesgoResidual: 'INACEPTABLE', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+        makeDr({ id: 2, valoracionActivoId: 2,
+          riesgoResidual: 'ACEPTABLE', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([
+        { id: 3, descripcion: 'V3', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({ q: 'servidor' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].nombreActivo).toBe('Servidor Producción');
+    });
+
+    it('debe filtrar por q en riesgoResidual (OR search)', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Router', macroProcesoId: 1, impacto: null },
+        { id: 2, nombreActivo: 'Switch', macroProcesoId: 1, impacto: null },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        makeDr({ id: 1, valoracionActivoId: 1,
+          riesgoResidual: 'INACEPTABLE', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+        makeDr({ id: 2, valoracionActivoId: 2,
+          riesgoResidual: 'ACEPTABLE', amenazaIds: '[1]', vulnerabilidadIds: '[3]' }),
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([
+        { id: 3, descripcion: 'V3', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({ q: 'inacep' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].riesgoResidual).toBe('INACEPTABLE');
+    });
+
+    it('debe enriquecer todas las columnas correctamente con nivelAmenaza, nivelVulnerabilidad y controlesImplementar', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        {
+          id: 10, nombreActivo: 'Servidor X', macroProcesoId: 10,
+          confidencialidadId: 1, integridadId: 2, disponibilidadId: 3,
+          impacto: 3.5,
+        },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        {
+          ...makeDr({
+            id: 100, valoracionActivoId: 10,
+            riesgoId: 1, vulnerabilidadRiesgoId: 2,
+            amenazaIds: '[1]', vulnerabilidadIds: '[2]',
+            metodoTratamiento: 'MITIGAR', evaluacionRiesgoControl: 3.0,
+            nivelRiesgoControl: 'Bajo', tipoControlId: 1,
+            riesgoResidual: 'ACEPTABLE',
+          }),
+          controlesImplementar: {
+            id: 5, seccion: 'A.1', descripcion: 'Control de acceso',
+            categoriaId: 1,
+            categoria: { id: 1, nombre: 'Técnicos' },
+          },
+        },
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([
+        makeRiesgo(1, 'Alto', 3),
+        makeRiesgo(2, 'Bajo', 1),
+      ]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Phishing', categoria: 'Técnica', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([
+        { id: 2, descripcion: 'Sin backups', categoria: 'Operativa', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([
+        { id: 10, nombre: 'Gestión TI' },
+      ]);
+      prisma.tipoControl.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Preventivo', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+
+      const result = await service.getTratamientoRiesgo({});
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: 100,
+        nombreActivo: 'Servidor X',
+        macroProceso: 'Gestión TI',
+        amenaza: 'Phishing',
+        vulnerabilidad: 'Sin backups',
+        nivelAmenaza: 'Alto',
+        nivelVulnerabilidad: 'Bajo',
+        impacto: 3.5,
+        metodoTratamiento: 'MITIGAR',
+        evaluacionRiesgoControl: 3.0,
+        nivelRiesgoControl: 'Bajo',
+        tipoControl: 'Preventivo',
+        riesgoResidual: 'ACEPTABLE',
+        controlesImplementar: 'Control de acceso',
+      });
+    });
+
+    it('debe retornar array vacío cuando no hay DetalleRiesgo', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({});
+
+      expect(result).toEqual([]);
+    });
+
+    it('debe manejar JSON malformado en amenazaIds/vulnerabilidadIds devolviendo string vacío', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1,
+          confidencialidadId: 1, integridadId: 1, disponibilidadId: 1, impacto: null },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        { ...makeDr({
+          id: 1, valoracionActivoId: 1,
+          amenazaIds: '{bad', vulnerabilidadIds: 'also-invalid',
+        }), controlesImplementar: null },
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'Gestión TI' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({});
+
+      expect(result).toHaveLength(1);
+      expect(result[0].amenaza).toBe('');
+      expect(result[0].vulnerabilidad).toBe('');
+    });
+
+    it('debe lanzar HttpException 500 si Prisma falla', async () => {
+      prisma.valoracionActivo.findMany.mockRejectedValue(
+        new Error('Connection lost'),
+      );
+
+      await expect(
+        service.getTratamientoRiesgo({ macroProcesoId: '1' }),
+      ).rejects.toThrow(HttpException);
+      await expect(
+        service.getTratamientoRiesgo({ macroProcesoId: '1' }),
+      ).rejects.toMatchObject({
+        status: 500,
+      });
+    });
+
+    it('debe ordenar resultados por nombreActivo ASC', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 2, nombreActivo: 'Servidor B', macroProcesoId: 1,
+          confidencialidadId: 1, integridadId: 1, disponibilidadId: 1, impacto: null },
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1,
+          confidencialidadId: 1, integridadId: 1, disponibilidadId: 1, impacto: null },
+        { id: 3, nombreActivo: 'Activo C', macroProcesoId: 1,
+          confidencialidadId: 1, integridadId: 1, disponibilidadId: 1, impacto: null },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        { ...makeDr({ id: 1, valoracionActivoId: 1,
+          amenazaIds: '[1]', vulnerabilidadIds: '[3]' }), controlesImplementar: null },
+        { ...makeDr({ id: 2, valoracionActivoId: 2,
+          amenazaIds: '[1]', vulnerabilidadIds: '[3]' }), controlesImplementar: null },
+        { ...makeDr({ id: 3, valoracionActivoId: 3,
+          amenazaIds: '[1]', vulnerabilidadIds: '[3]' }), controlesImplementar: null },
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'A1', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([
+        { id: 3, descripcion: 'V3', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([]);
+
+      const result = await service.getTratamientoRiesgo({});
+
+      expect(result).toHaveLength(3);
+      expect(result[0].nombreActivo).toBe('Activo C');
+      expect(result[1].nombreActivo).toBe('Servidor A');
+      expect(result[2].nombreActivo).toBe('Servidor B');
+    });
+
+    it('debe combinar los 5 filtros simultáneamente', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        { id: 1, nombreActivo: 'Servidor A', macroProcesoId: 1,
+          confidencialidadId: 1, integridadId: 1, disponibilidadId: 1, impacto: 2.5 },
+        { id: 2, nombreActivo: 'Servidor B', macroProcesoId: 1,
+          confidencialidadId: 1, integridadId: 1, disponibilidadId: 1, impacto: 1.0 },
+      ]);
+      prisma.detalleRiesgo.findMany.mockResolvedValue([
+        { ...makeDr({ id: 1, valoracionActivoId: 1,
+          nivelRiesgoControl: 'ALTO', tipoControlId: 1,
+          riesgoResidual: 'ACEPTABLE', metodoTratamiento: 'MITIGAR',
+          amenazaIds: '[1]', vulnerabilidadIds: '[3]' }), controlesImplementar: null },
+        { ...makeDr({ id: 2, valoracionActivoId: 2,
+          nivelRiesgoControl: 'BAJO', tipoControlId: 2,
+          riesgoResidual: 'INACEPTABLE', metodoTratamiento: 'EVITAR',
+          amenazaIds: '[1]', vulnerabilidadIds: '[3]' }), controlesImplementar: null },
+      ]);
+      prisma.riesgo.findMany.mockResolvedValue([]);
+      prisma.amenaza.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Phishing', categoria: 'X', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.vulnerabilidad.findMany.mockResolvedValue([
+        { id: 3, descripcion: 'Sin parches', categoria: 'Y', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      prisma.macroProceso.findMany.mockResolvedValue([{ id: 1, nombre: 'MP' }]);
+      prisma.tipoControl.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Preventivo', createdAt: new Date(), updatedAt: new Date() },
+        { id: 2, nombre: 'Detectivo', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+
+      const result = await service.getTratamientoRiesgo({
+        macroProcesoId: '1',
+        tipoControlId: '1',
+        nivelRiesgoControl: 'alto',
+        riesgoResidual: 'aceptable',
+        q: 'Servidor',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
+      expect(result[0].nombreActivo).toBe('Servidor A');
+      expect(result[0].nivelRiesgoControl).toBe('ALTO');
+      expect(result[0].riesgoResidual).toBe('ACEPTABLE');
+      expect(result[0].tipoControl).toBe('Preventivo');
     });
   });
 

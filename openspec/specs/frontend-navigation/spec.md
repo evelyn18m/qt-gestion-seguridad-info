@@ -82,32 +82,40 @@ The application MUST NOT reference components that are not registered or importe
 - WHEN any page in the application loads
 - THEN the browser console MUST NOT show component resolution errors for `UiCard`, `UiCardHeader`, `UiCardTitle`, or `UiCardContent`
 
-### Requirement: ReportesTabs Component Includes Evaluación de Riesgo Tab
+### Requirement: ReportesTabs Component Includes Four Report Tabs
 
 > **Added by change**: `reporte-evaluacion-riesgo` (2026-06-12)
+> **Modified by change**: `reporte-tratamiento-riesgo` (2026-06-12)
+> (Previously: Component had three tabs: Valoración → Análisis → Evaluación)
 
-The `ReportesTabs.vue` component MUST include a third tab labeled "Evaluación de Riesgo" linking to `/reportes/evaluacion-riesgo`. The tab order SHALL be: Valoración de Activos → Análisis de Riesgo → Evaluación de Riesgo.
+The `ReportesTabs.vue` component MUST include four tabs. The tab order SHALL be: Valoración de Activos → Análisis de Riesgo → Evaluación de Riesgo → Tratamiento de Riesgo.
 
-#### Scenario: Third tab renders in component
+#### Scenario: Four tab links render
 
 - GIVEN the user is on any `/reportes/*` page
 - WHEN `ReportesTabs.vue` renders
-- THEN three `<NuxtLink>` elements are present
-- AND the third link has `to="/reportes/evaluacion-riesgo"` with text "Evaluación de Riesgo"
+- THEN four `<NuxtLink>` elements are present
+- AND the fourth link has `to="/reportes/tratamiento-riesgo"` with text "Tratamiento de Riesgo"
 
 #### Scenario: Active tab highlights correctly
 
 - GIVEN the user is on `/reportes/evaluacion-riesgo`
 - WHEN `ReportesTabs` renders
 - THEN only the "Evaluación de Riesgo" tab has the `active` class
-- AND the other two tabs do NOT have the `active` class
+- AND the other three tabs do NOT have the `active` class
+
+#### Scenario: Fourth tab active highlights correctly
+
+- GIVEN the user is on `/reportes/tratamiento-riesgo`
+- WHEN `ReportesTabs` renders
+- THEN only the "Tratamiento de Riesgo" tab has the `active` class
 
 #### Scenario: Tab navigation preserves filter state per tab
 
 - GIVEN the user has applied filters on the Valoración page
-- WHEN they click "Evaluación de Riesgo" tab
-- THEN they navigate to `/reportes/evaluacion-riesgo`
-- AND the Evaluación page loads with its own default (unfiltered) state
+- WHEN they click "Tratamiento de Riesgo" tab
+- THEN they navigate to `/reportes/tratamiento-riesgo`
+- AND the Tratamiento page loads with its own default (unfiltered) state
 - AND returning to Valoración tab preserves the previous filter state
 
 ---

@@ -11,6 +11,7 @@ import {
   ValoracionActivoReporteDto,
   AnalisisRiesgoActivoDto,
   EvaluacionRiesgoReporteDto,
+  TratamientoRiesgoReporteDto,
 } from './dto/reporte-response.dto';
 
 @Controller('reportes')
@@ -41,6 +42,31 @@ export class ReportesController {
           ruta: 'GET /reportes/cia',
           descripcion:
             'Distribución de niveles CIA (Confidencialidad, Integridad, Disponibilidad)',
+        },
+        {
+          ruta: 'GET /reportes/valoracion-activos',
+          descripcion:
+            'Reporte de valoración de activos con filtros y búsqueda',
+        },
+        {
+          ruta: 'GET /reportes/analisis-riesgo-activos',
+          descripcion:
+            'Análisis de riesgo de activos con amenazas y vulnerabilidades',
+        },
+        {
+          ruta: 'GET /reportes/evaluacion-riesgo',
+          descripcion:
+            'Evaluación de riesgo con CIA, niveles y controles de área',
+        },
+        {
+          ruta: 'GET /reportes/tratamiento-riesgo',
+          descripcion:
+            'Reporte de tratamiento de riesgo con 13 columnas y filtros',
+        },
+        {
+          ruta: 'GET /reportes/tratamiento-riesgo/export',
+          descripcion:
+            'Exportación Excel del reporte de tratamiento de riesgo',
         },
       ],
     };
@@ -143,6 +169,32 @@ export class ReportesController {
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="evaluacion-riesgo-${new Date().toISOString().split('T')[0]}.xlsx"`,
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.write(buffer);
+    res.end();
+  }
+
+  @Get('tratamiento-riesgo')
+  getTratamientoRiesgo(
+    @Query() query: Record<string, string | undefined>,
+  ): Promise<TratamientoRiesgoReporteDto[]> {
+    return this.reportesService.getTratamientoRiesgo(query);
+  }
+
+  @Get('tratamiento-riesgo/export')
+  async exportTratamientoRiesgo(
+    @Query() query: Record<string, string | undefined>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.reportesService.exportTratamientoRiesgo(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="tratamiento-riesgo-${new Date().toISOString().split('T')[0]}.xlsx"`,
     );
     res.setHeader('Content-Length', buffer.length);
     res.write(buffer);

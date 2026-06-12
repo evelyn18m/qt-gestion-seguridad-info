@@ -187,3 +187,20 @@ export interface EvaluacionRiesgoReporte {
     nivelRiesgo: string | null
     controlesArea: string | null
 }
+
+export interface TratamientoRiesgoReporte {
+    id: number
+    nombreActivo: string
+    macroProceso: string
+    amenaza: string
+    vulnerabilidad: string
+    nivelAmenaza: string | null
+    nivelVulnerabilidad: string | null
+    impacto: number | null
+    metodoTratamiento: string | null
+    evaluacionRiesgoControl: number | null
+    nivelRiesgoControl: string | null
+    tipoControl: string | null
+    riesgoResidual: string | null
+    controlesImplementar: string | null
+}
