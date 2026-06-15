@@ -273,9 +273,13 @@ async function main() {
 
   // --- Probabilidades ---
   console.log('Seeding Probabilidades...');
-  const probabilidades = ['Bajo', 'Medio', 'Alto'];
+  const probabilidades = [
+    { nombre: 'Bajo', valor: 1 },
+    { nombre: 'Medio', valor: 2 },
+    { nombre: 'Alto', valor: 3 },
+  ];
   for (const p of probabilidades) {
-    await prisma.probabilidad.create({ data: { nombre: p } });
+    await prisma.probabilidad.create({ data: p });
   }
 
   console.log('Seeding completed!');

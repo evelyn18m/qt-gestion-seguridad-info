@@ -12,8 +12,22 @@ import {
   AnalisisRiesgoActivoDto,
   EvaluacionRiesgoReporteDto,
   TratamientoRiesgoReporteDto,
+  HeatmapSerieDto,
+  HeatmapCellDto,
 } from './dto/reporte-response.dto';
 import * as XLSX_STYLE from 'xlsx-js-style';
+
+const PROBABILIDAD_LABELS: Record<number, string> = {
+  1: '1. Bajo',
+  2: '2. Medio',
+  3: '3. Alto',
+};
+
+const IMPACTO_LABELS: Record<number, string> = {
+  1: '1. Bajo',
+  2: '2. Medio',
+  3: '3. Alto',
+};
 
 @Injectable()
 export class ReportesService {
@@ -270,6 +284,62 @@ export class ReportesService {
     } catch (error) {
       throw new HttpException(
         `Error al obtener reporte CIA: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getHeatmap(): Promise<HeatmapSerieDto[]> {
+    try {
+      const [vas, impactos, probabilidades] = await Promise.all([
+        this.prisma.valoracionActivo.findMany(),
+        this.prisma.impacto.findMany(),
+        this.prisma.probabilidad.findMany(),
+      ]);
+
+      const impactoMap = new Map(impactos.map((i) => [i.id, i.valor]));
+      const probMap = new Map(
+        probabilidades.map((p) => [p.id, p.valor]),
+      );
+
+      const filtered = vas.filter((va) => va.probabilidadId != null);
+
+      const cellMap: Record<string, number> = {};
+      for (let i = 1; i <= 3; i++) {
+        for (let p = 1; p <= 3; p++) {
+          cellMap[`${i}_${p}`] = 0;
+        }
+      }
+
+      for (const va of filtered) {
+        const impacto = Math.max(
+          impactoMap.get(va.confidencialidadId) ?? 0,
+          impactoMap.get(va.integridadId) ?? 0,
+          impactoMap.get(va.disponibilidadId) ?? 0,
+        );
+        const prob = probMap.get(va.probabilidadId!) ?? 1;
+        cellMap[`${impacto}_${prob}`]++;
+      }
+
+      const series: HeatmapSerieDto[] = [];
+      for (let i = 3; i >= 1; i--) {
+        const data: HeatmapCellDto[] = [];
+        for (let p = 1; p <= 3; p++) {
+          data.push({
+            x: PROBABILIDAD_LABELS[p],
+            y: cellMap[`${i}_${p}`],
+          });
+        }
+        series.push({
+          name: IMPACTO_LABELS[i],
+          data,
+        });
+      }
+
+      return series;
+    } catch (error) {
+      throw new HttpException(
+        `Error al obtener mapa de calor: ${(error as Error).message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

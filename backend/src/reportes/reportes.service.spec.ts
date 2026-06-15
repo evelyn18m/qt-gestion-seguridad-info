@@ -83,6 +83,14 @@ const makeImpacto = (
   updatedAt: new Date(),
 });
 
+const makeProbabilidad = (id: number, nombre: string, valor: number) => ({
+  id,
+  nombre,
+  valor,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
 describe('ReportesService', () => {
   let service: ReportesService;
   let prisma: {
@@ -97,6 +105,7 @@ describe('ReportesService', () => {
     vulnerabilidad: { findMany: jest.Mock };
     riesgo: { findMany: jest.Mock };
     tipoControl: { findMany: jest.Mock };
+    probabilidad: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -118,6 +127,7 @@ describe('ReportesService', () => {
       vulnerabilidad: { findMany: jest.fn().mockResolvedValue([]) },
       riesgo: { findMany: jest.fn().mockResolvedValue([]) },
       tipoControl: { findMany: jest.fn().mockResolvedValue([]) },
+      probabilidad: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -1582,6 +1592,156 @@ describe('ReportesService', () => {
       expect(result).toHaveLength(2);
       expect(result[0].nombreActivo).toBe('Servidor A');
       expect(result[1].nombreActivo).toBe('Servidor B');
+    });
+  });
+
+  describe('getHeatmap', () => {
+    const mockImpactos = [
+      makeImpacto(1, 'Confidencialidad', 'Bajo', 1),
+      makeImpacto(2, 'Confidencialidad', 'Medio', 2),
+      makeImpacto(3, 'Confidencialidad', 'Alto', 3),
+      makeImpacto(4, 'Integridad', 'Bajo', 1),
+      makeImpacto(5, 'Integridad', 'Medio', 2),
+      makeImpacto(6, 'Integridad', 'Alto', 3),
+      makeImpacto(7, 'Disponibilidad', 'Bajo', 1),
+      makeImpacto(8, 'Disponibilidad', 'Medio', 2),
+      makeImpacto(9, 'Disponibilidad', 'Alto', 3),
+    ];
+
+    const mockProbabilidades = [
+      makeProbabilidad(1, 'Bajo', 1),
+      makeProbabilidad(2, 'Medio', 2),
+      makeProbabilidad(3, 'Alto', 3),
+    ];
+
+    beforeEach(() => {
+      prisma.impacto.findMany.mockResolvedValue(mockImpactos);
+      prisma.probabilidad.findMany.mockResolvedValue(mockProbabilidades);
+    });
+
+    it('debe retornar matriz 3x3 con todos ceros cuando no hay activos', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([]);
+
+      const result = await service.getHeatmap();
+
+      expect(result).toHaveLength(3);
+      expect(result[0].name).toBe('3. Alto');
+      expect(result[1].name).toBe('2. Medio');
+      expect(result[2].name).toBe('1. Bajo');
+
+      for (const serie of result) {
+        expect(serie.data).toHaveLength(3);
+        for (const cell of serie.data) {
+          expect(cell.y).toBe(0);
+        }
+      }
+    });
+
+    it('debe excluir activos con probabilidadId null', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        makeVa({
+          id: 1,
+          probabilidadId: null,
+          confidencialidadId: 3,
+          integridadId: 3,
+          disponibilidadId: 3,
+        }),
+      ]);
+
+      const result = await service.getHeatmap();
+
+      expect(result).toHaveLength(3);
+      for (const serie of result) {
+        for (const cell of serie.data) {
+          expect(cell.y).toBe(0);
+        }
+      }
+    });
+
+    it('debe contar correctamente activos con distintos impactos y probabilidades', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        // Activo 1: conf=2, int=1, disp=1 → max=2=Medio, prob=1=Bajo → [2][1]
+        makeVa({ id: 1, probabilidadId: 1, confidencialidadId: 2, integridadId: 1, disponibilidadId: 1 }),
+        // Activo 2: conf=1, int=3, disp=1 → max=3=Alto, prob=2=Medio → [3][2]
+        makeVa({ id: 2, probabilidadId: 2, confidencialidadId: 1, integridadId: 6, disponibilidadId: 1 }),
+        // Activo 3: conf=1, int=1, disp=1 → max=1=Bajo, prob=3=Alto → [1][3]
+        makeVa({ id: 3, probabilidadId: 3, confidencialidadId: 1, integridadId: 1, disponibilidadId: 1 }),
+      ]);
+
+      const result = await service.getHeatmap();
+
+      // Serie 0 = impacto 3 (Alto) → data[1] prob=2 → cell y=1
+      const serieAlto = result.find((s) => s.name === '3. Alto');
+      expect(serieAlto).toBeDefined();
+      const cell32 = serieAlto!.data.find((c) => c.x === '2. Medio');
+      expect(cell32).toBeDefined();
+      expect(cell32!.y).toBe(1);
+
+      // Serie 1 = impacto 2 (Medio) → data[0] prob=1 → cell y=1
+      const serieMedio = result.find((s) => s.name === '2. Medio');
+      expect(serieMedio).toBeDefined();
+      const cell21 = serieMedio!.data.find((c) => c.x === '1. Bajo');
+      expect(cell21).toBeDefined();
+      expect(cell21!.y).toBe(1);
+
+      // Serie 2 = impacto 1 (Bajo) → data[2] prob=3 → cell y=1
+      const serieBajo = result.find((s) => s.name === '1. Bajo');
+      expect(serieBajo).toBeDefined();
+      const cell13 = serieBajo!.data.find((c) => c.x === '3. Alto');
+      expect(cell13).toBeDefined();
+      expect(cell13!.y).toBe(1);
+
+      // Total count should be 3
+      const totalCount = result.reduce(
+        (sum, s) => sum + s.data.reduce((s2, c) => s2 + c.y, 0),
+        0,
+      );
+      expect(totalCount).toBe(3);
+    });
+
+    it('debe ubicar un activo en la celda correcta (impacto=3, prob=3)', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        // conf=3, int=6→Alto, disp=7→Bajo → max=3=Alto, prob=3=Alto → [3][3]
+        makeVa({
+          id: 1,
+          probabilidadId: 3,
+          confidencialidadId: 3,
+          integridadId: 4,
+          disponibilidadId: 7,
+        }),
+      ]);
+
+      const result = await service.getHeatmap();
+
+      // impactoFinal = max(3,1,1) = 3 → "3. Alto" series
+      // probabilidadId=3 → valor 3 → "3. Alto" column
+      const serieAlto = result.find((s) => s.name === '3. Alto');
+      expect(serieAlto).toBeDefined();
+
+      const cell33 = serieAlto!.data.find((c) => c.x === '3. Alto');
+      expect(cell33).toBeDefined();
+      expect(cell33!.y).toBe(1);
+
+      // All other cells should be 0
+      const otherCells = result.flatMap((s) =>
+        s.data.filter(
+          (c) => !(s.name === '3. Alto' && c.x === '3. Alto'),
+        ),
+      );
+      for (const c of otherCells) {
+        expect(c.y).toBe(0);
+      }
+    });
+
+    it('debe lanzar HttpException 500 si Prisma falla', async () => {
+      prisma.valoracionActivo.findMany.mockRejectedValue(
+        new Error('Connection lost'),
+      );
+
+      await expect(service.getHeatmap()).rejects.toThrow(HttpException);
+      await expect(service.getHeatmap()).rejects.toMatchObject({
+        status: 500,
+      });
     });
   });
 });

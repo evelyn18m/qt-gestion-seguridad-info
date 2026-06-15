@@ -12,6 +12,7 @@ import {
   AnalisisRiesgoActivoDto,
   EvaluacionRiesgoReporteDto,
   TratamientoRiesgoReporteDto,
+  HeatmapReporteDto,
 } from './dto/reporte-response.dto';
 
 @Controller('reportes')
@@ -67,6 +68,11 @@ export class ReportesController {
           ruta: 'GET /reportes/tratamiento-riesgo/export',
           descripcion:
             'Exportación Excel del reporte de tratamiento de riesgo',
+        },
+        {
+          ruta: 'GET /reportes/heatmap',
+          descripcion:
+            'Mapa de calor 3x3 de riesgos (Probabilidad × Impacto)',
         },
       ],
     };
@@ -180,6 +186,11 @@ export class ReportesController {
     @Query() query: Record<string, string | undefined>,
   ): Promise<TratamientoRiesgoReporteDto[]> {
     return this.reportesService.getTratamientoRiesgo(query);
+  }
+
+  @Get('heatmap')
+  getHeatmap(): Promise<HeatmapReporteDto> {
+    return this.reportesService.getHeatmap();
   }
 
   @Get('tratamiento-riesgo/export')

@@ -85,6 +85,18 @@ export class EvaluacionRiesgoReporteDto {
   controlesArea: string | null;
 }
 
+export class HeatmapCellDto {
+  x: string;
+  y: number;
+}
+
+export class HeatmapSerieDto {
+  name: string;
+  data: HeatmapCellDto[];
+}
+
+export type HeatmapReporteDto = HeatmapSerieDto[];
+
 export class TratamientoRiesgoReporteDto {
   id: number;
   nombreActivo: string;

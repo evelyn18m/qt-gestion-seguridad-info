@@ -18,6 +18,7 @@ describe('ReportesController', () => {
     exportEvaluacionRiesgo: jest.Mock;
     getTratamientoRiesgo: jest.Mock;
     exportTratamientoRiesgo: jest.Mock;
+    getHeatmap: jest.Mock;
   };
 
   const mockResumen = {
@@ -125,6 +126,33 @@ describe('ReportesController', () => {
     },
   ];
 
+  const mockHeatmap = [
+    {
+      name: '3. Alto',
+      data: [
+        { x: '1. Bajo', y: 0 },
+        { x: '2. Medio', y: 1 },
+        { x: '3. Alto', y: 2 },
+      ],
+    },
+    {
+      name: '2. Medio',
+      data: [
+        { x: '1. Bajo', y: 3 },
+        { x: '2. Medio', y: 0 },
+        { x: '3. Alto', y: 1 },
+      ],
+    },
+    {
+      name: '1. Bajo',
+      data: [
+        { x: '1. Bajo', y: 0 },
+        { x: '2. Medio', y: 0 },
+        { x: '3. Alto', y: 0 },
+      ],
+    },
+  ];
+
   beforeEach(async () => {
     service = {
       getResumen: jest.fn().mockResolvedValue(mockResumen),
@@ -144,6 +172,7 @@ describe('ReportesController', () => {
       exportEvaluacionRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
       getTratamientoRiesgo: jest.fn().mockResolvedValue(mockTratamientoRiesgo),
       exportTratamientoRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
+      getHeatmap: jest.fn().mockResolvedValue(mockHeatmap),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -418,6 +447,38 @@ describe('ReportesController', () => {
       } as any;
       await controller.exportTratamientoRiesgo(query, mockRes);
       expect(service.exportTratamientoRiesgo).toHaveBeenCalledWith(query);
+    });
+  });
+
+  describe('GET /reportes/heatmap', () => {
+    it('debe retornar 200 con shape correcto de HeatmapReporteDto', async () => {
+      const result = await controller.getHeatmap();
+
+      expect(service.getHeatmap).toHaveBeenCalled();
+      expect(result).toEqual(mockHeatmap);
+      expect(result).toHaveLength(3);
+      expect(result[0]).toHaveProperty('name');
+      expect(result[0]).toHaveProperty('data');
+      expect(result[0].data).toHaveLength(3);
+      expect(result[0].data[0]).toHaveProperty('x');
+      expect(result[0].data[0]).toHaveProperty('y');
+    });
+
+    it('debe delegar al servicio getHeatmap', async () => {
+      await controller.getHeatmap();
+      expect(service.getHeatmap).toHaveBeenCalled();
+    });
+
+    it('debe incluir ruta heatmap en el indice de endpoints', () => {
+      const result = controller.getIndice();
+
+      const heatmapEntry = result.endpoints.find(
+        (e) => e.ruta === 'GET /reportes/heatmap',
+      );
+      expect(heatmapEntry).toBeDefined();
+      expect(heatmapEntry!.descripcion).toBe(
+        'Mapa de calor 3x3 de riesgos (Probabilidad × Impacto)',
+      );
     });
   });
 });
