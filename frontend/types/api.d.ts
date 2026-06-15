@@ -204,3 +204,15 @@ export interface TratamientoRiesgoReporte {
     riesgoResidual: string | null
     controlesImplementar: string | null
 }
+
+// ── Heatmap module ────────────────────────────────────────────────────────────
+
+export interface HeatmapCellDto {
+    x: string   // "1. Bajo" | "2. Medio" | "3. Alto"
+    y: number   // cell count
+}
+
+export interface HeatmapSerieDto {
+    name: string            // series label (e.g. "Conteo")
+    data: HeatmapCellDto[]  // 9 cells (3×3)
+}

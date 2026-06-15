@@ -10,10 +10,12 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "apexcharts": "^5.15.0",
     "keycloak-js": "^26.2.4",
     "nuxt": "^4.4.4",
     "vue": "^3.5.33",
-    "vue-router": "^5.0.6"
+    "vue-router": "^5.0.6",
+    "vue3-apexcharts": "^1.11.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.1"
