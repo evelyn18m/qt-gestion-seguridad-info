@@ -1,6 +1,7 @@
 project: qt-gestion-seguridad-info
 description: SGSI (Sistema de Gestión de Seguridad de la Información) — monorepo with NestJS backend and Nuxt 4 frontend
 initialized: 2026-05-27
+re-detected: 2026-06-15
 mode: hybrid
 
 context:
