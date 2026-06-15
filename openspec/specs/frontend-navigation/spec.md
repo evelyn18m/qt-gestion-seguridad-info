@@ -125,6 +125,30 @@ The `ReportesTabs.vue` component MUST include five tabs. The tab order SHALL be:
 - AND the heatmap page loads with its own default (unfiltered) state
 - AND returning to Valoración tab preserves the previous filter state
 
+### Requirement: Sidebar Parametrización Link
+
+> **Added by change**: `modulo-parametrizacion` (2026-06-15)
+
+The sidebar MUST include a `NuxtLink` to `/parametrizacion` between "Valoración de Activos" and "Reportes".
+
+#### Scenario: Parametrización link renders
+
+- GIVEN the sidebar is rendered on any page
+- WHEN inspecting the nav items
+- THEN a `NuxtLink to="/parametrizacion"` with label "Parametrización" is present between "Valoración de Activos" and "Reportes"
+
+#### Scenario: Active state highlights correctly
+
+- GIVEN the user is on `/parametrizacion`
+- WHEN the sidebar renders
+- THEN the Parametrización link has the `active` class
+
+#### Scenario: Link navigates correctly
+
+- GIVEN the user is on any page
+- WHEN they click the Parametrización sidebar link
+- THEN they navigate to `/parametrizacion`
+
 ---
 
 ## 3. Expected Behavior After Fix
