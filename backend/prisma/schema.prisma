@@ -193,6 +193,19 @@ model CategoriaControlesImplementar {
   controlesImplementar ControlesImplementar[]
 }
 
+model ConfiguracionRiesgo {
+  id                   Int      @id @default(autoincrement())
+  riesgoBajoMax        Int      @default(3)
+  riesgoMedioMax       Int      @default(9)
+  riesgoAltoMax        Int      @default(27)
+  controlBajoMax       Int      @default(3)
+  controlMedioMax      Int      @default(9)
+  controlAltoMax       Int      @default(27)
+  residualAceptableMax Int      @default(3)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
 model ControlesImplementar {
   id             Int                           @id @default(autoincrement())
   seccion        String                        @unique

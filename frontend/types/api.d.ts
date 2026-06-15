@@ -216,3 +216,16 @@ export interface HeatmapSerieDto {
     name: string            // series label (e.g. "Conteo")
     data: HeatmapCellDto[]  // 9 cells (3×3)
 }
+
+// ── Parametros module ───────────────────────────────────────────────────────────
+
+export interface ConfiguracionRiesgo {
+    id: number
+    riesgoBajoMax: number
+    riesgoMedioMax: number
+    riesgoAltoMax: number
+    controlBajoMax: number
+    controlMedioMax: number
+    controlAltoMax: number
+    residualAceptableMax: number
+}

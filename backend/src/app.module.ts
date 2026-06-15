@@ -7,9 +7,10 @@ import { ValoracionesModule } from './valoraciones/valoraciones.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/auth.guard';
 import { ReportesModule } from './reportes/reportes.module';
+import { ParametrosModule } from './parametros/parametros.module';
 
 @Module({
-  imports: [CatalogosModule, ValoracionesModule, AuthModule, ReportesModule],
+  imports: [CatalogosModule, ValoracionesModule, AuthModule, ReportesModule, ParametrosModule],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: AuthGuard }],
 })
