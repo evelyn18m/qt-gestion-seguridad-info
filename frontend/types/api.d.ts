@@ -217,6 +217,14 @@ export interface HeatmapSerieDto {
     data: HeatmapCellDto[]  // 9 cells (3×3)
 }
 
+export interface HeatmapCellDetail {
+    id: number
+    nombreActivo: string
+    macroProceso: string
+    nivelRiesgo: string | null
+    evaluacionRiesgo: number | null
+}
+
 // ── Parametros module ───────────────────────────────────────────────────────────
 
 export interface ConfiguracionRiesgo {
