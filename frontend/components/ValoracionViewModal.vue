@@ -45,7 +45,6 @@ function getCiaLevel(avg: number) {
 
 function getNivelStyle(nivel: string) {
   const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return {label: 'Crítico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)'}
   if (n.includes('alto')) return {label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)'}
   if (n.includes('medio')) return {label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)'}
   return {label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)'}
@@ -53,14 +52,12 @@ function getNivelStyle(nivel: string) {
 
 function getMaxNivelIndex(nivel: string) {
   const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return 4
   if (n.includes('alto')) return 3
   if (n.includes('medio')) return 2
   return 1
 }
 
 function getNivelFromIndex(idx: number) {
-  if (idx >= 4) return 'Crítico'
   if (idx >= 3) return 'Alto'
   if (idx >= 2) return 'Medio'
   return 'Bajo'

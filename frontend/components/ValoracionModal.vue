@@ -475,15 +475,14 @@ function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilid
 }
 
 function calcularNivelRiesgo(evaluacion: number) {
-  if (evaluacion >= 18) return 'Crítico'
-  if (evaluacion >= 9) return 'Alto'
-  if (evaluacion >= 3) return 'Medio'
-  return 'Bajo'
+  if (evaluacion <= 3) return 'BAJO'
+  if (evaluacion <= 8) return 'MEDIO'
+  if (evaluacion <= 27) return 'ALTO'
+  return 'ALTO'
 }
 
 function getNivelStyle(nivel: string) {
   const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return {label: 'Crítico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)'}
   if (n.includes('alto')) return {label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)'}
   if (n.includes('medio')) return {label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)'}
   return {label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)'}
