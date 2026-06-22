@@ -83,14 +83,6 @@ const makeImpacto = (
   updatedAt: new Date(),
 });
 
-const makeProbabilidad = (id: number, nombre: string, valor: number) => ({
-  id,
-  nombre,
-  valor,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-});
-
 describe('ReportesService', () => {
   let service: ReportesService;
   let prisma: {
@@ -2451,15 +2443,8 @@ describe('ReportesService', () => {
       makeImpacto(9, 'Disponibilidad', 'Alto', 3),
     ];
 
-    const mockProbabilidades = [
-      makeProbabilidad(1, 'Bajo', 1),
-      makeProbabilidad(2, 'Medio', 2),
-      makeProbabilidad(3, 'Alto', 3),
-    ];
-
     beforeEach(() => {
       prisma.impacto.findMany.mockResolvedValue(mockImpactos);
-      prisma.probabilidad.findMany.mockResolvedValue(mockProbabilidades);
     });
 
     it('debe retornar matriz 3x3 con todos ceros cuando no hay activos', async () => {
@@ -2480,11 +2465,12 @@ describe('ReportesService', () => {
       }
     });
 
-    it('debe excluir activos con probabilidadId null', async () => {
+    it('debe excluir activos con evaluacionRiesgo null', async () => {
       prisma.valoracionActivo.findMany.mockResolvedValue([
         makeVa({
           id: 1,
-          probabilidadId: null,
+          evaluacionRiesgo: null,
+          probabilidadId: 1,
           confidencialidadId: 3,
           integridadId: 3,
           disponibilidadId: 3,
@@ -2501,28 +2487,28 @@ describe('ReportesService', () => {
       }
     });
 
-    it('debe contar correctamente activos con distintos impactos y probabilidades', async () => {
+    it('debe contar correctamente activos con distintos impactos y evaluaciones de riesgo', async () => {
       prisma.valoracionActivo.findMany.mockResolvedValue([
-        // Activo 1: conf=2, int=1, disp=1 → max=2=Medio, prob=1=Bajo → [2][1]
+        // Activo 1: conf=2, int=1, disp=1 → max=2=Medio, eval=2=Bajo → [2][1]
         makeVa({
           id: 1,
-          probabilidadId: 1,
+          evaluacionRiesgo: 2,
           confidencialidadId: 2,
           integridadId: 1,
           disponibilidadId: 1,
         }),
-        // Activo 2: conf=1, int=3, disp=1 → max=3=Alto, prob=2=Medio → [3][2]
+        // Activo 2: conf=1, int=3, disp=1 → max=3=Alto, eval=6=Medio → [3][2]
         makeVa({
           id: 2,
-          probabilidadId: 2,
+          evaluacionRiesgo: 6,
           confidencialidadId: 1,
           integridadId: 6,
           disponibilidadId: 1,
         }),
-        // Activo 3: conf=1, int=1, disp=1 → max=1=Bajo, prob=3=Alto → [1][3]
+        // Activo 3: conf=1, int=1, disp=1 → max=1=Bajo, eval=12=Alto → [1][3]
         makeVa({
           id: 3,
-          probabilidadId: 3,
+          evaluacionRiesgo: 12,
           confidencialidadId: 1,
           integridadId: 1,
           disponibilidadId: 1,
@@ -2531,21 +2517,21 @@ describe('ReportesService', () => {
 
       const result = await service.getHeatmap();
 
-      // Serie 0 = impacto 3 (Alto) → data[1] prob=2 → cell y=1
+      // Serie 0 = impacto 3 (Alto) → data[1] eval=Medio → cell y=1
       const serieAlto = result.find((s) => s.name === '3. Alto');
       expect(serieAlto).toBeDefined();
       const cell32 = serieAlto!.data.find((c) => c.x === '2. Medio');
       expect(cell32).toBeDefined();
       expect(cell32!.y).toBe(1);
 
-      // Serie 1 = impacto 2 (Medio) → data[0] prob=1 → cell y=1
+      // Serie 1 = impacto 2 (Medio) → data[0] eval=Bajo → cell y=1
       const serieMedio = result.find((s) => s.name === '2. Medio');
       expect(serieMedio).toBeDefined();
       const cell21 = serieMedio!.data.find((c) => c.x === '1. Bajo');
       expect(cell21).toBeDefined();
       expect(cell21!.y).toBe(1);
 
-      // Serie 2 = impacto 1 (Bajo) → data[2] prob=3 → cell y=1
+      // Serie 2 = impacto 1 (Bajo) → data[2] eval=Alto → cell y=1
       const serieBajo = result.find((s) => s.name === '1. Bajo');
       expect(serieBajo).toBeDefined();
       const cell13 = serieBajo!.data.find((c) => c.x === '3. Alto');
@@ -2560,12 +2546,12 @@ describe('ReportesService', () => {
       expect(totalCount).toBe(3);
     });
 
-    it('debe ubicar un activo en la celda correcta (impacto=3, prob=3)', async () => {
+    it('debe ubicar un activo en la celda correcta (impacto=3, evaluacionRiesgo=Alto)', async () => {
       prisma.valoracionActivo.findMany.mockResolvedValue([
-        // conf=3, int=6→Alto, disp=7→Bajo → max=3=Alto, prob=3=Alto → [3][3]
+        // conf=3, int=1→Bajo, disp=1→Bajo → max=3=Alto, eval=20=Alto → [3][3]
         makeVa({
           id: 1,
-          probabilidadId: 3,
+          evaluacionRiesgo: 20,
           confidencialidadId: 3,
           integridadId: 4,
           disponibilidadId: 7,
@@ -2575,7 +2561,7 @@ describe('ReportesService', () => {
       const result = await service.getHeatmap();
 
       // impactoFinal = max(3,1,1) = 3 → "3. Alto" series
-      // probabilidadId=3 → valor 3 → "3. Alto" column
+      // evaluacionRiesgo=20 → >8 → bucket 3 → "3. Alto" column
       const serieAlto = result.find((s) => s.name === '3. Alto');
       expect(serieAlto).toBeDefined();
 

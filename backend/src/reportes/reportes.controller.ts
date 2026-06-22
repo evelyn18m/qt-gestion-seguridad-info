@@ -70,7 +70,7 @@ export class ReportesController {
         },
         {
           ruta: 'GET /reportes/heatmap',
-          descripcion: 'Mapa de calor 3x3 de riesgos (Probabilidad × Impacto)',
+          descripcion: 'Mapa de calor 3x3 de riesgos (Evaluación de Riesgo × Impacto)',
         },
       ],
     };

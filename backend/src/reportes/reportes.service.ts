@@ -17,7 +17,7 @@ import {
 } from './dto/reporte-response.dto';
 import * as XLSX_STYLE from 'xlsx-js-style';
 
-const PROBABILIDAD_LABELS: Record<number, string> = {
+const EVALUACION_RIESGO_LABELS: Record<number, string> = {
   1: '1. Bajo',
   2: '2. Medio',
   3: '3. Alto',
@@ -291,16 +291,14 @@ export class ReportesService {
 
   async getHeatmap(): Promise<HeatmapSerieDto[]> {
     try {
-      const [vas, impactos, probabilidades] = await Promise.all([
+      const [vas, impactos] = await Promise.all([
         this.prisma.valoracionActivo.findMany(),
         this.prisma.impacto.findMany(),
-        this.prisma.probabilidad.findMany(),
       ]);
 
       const impactoMap = new Map(impactos.map((i) => [i.id, i.valor]));
-      const probMap = new Map(probabilidades.map((p) => [p.id, p.valor]));
 
-      const filtered = vas.filter((va) => va.probabilidadId != null);
+      const filtered = vas.filter((va) => va.evaluacionRiesgo != null);
 
       const cellMap: Record<string, number> = {};
       for (let i = 1; i <= 3; i++) {
@@ -315,7 +313,7 @@ export class ReportesService {
           impactoMap.get(va.integridadId) ?? 0,
           impactoMap.get(va.disponibilidadId) ?? 0,
         );
-        const prob = probMap.get(va.probabilidadId!) ?? 1;
+        const prob = va.evaluacionRiesgo! <= 3 ? 1 : va.evaluacionRiesgo! <= 8 ? 2 : 3;
         cellMap[`${impacto}_${prob}`]++;
       }
 
@@ -324,7 +322,7 @@ export class ReportesService {
         const data: HeatmapCellDto[] = [];
         for (let p = 1; p <= 3; p++) {
           data.push({
-            x: PROBABILIDAD_LABELS[p],
+            x: EVALUACION_RIESGO_LABELS[p],
             y: cellMap[`${i}_${p}`],
           });
         }

@@ -479,7 +479,7 @@ describe('ReportesController', () => {
       );
       expect(heatmapEntry).toBeDefined();
       expect(heatmapEntry!.descripcion).toBe(
-        'Mapa de calor 3x3 de riesgos (Probabilidad × Impacto)',
+        'Mapa de calor 3x3 de riesgos (Evaluación de Riesgo × Impacto)',
       );
     });
   });
