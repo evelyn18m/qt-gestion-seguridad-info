@@ -1,38 +1,12 @@
-# Spec: Backend — calculo-riesgo Service
+# Delta for calculo-riesgo
 
-## Purpose
-
-Servicio puro de cálculo de riesgo según matriz EGSI v1.4. Sin side effects, exportable para testing. Integra en `DetalleRiesgoService` y expone endpoint de preview. Los umbrales de clasificación son parametrizables vía `ConfiguracionRiesgo`.
-
-## Requirements
-
-### Requirement: Pure calculateRiesgo() Function
-
-La función `calculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number, nivelAmenazaControl?: number, nivelVulnerabilidadControl?: number, config?: Thresholds)` DEBE ser exportada desde `calculo-riesgo.service.ts` como función pura. NO DEBE tener side effects ni dependencias de Prisma.
-
-SHALL accept optional 6th parameter `config?: Thresholds`. Without config, SHALL use defaults (`DEFAULT_THRESHOLDS`: riesgoBajoMax=3, riesgoMedioMax=9, riesgoAltoMax=27, matching DB seed). With config, all derivations (nivelRiesgo, metodoTratamiento, tipoControl, riesgoResidual) SHALL use config thresholds. Function remains pure — no DB access.
-
-#### Scenario: Función pura retornable
-
-- GIVEN se importa `calculateRiesgo` desde `calculo-riesgo.service`
-- WHEN se llama con `(2, 2, 2)`
-- THEN retorna objeto con `evaluacionRiesgo: 8` y sin llamado a base de datos
-
-#### Scenario: Classify with custom config
-
-- GIVEN config with riesgoBajoMax=5, riesgoMedioMax=15
-- WHEN calculateRiesgo(2, 2, 2, undefined, undefined, config) — evaluacionRiesgo=8
-- THEN nivelRiesgo="MEDIO" (8 > 5 and 8 ≤ 15)
-
-#### Scenario: Backward compatible without config
-
-- GIVEN no config parameter
-- WHEN calculateRiesgo(2, 2, 2) — evaluacionRiesgo=8
-- THEN defaults apply: nivelRiesgo="MEDIO" (8 > 3 and 8 ≤ 9)
+## MODIFIED Requirements
 
 ### Requirement: Service Integration in DetalleRiesgoService
 
 El `DetalleRiesgoService` DEBE inyectar `ParametrosService`, leer `ConfiguracionRiesgo` vía `getConfiguracion()` antes de cada llamado a `calculateRiesgo()`, y pasar config como parámetro. `mapDetalleRiesgo()` DEBE recibir `va: number` como parámetro adicional derivado del `ValoracionActivo` padre — NO DEBE hardcodear `3`. Los callers (`create()`, `update()`) DEBEN calcular VA como promedio de los valores de impacto (CIA) del catálogo `Impacto`. Los campos calculados DEBEN persistirse: `evaluacionRiesgo`, `nivelRiesgo`, `metodoTratamiento`, `tipoControl`, `evaluacionRiesgoControl`, `nivelRiesgoControl`. `ValoracionActivo.evaluacionRiesgo` y `nivelRiesgo` DEBEN persistirse como MAX de sus `DetalleRiesgo` hijos dentro de `$transaction`.
+
+(Previously: `mapDetalleRiesgo` hardcodeaba VA=3; `ValoracionActivo.evaluacionRiesgo`/`nivelRiesgo` nunca se escribían.)
 
 #### Scenario: Create DetalleRiesgo calcula campos con VA derivado del padre
 
@@ -67,6 +41,8 @@ El endpoint PATCH `/detalle-riesgo/:id/calcular` DEBE invocar `calculateRiesgo()
 
 SHALL accept optional `config` field in request body. When provided, preview SHALL use submitted thresholds. When omitted, SHALL use DB config.
 
+(Previously: fallback `dto.VA ?? 3` sin consultar el padre.)
+
 #### Scenario: Preview recalcula sin persistir
 
 - GIVEN un DetalleRiesgo existe
@@ -97,25 +73,3 @@ SHALL accept optional `config` field in request body. When provided, preview SHA
 - GIVEN body includes `config: { riesgoBajoMax: 6, riesgoMedioMax: 12, ... }`
 - WHEN PATCH /detalle-riesgo/:id/calcular
 - THEN response classifications use threshold 6 for BAJO/MEDIO boundary
-
-### Requirement: Backend Range Validation on Update
-
-ParametrosService.updateConfiguracion() SHALL reject updates where riesgoBajoMax >= riesgoMedioMax or riesgoMedioMax >= riesgoAltoMax. Same for control thresholds. Violation SHALL return HTTP 400.
-
-#### Scenario: Overlapping range rejected
-
-- GIVEN PUT body with riesgoBajoMax=10, riesgoMedioMax=5
-- WHEN updateConfiguracion() validates
-- THEN returns 400 with message "riesgoBajoMax debe ser menor que riesgoMedioMax"
-
-#### Scenario: Valid ascending ranges
-
-- GIVEN riesgoBajoMax=3, riesgoMedioMax=9, riesgoAltoMax=27
-- WHEN updateConfiguracion() validates
-- THEN validation passes, config saved
-
-## Out of Scope
-
-- Persistencia de `riesgoResidual` como columna (se calcula en tiempo de query/display)
-- Modificación de schema Prisma (campos ya existen)
-- Migración/recálculo de valoraciones existentes
