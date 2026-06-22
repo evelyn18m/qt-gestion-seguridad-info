@@ -54,6 +54,25 @@ export class ValoracionesService {
       Array.isArray(detallesRiesgo) &&
       detallesRiesgo.length > 0
     ) {
+      // Compute VA from CIA impacto catalog (confidencialidad + integridad + disponibilidad)
+      const [impConf, impInt, impDisp] = await Promise.all([
+        this.prisma.impacto.findUnique({
+          where: { id: dto.confidencialidadId },
+        }),
+        this.prisma.impacto.findUnique({
+          where: { id: dto.integridadId },
+        }),
+        this.prisma.impacto.findUnique({
+          where: { id: dto.disponibilidadId },
+        }),
+      ]);
+      const ciaAvg =
+        impConf && impInt && impDisp
+          ? Math.round(
+              ((impConf.valor + impInt.valor + impDisp.valor) / 3) * 100,
+            ) / 100
+          : 3;
+
       // Look up Riesgo catalog entries to get nivel (valor field) for calculateRiesgo
       const riesgoResults = await Promise.all(
         detallesRiesgo.map((d) =>
@@ -100,21 +119,42 @@ export class ValoracionesService {
         (r) => r?.valor ?? undefined,
       );
 
-      await this.prisma.$transaction(
-        detallesRiesgo.map((d, i) =>
-          this.prisma.detalleRiesgo.create({
-            data: this.mapDetalleRiesgo(
-              d,
-              item.id,
-              nivelValores[i],
-              vulnNivelValores[i],
-              nivelControlAmenaza[i],
-              nivelControlVuln[i],
-              config,
-            ),
-          }),
+      const createInputs = detallesRiesgo.map((d, i) =>
+        this.mapDetalleRiesgo(
+          d,
+          item.id,
+          nivelValores[i],
+          vulnNivelValores[i],
+          nivelControlAmenaza[i],
+          nivelControlVuln[i],
+          config,
+          ciaAvg,
         ),
       );
+
+      await this.prisma.$transaction(
+        createInputs.map((data) => this.prisma.detalleRiesgo.create({ data })),
+      );
+
+      // Persist ValoracionActivo.evaluacionRiesgo = MAX of hijos
+      const evals = createInputs
+        .map((input) => input.evaluacionRiesgo ?? 0)
+        .filter((e) => e > 0);
+      if (evals.length > 0) {
+        const maxEval = Math.max(...evals);
+        const nivelMaxEval = createInputs.find(
+          (input) => input.evaluacionRiesgo === maxEval,
+        )?.nivelRiesgo;
+        if (maxEval > 0 && nivelMaxEval) {
+          await this.prisma.valoracionActivo.update({
+            where: { id: item.id },
+            data: {
+              evaluacionRiesgo: maxEval,
+              nivelRiesgo: nivelMaxEval,
+            },
+          });
+        }
+      }
     }
     return this.enrich(item);
   }
@@ -140,6 +180,25 @@ export class ValoracionesService {
       Array.isArray(detallesRiesgo) &&
       detallesRiesgo.length > 0
     ) {
+      // Compute VA from CIA impacto catalog
+      const [impConf, impInt, impDisp] = await Promise.all([
+        this.prisma.impacto.findUnique({
+          where: { id: data.confidencialidadId },
+        }),
+        this.prisma.impacto.findUnique({
+          where: { id: data.integridadId },
+        }),
+        this.prisma.impacto.findUnique({
+          where: { id: data.disponibilidadId },
+        }),
+      ]);
+      const ciaAvg =
+        impConf && impInt && impDisp
+          ? Math.round(
+              ((impConf.valor + impInt.valor + impDisp.valor) / 3) * 100,
+            ) / 100
+          : 3;
+
       // Look up Riesgo catalog entries to get nivel (valor field) for calculateRiesgo
       const riesgoResults = await Promise.all(
         detallesRiesgo.map((d) =>
@@ -186,24 +245,47 @@ export class ValoracionesService {
         (r) => r?.valor ?? undefined,
       );
 
+      const createInputs = detallesRiesgo.map((d, i) =>
+        this.mapDetalleRiesgo(
+          d,
+          id,
+          nivelValores[i],
+          vulnNivelValores[i],
+          nivelControlAmenaza[i],
+          nivelControlVuln[i],
+          config,
+          ciaAvg,
+        ),
+      );
+
       await this.prisma.$transaction([
         this.prisma.detalleRiesgo.deleteMany({
           where: { valoracionActivoId: id },
         }),
-        ...detallesRiesgo.map((d, i) =>
-          this.prisma.detalleRiesgo.create({
-            data: this.mapDetalleRiesgo(
-              d,
-              id,
-              nivelValores[i],
-              vulnNivelValores[i],
-              nivelControlAmenaza[i],
-              nivelControlVuln[i],
-              config,
-            ),
-          }),
+        ...createInputs.map((data) =>
+          this.prisma.detalleRiesgo.create({ data }),
         ),
       ]);
+
+      // Persist ValoracionActivo.evaluacionRiesgo = MAX of hijos
+      const evals = createInputs
+        .map((input) => input.evaluacionRiesgo ?? 0)
+        .filter((e) => e > 0);
+      if (evals.length > 0) {
+        const maxEval = Math.max(...evals);
+        const nivelMaxEval = createInputs.find(
+          (input) => input.evaluacionRiesgo === maxEval,
+        )?.nivelRiesgo;
+        if (maxEval > 0 && nivelMaxEval) {
+          await this.prisma.valoracionActivo.update({
+            where: { id },
+            data: {
+              evaluacionRiesgo: maxEval,
+              nivelRiesgo: nivelMaxEval,
+            },
+          });
+        }
+      }
     }
     return this.enrich(item);
   }
@@ -227,7 +309,7 @@ export class ValoracionesService {
         `DetalleRiesgo ${detalleId} no encontrado para Valoración ${id}`,
       );
     }
-    const va = dto.VA ?? 3;
+    const va = dto.VA ?? (await this.computeParentCiaAvg(id)) ?? 3;
 
     // Use dto.config if provided, otherwise read from DB
     let config: Thresholds = DEFAULT_THRESHOLDS;
@@ -259,6 +341,146 @@ export class ValoracionesService {
     return this.prisma.valoracionActivo.delete({ where: { id } });
   }
 
+  /**
+   * Recalcula todos los DetalleRiesgo de un ValoracionActivo con el VA real
+   * del padre. Corrige filas existentes persistidas con VA=3 hardcodeado.
+   * No modifica inputs (riesgoId, amenazaIds, etc.), solo recalcula campos derivados.
+   */
+  async recalcular(id: number) {
+    const va = await this.prisma.valoracionActivo.findUnique({
+      where: { id },
+    });
+    if (!va) throw new NotFoundException(`Valoración ${id} no encontrada`);
+
+    const hijos = await this.prisma.detalleRiesgo.findMany({
+      where: { valoracionActivoId: id },
+    });
+
+    if (hijos.length === 0) {
+      return this.enrich(va);
+    }
+
+    // Compute real VA from CIA impacto catalog
+    const [impConf, impInt, impDisp] = await Promise.all([
+      this.prisma.impacto.findUnique({
+        where: { id: va.confidencialidadId },
+      }),
+      this.prisma.impacto.findUnique({
+        where: { id: va.integridadId },
+      }),
+      this.prisma.impacto.findUnique({
+        where: { id: va.disponibilidadId },
+      }),
+    ]);
+    const ciaAvg =
+      impConf && impInt && impDisp
+        ? Math.round(
+            ((impConf.valor + impInt.valor + impDisp.valor) / 3) * 100,
+          ) / 100
+        : 3;
+
+    // Read config
+    let config: Thresholds = DEFAULT_THRESHOLDS;
+    try {
+      config = await this.parametrosService.getConfiguracion();
+    } catch {
+      // Fallback
+    }
+
+    // Look up Riesgo catalog for each hijo
+    const riesgoResults = await Promise.all(
+      hijos.map((h) =>
+        h.riesgoId != null
+          ? this.prisma.riesgo.findUnique({ where: { id: h.riesgoId } })
+          : Promise.resolve(null),
+      ),
+    );
+    const vulnRiesgoResults = await Promise.all(
+      hijos.map((h) =>
+        h.vulnerabilidadRiesgoId != null
+          ? this.prisma.riesgo.findUnique({
+              where: { id: h.vulnerabilidadRiesgoId },
+            })
+          : Promise.resolve(null),
+      ),
+    );
+    const riesgoControlResults = await Promise.all(
+      hijos.map((h) =>
+        h.riesgoControlId != null
+          ? this.prisma.riesgo.findUnique({
+              where: { id: h.riesgoControlId },
+            })
+          : Promise.resolve(null),
+      ),
+    );
+    const vulnControlResults = await Promise.all(
+      hijos.map((h) =>
+        h.vulnerabilidadControlId != null
+          ? this.prisma.riesgo.findUnique({
+              where: { id: h.vulnerabilidadControlId },
+            })
+          : Promise.resolve(null),
+      ),
+    );
+
+    // Build create inputs preserving original input fields
+    const createInputs = hijos.map((h, i) => {
+      const d: DetalleRiesgoDto = {
+        tipo: h.tipo,
+        catalogoId: h.catalogoId,
+        riesgoId: h.riesgoId ?? undefined,
+        vulnerabilidadRiesgoId: h.vulnerabilidadRiesgoId ?? undefined,
+        tipoControlId: h.tipoControlId,
+        riesgoControlId: h.riesgoControlId ?? undefined,
+        vulnerabilidadControlId: h.vulnerabilidadControlId ?? undefined,
+        amenazaIds: h.amenazaIds ?? undefined,
+        vulnerabilidadIds: h.vulnerabilidadIds ?? undefined,
+        controlesImplementados: h.controlesImplementados ?? undefined,
+        controlesArea: h.controlesArea ?? undefined,
+        controlesImplementarId: h.controlesImplementarId ?? undefined,
+      };
+      return this.mapDetalleRiesgo(
+        d,
+        id,
+        riesgoResults[i]?.valor ?? 1,
+        vulnRiesgoResults[i]?.valor ?? 1,
+        riesgoControlResults[i]?.valor ?? undefined,
+        vulnControlResults[i]?.valor ?? undefined,
+        config,
+        ciaAvg,
+      );
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.detalleRiesgo.deleteMany({
+        where: { valoracionActivoId: id },
+      }),
+      ...createInputs.map((data) => this.prisma.detalleRiesgo.create({ data })),
+    ]);
+
+    // Persist MAX
+    const evals = createInputs
+      .map((input) => input.evaluacionRiesgo ?? 0)
+      .filter((e) => e > 0);
+    if (evals.length > 0) {
+      const maxEval = Math.max(...evals);
+      const nivelMaxEval = createInputs.find(
+        (input) => input.evaluacionRiesgo === maxEval,
+      )?.nivelRiesgo;
+      if (maxEval > 0 && nivelMaxEval) {
+        await this.prisma.valoracionActivo.update({
+          where: { id },
+          data: {
+            evaluacionRiesgo: maxEval,
+            nivelRiesgo: nivelMaxEval,
+          },
+        });
+      }
+    }
+
+    return this.enrich(va);
+  }
+
   private mapDetalleRiesgo(
     d: DetalleRiesgoDto,
     valoracionActivoId: number,
@@ -267,6 +489,7 @@ export class ValoracionesService {
     nivelAmenazaControlValor?: number,
     nivelVulnerabilidadControlValor?: number,
     config: Thresholds = DEFAULT_THRESHOLDS,
+    va: number = 3,
   ): Prisma.DetalleRiesgoUncheckedCreateInput {
     const data: Prisma.DetalleRiesgoUncheckedCreateInput = {
       valoracionActivoId,
@@ -317,13 +540,13 @@ export class ValoracionesService {
       }),
     };
 
-    // Compute risk fields using calculateRiesgo with VA=3 (CIA promedio fallback)
+    // Compute risk fields using calculateRiesgo with VA from parent CIA average
     // nivelAmenazaValor comes from the Riesgo catalog's valor field via riesgoId lookup
     // nivelVulnerabilidadValor comes independently from vulnerabilidadRiesgoId lookup
     const nivelAmenaza = nivelAmenazaValor ?? 1;
     const nivelVulnerabilidad = nivelVulnerabilidadValor ?? 1;
     const riesgo = calculateRiesgo(
-      3,
+      va,
       nivelAmenaza,
       nivelVulnerabilidad,
       nivelAmenazaControlValor,
@@ -339,6 +562,43 @@ export class ValoracionesService {
     data.riesgoResidual = riesgo.riesgoResidual;
 
     return data;
+  }
+
+  /**
+   * Computes CIA average for a ValoracionActivo from its impacto catalog entries.
+   * Returns null if the parent or any impacto record is missing.
+   */
+  private async computeParentCiaAvg(
+    valoracionActivoId: number,
+  ): Promise<number | null> {
+    const parent = await this.prisma.valoracionActivo.findUnique({
+      where: { id: valoracionActivoId },
+      select: {
+        confidencialidadId: true,
+        integridadId: true,
+        disponibilidadId: true,
+      },
+    });
+    if (!parent) return null;
+
+    const [impConf, impInt, impDisp] = await Promise.all([
+      this.prisma.impacto.findUnique({
+        where: { id: parent.confidencialidadId },
+      }),
+      this.prisma.impacto.findUnique({
+        where: { id: parent.integridadId },
+      }),
+      this.prisma.impacto.findUnique({
+        where: { id: parent.disponibilidadId },
+      }),
+    ]);
+
+    if (!impConf || !impInt || !impDisp) return null;
+
+    return (
+      Math.round(((impConf.valor + impInt.valor + impDisp.valor) / 3) * 100) /
+      100
+    );
   }
 
   private async enrich(

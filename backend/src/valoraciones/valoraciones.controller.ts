@@ -53,4 +53,9 @@ export class ValoracionesController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.valoracionesService.remove(id);
   }
+
+  @Post(':id/recalcular')
+  recalcular(@Param('id', ParseIntPipe) id: number) {
+    return this.valoracionesService.recalcular(id);
+  }
 }

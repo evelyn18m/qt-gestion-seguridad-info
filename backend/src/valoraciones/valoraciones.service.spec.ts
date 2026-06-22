@@ -34,6 +34,7 @@ const mockPrisma = {
   },
   detalleRiesgo: {
     findMany: jest.fn(),
+    findFirst: jest.fn(),
     deleteMany: jest.fn(),
     create: jest.fn(),
   },
@@ -1212,6 +1213,596 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
     expect(detalle.controlesImplementar.descripcion).toBe('Politica de acceso');
     expect(detalle.controlesImplementar.categoria.nombre).toBe(
       'Control de Acceso',
+    );
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// mapDetalleRiesgo — VA from CIA average (Phase 1: Fix hardcoded VA=3)
+// ──────────────────────────────────────────────────────────────────────────────
+describe('mapDetalleRiesgo with VA from CIA impacto', () => {
+  let service: ValoracionesService;
+
+  const baseDto: CreateValoracionDto = {
+    nombreActivo: 'Test Activo',
+    tipoActivoId: 1,
+    formatoId: 1,
+    macroProcesoId: 1,
+    subProcesoId: 1,
+    propietarioId: 1,
+    custodioId: 1,
+    descripcion: 'Test desc',
+    controlSeguridad: 'Test ctrl',
+    ubicacion: 'Test loc',
+    confidencialidadId: 10,
+    integridadId: 11,
+    disponibilidadId: 12,
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ParametrosService, useValue: mockParametrosService },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED: should compute evaluacionRiesgo = ciaAverage × A × V (not 3 × A × V)', async () => {
+    // CIA impacto values: 1 + 2 + 2 → avg = 1.67
+    mockPrisma.impacto.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 10)
+          return Promise.resolve({
+            id: 10,
+            tipo: 'confidencialidad',
+            nivel: 'Bajo',
+            valor: 1,
+            criterio: 'test',
+          });
+        if (args.where.id === 11)
+          return Promise.resolve({
+            id: 11,
+            tipo: 'integridad',
+            nivel: 'Medio',
+            valor: 2,
+            criterio: 'test',
+          });
+        if (args.where.id === 12)
+          return Promise.resolve({
+            id: 12,
+            tipo: 'disponibilidad',
+            nivel: 'Medio',
+            valor: 2,
+            criterio: 'test',
+          });
+        return Promise.resolve(null);
+      },
+    );
+
+    // riesgoId=2 → valor=2, vulnerabilidadRiesgoId=3 → valor=3
+    mockPrisma.riesgo.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 2)
+          return Promise.resolve({ id: 2, valor: 2, nivel: 'Medio' });
+        if (args.where.id === 3)
+          return Promise.resolve({ id: 3, valor: 3, nivel: 'Alto' });
+        return Promise.resolve(null);
+      },
+    );
+
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 200 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 200 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          riesgoId: 2,
+          vulnerabilidadRiesgoId: 3,
+          tipoControlId: 1,
+          amenazaIds: '[1]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    const createCall = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    // va = (1+2+2)/3 ≈ 1.67 → evaluacionRiesgo = 1.67 × 2 × 3 = 10.02
+    // Currently (bug): va=3 → evaluacionRiesgo = 3 × 2 × 3 = 18
+    expect(createCall.data.evaluacionRiesgo).toBeCloseTo(10.02, 2);
+  });
+
+  it('TRIANGULATE: CIA=1,1,1 → va=1 → evaluacionRiesgo = 1×A×V', async () => {
+    // All CIA IDs = 1 (valor=1 each) → avg = 1
+    mockPrisma.impacto.findUnique.mockResolvedValue({
+      id: 1,
+      tipo: 'confidencialidad',
+      nivel: 'Bajo',
+      valor: 1,
+      criterio: 'test',
+    });
+
+    // riesgoId=2 → valor=2, vulnerabilidadRiesgoId=3 → valor=3
+    mockPrisma.riesgo.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 2)
+          return Promise.resolve({ id: 2, valor: 2, nivel: 'Medio' });
+        if (args.where.id === 3)
+          return Promise.resolve({ id: 3, valor: 3, nivel: 'Alto' });
+        return Promise.resolve(null);
+      },
+    );
+
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.create.mockResolvedValue({ id: 201 });
+    mockPrisma.$transaction.mockResolvedValue([{ id: 201 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      confidencialidadId: 1,
+      integridadId: 1,
+      disponibilidadId: 1,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          riesgoId: 2,
+          vulnerabilidadRiesgoId: 3,
+          tipoControlId: 1,
+          amenazaIds: '[1]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    const createCall = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    // va = (1+1+1)/3 = 1 → evaluacionRiesgo = 1 × 2 × 3 = 6
+    // Old bug: va=3 → evaluacionRiesgo = 3 × 2 × 3 = 18
+    expect(createCall.data.evaluacionRiesgo).toBe(6);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// calcularDetalleRiesgo — fallback to parent CIA when VA not in DTO
+// ──────────────────────────────────────────────────────────────────────────────
+describe('calcularDetalleRiesgo with parent CIA fallback', () => {
+  let service: ValoracionesService;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ParametrosService, useValue: mockParametrosService },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED: should use parent CIA average when DTO has no VA', async () => {
+    // Mock detalle exists
+    mockPrisma.detalleRiesgo.findFirst.mockResolvedValue({
+      id: 50,
+      valoracionActivoId: 1,
+      riesgoId: 2,
+      vulnerabilidadRiesgoId: 3,
+    });
+
+    // Parent VA has CIA IDs that map to impacto values: 1,2,2 → avg=1.67
+    mockPrisma.valoracionActivo.findUnique.mockResolvedValue({
+      id: 1,
+      confidencialidadId: 10,
+      integridadId: 11,
+      disponibilidadId: 12,
+    });
+
+    mockPrisma.impacto.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 10)
+          return Promise.resolve({
+            id: 10,
+            tipo: 'c',
+            nivel: 'Bajo',
+            valor: 1,
+            criterio: 't',
+          });
+        if (args.where.id === 11)
+          return Promise.resolve({
+            id: 11,
+            tipo: 'i',
+            nivel: 'Medio',
+            valor: 2,
+            criterio: 't',
+          });
+        if (args.where.id === 12)
+          return Promise.resolve({
+            id: 12,
+            tipo: 'd',
+            nivel: 'Medio',
+            valor: 2,
+            criterio: 't',
+          });
+        return Promise.resolve(null);
+      },
+    );
+
+    const result = await service.calcularDetalleRiesgo(1, 50, {
+      nivelAmenaza: 2,
+      nivelVulnerabilidad: 2,
+      // NO VA in DTO → should fall back to parent CIA avg = 1.67
+    });
+
+    // va=1.67 → evaluacionRiesgo = 1.67 × 2 × 2 = 6.68
+    // Old bug (without fix): va=3 → evaluacionRiesgo = 3 × 2 × 2 = 12
+    expect(result.evaluacionRiesgo).toBeCloseTo(6.68, 2);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// create() / update() — persist ValoracionActivo.evaluacionRiesgo as MAX
+// ──────────────────────────────────────────────────────────────────────────────
+describe('create() persists ValoracionActivo.evaluacionRiesgo as MAX of hijos', () => {
+  let service: ValoracionesService;
+
+  const baseDto: CreateValoracionDto = {
+    nombreActivo: 'Test Activo',
+    tipoActivoId: 1,
+    formatoId: 1,
+    macroProcesoId: 1,
+    subProcesoId: 1,
+    propietarioId: 1,
+    custodioId: 1,
+    descripcion: 'Test desc',
+    controlSeguridad: 'Test ctrl',
+    ubicacion: 'Test loc',
+    confidencialidadId: 10,
+    integridadId: 11,
+    disponibilidadId: 12,
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ParametrosService, useValue: mockParametrosService },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED: should persist VA.evaluacionRiesgo = MAX(hijos.evaluacionRiesgo) after create', async () => {
+    // CIA impacto: valores 1,2,2 → avg = 1.67
+    mockPrisma.impacto.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 10)
+          return Promise.resolve({
+            id: 10,
+            tipo: 'c',
+            nivel: 'Bajo',
+            valor: 1,
+            criterio: 't',
+          });
+        if (args.where.id === 11)
+          return Promise.resolve({
+            id: 11,
+            tipo: 'i',
+            nivel: 'Medio',
+            valor: 2,
+            criterio: 't',
+          });
+        if (args.where.id === 12)
+          return Promise.resolve({
+            id: 12,
+            tipo: 'd',
+            nivel: 'Medio',
+            valor: 2,
+            criterio: 't',
+          });
+        return Promise.resolve(null);
+      },
+    );
+
+    // riesgoId=2 → valor=2, riesgoId=3 → valor=3
+    mockPrisma.riesgo.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 2)
+          return Promise.resolve({ id: 2, valor: 2, nivel: 'Medio' });
+        if (args.where.id === 3)
+          return Promise.resolve({ id: 3, valor: 3, nivel: 'Alto' });
+        return Promise.resolve(null);
+      },
+    );
+
+    const createdItem = {
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    mockPrisma.valoracionActivo.create.mockResolvedValue(createdItem);
+    mockPrisma.$transaction.mockResolvedValue([{ id: 300 }, { id: 301 }]);
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+
+    const dto: CreateValoracionDto = {
+      ...baseDto,
+      detallesRiesgo: [
+        {
+          tipo: 'amenaza',
+          catalogoId: 1,
+          riesgoId: 2, // valor=2 → eval = 1.67×2×1 = 3.34  (vuln defaults to 1)
+          tipoControlId: 1,
+          amenazaIds: '[1]',
+        },
+        {
+          tipo: 'vulnerabilidad',
+          catalogoId: 2,
+          riesgoId: 3, // valor=3 → eval = 1.67×3×1 = 5.01
+          tipoControlId: 1,
+          vulnerabilidadIds: '[2]',
+        },
+      ],
+    };
+
+    await service.create(dto);
+
+    // Assert VA.update was called with evaluacionRiesgo = MAX(3.34, 5.01) = 5.01
+    // and nivelRiesgo derived from 5.01 (default riesgoBajoMax=3, riesgoMedioMax=9 → MEDIO)
+    expect(mockPrisma.valoracionActivo.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: expect.objectContaining({
+        evaluacionRiesgo: 5.01,
+        nivelRiesgo: 'MEDIO',
+      }),
+    });
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// recalcular() — fix existing rows with inflated VA=3
+// ──────────────────────────────────────────────────────────────────────────────
+describe('recalcular() recalculates with real VA', () => {
+  let service: ValoracionesService;
+
+  const parentVA = {
+    id: 1,
+    nombreActivo: 'Test',
+    confidencialidadId: 10,
+    integridadId: 11,
+    disponibilidadId: 12,
+    tipoControl: null,
+    amenazas: null,
+    vulnerabilidades: null,
+    controlesImplementacion: null,
+    impacto: null,
+    probabilidadId: null,
+    amenazaRiesgoId: null,
+    vulnerabilidadRiesgoId: null,
+    controlesArea: null,
+    evaluacionRiesgo: 18,
+    nivelRiesgo: 'ALTO',
+    metodoTratamiento: null,
+    tipoControlId: 1,
+    controlesImplementar: null,
+    nivelAmenazaControl: null,
+    nivelVulnerabilidadControl: null,
+    evaluacionRiesgoControl: null,
+    nivelRiesgoControl: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ParametrosService, useValue: mockParametrosService },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('RED: should delete old hijos and recreate with real VA from parent CIA', async () => {
+    // CIA impacto: 1,2,2 → avg = 1.67
+    mockPrisma.impacto.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 10)
+          return Promise.resolve({
+            id: 10,
+            tipo: 'c',
+            nivel: 'Bajo',
+            valor: 1,
+            criterio: 't',
+          });
+        if (args.where.id === 11)
+          return Promise.resolve({
+            id: 11,
+            tipo: 'i',
+            nivel: 'Medio',
+            valor: 2,
+            criterio: 't',
+          });
+        if (args.where.id === 12)
+          return Promise.resolve({
+            id: 12,
+            tipo: 'd',
+            nivel: 'Medio',
+            valor: 2,
+            criterio: 't',
+          });
+        return Promise.resolve(null);
+      },
+    );
+
+    // Existing hijos with inflated evaluacionRiesgo (was VA=3)
+    const oldHijo1 = {
+      id: 10,
+      valoracionActivoId: 1,
+      tipo: 'amenaza',
+      catalogoId: 1,
+      riesgoId: 2,
+      vulnerabilidadRiesgoId: 3,
+      evaluacionRiesgo: 18, // 3×2×3 = old bug
+      nivelRiesgo: 'ALTO',
+      metodoTratamiento: 'MODIFICAR / PREVENIR / COMPARTIR',
+      tipoControlId: 1,
+      riesgoControlId: null,
+      vulnerabilidadControlId: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      riesgoResidual: null,
+      amenazaIds: '[1]',
+      vulnerabilidadIds: null,
+      controlesImplementados: null,
+      controlesArea: null,
+      controlesImplementarId: null,
+    };
+
+    // Mock parent VA exists
+    mockPrisma.valoracionActivo.findUnique.mockResolvedValue(parentVA);
+
+    // Mock existing hijos
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([oldHijo1]);
+
+    // Mock deleteMany
+    mockPrisma.detalleRiesgo.deleteMany.mockResolvedValue({ count: 1 });
+
+    // Mock transaction
+    mockPrisma.$transaction.mockResolvedValue([{ count: 1 }, { id: 100 }]);
+
+    // Mock enrich catalog lookups (return null for simplicity)
+    mockPrisma.tipoActivo.findUnique.mockResolvedValue(null);
+    mockPrisma.formato.findUnique.mockResolvedValue(null);
+    mockPrisma.macroProceso.findUnique.mockResolvedValue(null);
+    mockPrisma.subproceso.findUnique.mockResolvedValue(null);
+    mockPrisma.area.findUnique.mockResolvedValue(null);
+    mockPrisma.funcionario.findUnique.mockResolvedValue(null);
+    mockPrisma.tipoControl.findUnique.mockResolvedValue(null);
+    mockPrisma.detalleRiesgo.findMany
+      .mockResolvedValueOnce([oldHijo1])
+      .mockResolvedValueOnce([]); // after recalcular, findMany inside enrich
+
+    // Mock Riesgo catalog for recalculating
+    mockPrisma.riesgo.findUnique.mockImplementation(
+      (args: { where: { id: number } }) => {
+        if (args.where.id === 2)
+          return Promise.resolve({ id: 2, valor: 2, nivel: 'Medio' });
+        if (args.where.id === 3)
+          return Promise.resolve({ id: 3, valor: 3, nivel: 'Alto' });
+        return Promise.resolve(null);
+      },
+    );
+
+    // Mock valoracionActivo.update for post-recalculo MAX persistence
+    mockPrisma.valoracionActivo.update.mockResolvedValue(parentVA);
+
+    const result = await service.recalcular(1);
+
+    // Should call deleteMany for old hijos
+    expect(mockPrisma.detalleRiesgo.deleteMany).toHaveBeenCalledWith({
+      where: { valoracionActivoId: 1 },
+    });
+
+    // Should recreate hijo using real VA (1.67 not 3)
+    // With VA=1.67, riesgoId=2 (valor=2), vulnRiesgoId=3 (valor=3): eval = 1.67×2×3 = 10.02
+    const createCall = mockPrisma.detalleRiesgo.create.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(createCall.data.evaluacionRiesgo).toBeCloseTo(10.02, 2);
+    // Inputs preserved
+    expect(createCall.data.riesgoId).toBe(2);
+    expect(createCall.data.vulnerabilidadRiesgoId).toBe(3);
+    expect(createCall.data.amenazaIds).toBe('[1]');
+
+    // Should persist VA.evaluacionRiesgo as MAX
+    expect(mockPrisma.valoracionActivo.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          evaluacionRiesgo: expect.any(Number),
+          nivelRiesgo: expect.any(String),
+        }),
+      }),
     );
   });
 });
