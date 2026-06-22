@@ -292,20 +292,21 @@ export class ReportesService {
 
   private classifyAsset(
     va: {
-      confidencialidadId: number;
-      integridadId: number;
-      disponibilidadId: number;
-      evaluacionRiesgo: number;
+      confidencialidadId: number | null;
+      integridadId: number | null;
+      disponibilidadId: number | null;
+      evaluacionRiesgo: number | null;
     },
     impactoMap: Map<number, number>,
   ): { impacto: number; probabilidad: number } {
     const impacto = Math.max(
-      impactoMap.get(va.confidencialidadId) ?? 0,
-      impactoMap.get(va.integridadId) ?? 0,
-      impactoMap.get(va.disponibilidadId) ?? 0,
+      impactoMap.get(va.confidencialidadId ?? 0) ?? 0,
+      impactoMap.get(va.integridadId ?? 0) ?? 0,
+      impactoMap.get(va.disponibilidadId ?? 0) ?? 0,
     );
+    const evalRiesgo = va.evaluacionRiesgo ?? 0;
     const probabilidad =
-      va.evaluacionRiesgo <= 3 ? 1 : va.evaluacionRiesgo <= 8 ? 2 : 3;
+      evalRiesgo <= 3 ? 1 : evalRiesgo <= 8 ? 2 : 3;
     return { impacto, probabilidad };
   }
 
