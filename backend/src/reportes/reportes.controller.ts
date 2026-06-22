@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Controller, Get, Query, Res, HttpException, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
 import { ReportesService } from './reportes.service';
 import {
@@ -13,6 +13,7 @@ import {
   EvaluacionRiesgoReporteDto,
   TratamientoRiesgoReporteDto,
   HeatmapReporteDto,
+  HeatmapCellDetailDto,
 } from './dto/reporte-response.dto';
 
 @Controller('reportes')
@@ -71,6 +72,11 @@ export class ReportesController {
         {
           ruta: 'GET /reportes/heatmap',
           descripcion: 'Mapa de calor 3x3 de riesgos (Evaluación de Riesgo × Impacto)',
+        },
+        {
+          ruta: 'GET /reportes/heatmap/cell',
+          descripcion:
+            'Detalle de activos en una celda del mapa de calor (impacto × probabilidad)',
         },
       ],
     };
@@ -190,6 +196,24 @@ export class ReportesController {
   @Get('heatmap')
   getHeatmap(): Promise<HeatmapReporteDto> {
     return this.reportesService.getHeatmap();
+  }
+
+  @Get('heatmap/cell')
+  getHeatmapCell(
+    @Query('impacto') impacto: string,
+    @Query('probabilidad') probabilidad: string,
+  ): Promise<HeatmapCellDetailDto[]> {
+    const i = Number(impacto);
+    const p = Number(probabilidad);
+
+    if (isNaN(i) || isNaN(p) || i < 1 || i > 3 || p < 1 || p > 3) {
+      throw new HttpException(
+        'impacto y probabilidad deben ser números entre 1 y 3',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return this.reportesService.getHeatmapCell(i, p);
   }
 
   @Get('tratamiento-riesgo/export')

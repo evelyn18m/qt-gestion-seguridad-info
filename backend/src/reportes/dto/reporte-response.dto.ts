@@ -97,6 +97,14 @@ export class HeatmapSerieDto {
 
 export type HeatmapReporteDto = HeatmapSerieDto[];
 
+export class HeatmapCellDetailDto {
+  id: number;
+  nombreActivo: string;
+  macroProceso: string;
+  nivelRiesgo: string | null;
+  evaluacionRiesgo: number | null;
+}
+
 export class TratamientoRiesgoReporteDto {
   id: number;
   nombreActivo: string;

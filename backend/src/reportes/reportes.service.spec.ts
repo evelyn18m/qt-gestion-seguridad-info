@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException } from '@nestjs/common';
 import { ReportesService } from './reportes.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { HeatmapCellDetailDto } from './dto/reporte-response.dto';
 
 const makeVa = (overrides: Record<string, unknown> = {}) => ({
   id: 1,
@@ -2585,6 +2586,150 @@ describe('ReportesService', () => {
 
       await expect(service.getHeatmap()).rejects.toThrow(HttpException);
       await expect(service.getHeatmap()).rejects.toMatchObject({
+        status: 500,
+      });
+    });
+  });
+
+  describe('getHeatmapCell', () => {
+    const mockImpactos = [
+      makeImpacto(1, 'Confidencialidad', 'Bajo', 1),
+      makeImpacto(2, 'Confidencialidad', 'Medio', 2),
+      makeImpacto(3, 'Confidencialidad', 'Alto', 3),
+      makeImpacto(4, 'Integridad', 'Bajo', 1),
+      makeImpacto(5, 'Integridad', 'Medio', 2),
+      makeImpacto(6, 'Integridad', 'Alto', 3),
+      makeImpacto(7, 'Disponibilidad', 'Bajo', 1),
+      makeImpacto(8, 'Disponibilidad', 'Medio', 2),
+      makeImpacto(9, 'Disponibilidad', 'Alto', 3),
+    ];
+
+    const mockMacroProcesos = [
+      { id: 1, nombre: 'Gestión TI' },
+      { id: 2, nombre: 'Recursos Humanos' },
+    ];
+
+    beforeEach(() => {
+      prisma.impacto.findMany.mockResolvedValue(mockImpactos);
+      prisma.macroProceso.findMany.mockResolvedValue(mockMacroProcesos);
+    });
+
+    it('debe retornar activos filtrados por impacto y probabilidad correctos', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        // impacto=3 (conf=3=Alto), evaluacionRiesgo=6 → prob=2 (Medio) → cell [3][2]
+        makeVa({
+          id: 1,
+          nombreActivo: 'Servidor A',
+          macroProcesoId: 1,
+          evaluacionRiesgo: 6,
+          nivelRiesgo: 'Medio',
+          confidencialidadId: 3,
+          integridadId: 4,
+          disponibilidadId: 7,
+        }),
+        // impacto=2 (conf=2=Medio), evaluacionRiesgo=2 → prob=1 (Bajo) → cell [2][1]
+        makeVa({
+          id: 2,
+          nombreActivo: 'Servidor B',
+          macroProcesoId: 2,
+          evaluacionRiesgo: 2,
+          nivelRiesgo: 'Bajo',
+          confidencialidadId: 2,
+          integridadId: 1,
+          disponibilidadId: 1,
+        }),
+        // impacto=3 (conf=3=Alto), evaluacionRiesgo=6 → prob=2 (Medio) → cell [3][2]
+        makeVa({
+          id: 3,
+          nombreActivo: 'Servidor C',
+          macroProcesoId: 1,
+          evaluacionRiesgo: 6,
+          nivelRiesgo: 'Medio',
+          confidencialidadId: 3,
+          integridadId: 1,
+          disponibilidadId: 1,
+        }),
+      ]);
+
+      const result = await service.getHeatmapCell(3, 2);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        id: 1,
+        nombreActivo: 'Servidor A',
+        macroProceso: 'Gestión TI',
+        nivelRiesgo: 'Medio',
+        evaluacionRiesgo: 6,
+      });
+      expect(result[1]).toEqual({
+        id: 3,
+        nombreActivo: 'Servidor C',
+        macroProceso: 'Gestión TI',
+        nivelRiesgo: 'Medio',
+        evaluacionRiesgo: 6,
+      });
+    });
+
+    it('debe retornar array vacío para celda sin activos', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        // Only assets in cell [1][1]
+        makeVa({
+          id: 1,
+          evaluacionRiesgo: 1,
+          confidencialidadId: 1,
+          integridadId: 1,
+          disponibilidadId: 1,
+        }),
+      ]);
+
+      const result = await service.getHeatmapCell(3, 3);
+
+      expect(result).toEqual([]);
+    });
+
+    it('debe retornar macroProceso "Desconocido" si el ID no tiene match', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        makeVa({
+          id: 1,
+          nombreActivo: 'Servidor Huerfano',
+          macroProcesoId: 999,
+          evaluacionRiesgo: 5,
+          nivelRiesgo: 'Medio',
+          confidencialidadId: 2,
+          integridadId: 1,
+          disponibilidadId: 1,
+        }),
+      ]);
+
+      const result = await service.getHeatmapCell(2, 2);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].macroProceso).toBe('Desconocido');
+    });
+
+    it('debe excluir activos con evaluacionRiesgo null', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        makeVa({
+          id: 1,
+          evaluacionRiesgo: null,
+          confidencialidadId: 3,
+          integridadId: 3,
+          disponibilidadId: 3,
+        }),
+      ]);
+
+      const result = await service.getHeatmapCell(3, 3);
+
+      expect(result).toEqual([]);
+    });
+
+    it('debe lanzar HttpException 500 si Prisma falla', async () => {
+      prisma.valoracionActivo.findMany.mockRejectedValue(
+        new Error('Connection lost'),
+      );
+
+      await expect(service.getHeatmapCell(1, 1)).rejects.toThrow(HttpException);
+      await expect(service.getHeatmapCell(1, 1)).rejects.toMatchObject({
         status: 500,
       });
     });

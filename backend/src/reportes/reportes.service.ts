@@ -14,6 +14,7 @@ import {
   TratamientoRiesgoReporteDto,
   HeatmapSerieDto,
   HeatmapCellDto,
+  HeatmapCellDetailDto,
 } from './dto/reporte-response.dto';
 import * as XLSX_STYLE from 'xlsx-js-style';
 
@@ -289,6 +290,25 @@ export class ReportesService {
     }
   }
 
+  private classifyAsset(
+    va: {
+      confidencialidadId: number;
+      integridadId: number;
+      disponibilidadId: number;
+      evaluacionRiesgo: number;
+    },
+    impactoMap: Map<number, number>,
+  ): { impacto: number; probabilidad: number } {
+    const impacto = Math.max(
+      impactoMap.get(va.confidencialidadId) ?? 0,
+      impactoMap.get(va.integridadId) ?? 0,
+      impactoMap.get(va.disponibilidadId) ?? 0,
+    );
+    const probabilidad =
+      va.evaluacionRiesgo <= 3 ? 1 : va.evaluacionRiesgo <= 8 ? 2 : 3;
+    return { impacto, probabilidad };
+  }
+
   async getHeatmap(): Promise<HeatmapSerieDto[]> {
     try {
       const [vas, impactos] = await Promise.all([
@@ -308,13 +328,8 @@ export class ReportesService {
       }
 
       for (const va of filtered) {
-        const impacto = Math.max(
-          impactoMap.get(va.confidencialidadId) ?? 0,
-          impactoMap.get(va.integridadId) ?? 0,
-          impactoMap.get(va.disponibilidadId) ?? 0,
-        );
-        const prob = va.evaluacionRiesgo! <= 3 ? 1 : va.evaluacionRiesgo! <= 8 ? 2 : 3;
-        cellMap[`${impacto}_${prob}`]++;
+        const { impacto, probabilidad } = this.classifyAsset(va, impactoMap);
+        cellMap[`${impacto}_${probabilidad}`]++;
       }
 
       const series: HeatmapSerieDto[] = [];
@@ -336,6 +351,47 @@ export class ReportesService {
     } catch (error) {
       throw new HttpException(
         `Error al obtener mapa de calor: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getHeatmapCell(
+    impacto: number,
+    probabilidad: number,
+  ): Promise<HeatmapCellDetailDto[]> {
+    try {
+      const [vas, impactos, macroProcesos] = await Promise.all([
+        this.prisma.valoracionActivo.findMany(),
+        this.prisma.impacto.findMany(),
+        this.prisma.macroProceso.findMany(),
+      ]);
+
+      const impactoMap = new Map(impactos.map((i) => [i.id, i.valor]));
+      const macroProcesoMap = new Map(
+        macroProcesos.map((m) => [m.id, m.nombre]),
+      );
+
+      const filtered = vas.filter((va) => va.evaluacionRiesgo != null);
+
+      const matching = filtered.filter((va) => {
+        const classification = this.classifyAsset(va, impactoMap);
+        return (
+          classification.impacto === impacto &&
+          classification.probabilidad === probabilidad
+        );
+      });
+
+      return matching.map((va) => ({
+        id: va.id,
+        nombreActivo: va.nombreActivo,
+        macroProceso: macroProcesoMap.get(va.macroProcesoId) ?? 'Desconocido',
+        nivelRiesgo: va.nivelRiesgo,
+        evaluacionRiesgo: va.evaluacionRiesgo,
+      }));
+    } catch (error) {
+      throw new HttpException(
+        `Error al obtener detalle de celda del mapa de calor: ${(error as Error).message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

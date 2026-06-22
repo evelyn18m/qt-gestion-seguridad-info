@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { HttpException } from '@nestjs/common';
 import { ReportesController } from './reportes.controller';
 import { ReportesService } from './reportes.service';
 
@@ -19,6 +20,7 @@ describe('ReportesController', () => {
     getTratamientoRiesgo: jest.Mock;
     exportTratamientoRiesgo: jest.Mock;
     getHeatmap: jest.Mock;
+    getHeatmapCell: jest.Mock;
   };
 
   const mockResumen = {
@@ -153,6 +155,23 @@ describe('ReportesController', () => {
     },
   ];
 
+  const mockHeatmapCell = [
+    {
+      id: 1,
+      nombreActivo: 'Servidor A',
+      macroProceso: 'Gestión TI',
+      nivelRiesgo: 'Medio',
+      evaluacionRiesgo: 6,
+    },
+    {
+      id: 2,
+      nombreActivo: 'Servidor B',
+      macroProceso: 'Recursos Humanos',
+      nivelRiesgo: 'Bajo',
+      evaluacionRiesgo: 2,
+    },
+  ];
+
   beforeEach(async () => {
     service = {
       getResumen: jest.fn().mockResolvedValue(mockResumen),
@@ -175,6 +194,7 @@ describe('ReportesController', () => {
       getTratamientoRiesgo: jest.fn().mockResolvedValue(mockTratamientoRiesgo),
       exportTratamientoRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
       getHeatmap: jest.fn().mockResolvedValue(mockHeatmap),
+      getHeatmapCell: jest.fn().mockResolvedValue(mockHeatmapCell),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -480,6 +500,41 @@ describe('ReportesController', () => {
       expect(heatmapEntry).toBeDefined();
       expect(heatmapEntry!.descripcion).toBe(
         'Mapa de calor 3x3 de riesgos (Evaluación de Riesgo × Impacto)',
+      );
+    });
+  });
+
+  describe('GET /reportes/heatmap/cell', () => {
+    it('debe retornar 200 con lista de activos en la celda', async () => {
+      const result = await controller.getHeatmapCell(2, 1);
+
+      expect(service.getHeatmapCell).toHaveBeenCalledWith(2, 1);
+      expect(result).toEqual(mockHeatmapCell);
+      expect(result).toHaveLength(2);
+      expect(result[0]).toHaveProperty('id');
+      expect(result[0]).toHaveProperty('nombreActivo');
+      expect(result[0]).toHaveProperty('macroProceso');
+      expect(result[0]).toHaveProperty('nivelRiesgo');
+      expect(result[0]).toHaveProperty('evaluacionRiesgo');
+    });
+
+    it('debe retornar 400 para impacto fuera de rango (impacto=5)', () => {
+      expect(() => controller.getHeatmapCell(5, 1)).toThrow(HttpException);
+    });
+
+    it('debe retornar 400 para probabilidad fuera de rango (probabilidad=0)', () => {
+      expect(() => controller.getHeatmapCell(1, 0)).toThrow(HttpException);
+    });
+
+    it('debe incluir ruta heatmap/cell en el indice de endpoints', () => {
+      const result = controller.getIndice();
+
+      const cellEntry = result.endpoints.find(
+        (e) => e.ruta === 'GET /reportes/heatmap/cell',
+      );
+      expect(cellEntry).toBeDefined();
+      expect(cellEntry!.descripcion).toBe(
+        'Detalle de activos en una celda del mapa de calor (impacto × probabilidad)',
       );
     });
   });
