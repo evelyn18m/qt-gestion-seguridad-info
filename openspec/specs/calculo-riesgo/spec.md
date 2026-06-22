@@ -1,14 +1,16 @@
-# Delta: Backend — calculo-riesgo Service
+# Spec: Backend — calculo-riesgo Service
 
 ## Purpose
 
-Servicio puro de cálculo de riesgo según matriz EGSI v1.4. Sin side effects, exportable para testing. Integra en `DetalleRiesgoService` y expone endpoint de preview.
+Servicio puro de cálculo de riesgo según matriz EGSI v1.4. Sin side effects, exportable para testing. Integra en `DetalleRiesgoService` y expone endpoint de preview. Los umbrales de clasificación son parametrizables vía `ConfiguracionRiesgo`.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Pure calculateRiesgo() Function
 
-La función `calculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number)` DEBE ser exportada desde `calculo-riesgo.service.ts` como función pura. NO DEBE tener side effects ni dependencias de Prisma.
+La función `calculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number, nivelAmenazaControl?: number, nivelVulnerabilidadControl?: number, config?: Thresholds)` DEBE ser exportada desde `calculo-riesgo.service.ts` como función pura. NO DEBE tener side effects ni dependencias de Prisma.
+
+SHALL accept optional 6th parameter `config?: Thresholds`. Without config, SHALL use defaults (`DEFAULT_THRESHOLDS`: riesgoBajoMax=3, riesgoMedioMax=9, riesgoAltoMax=27, matching DB seed). With config, all derivations (nivelRiesgo, metodoTratamiento, tipoControl, riesgoResidual) SHALL use config thresholds. Function remains pure — no DB access.
 
 #### Scenario: Función pura retornable
 
@@ -16,25 +18,45 @@ La función `calculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilid
 - WHEN se llama con `(2, 2, 2)`
 - THEN retorna objeto con `evaluacionRiesgo: 8` y sin llamado a base de datos
 
+#### Scenario: Classify with custom config
+
+- GIVEN config with riesgoBajoMax=5, riesgoMedioMax=15
+- WHEN calculateRiesgo(2, 2, 2, undefined, undefined, config) — evaluacionRiesgo=8
+- THEN nivelRiesgo="MEDIO" (8 > 5 and 8 ≤ 15)
+
+#### Scenario: Backward compatible without config
+
+- GIVEN no config parameter
+- WHEN calculateRiesgo(2, 2, 2) — evaluacionRiesgo=8
+- THEN defaults apply: nivelRiesgo="MEDIO" (8 > 3 and 8 ≤ 9)
+
 ### Requirement: Service Integration in DetalleRiesgoService
 
-El `DetalleRiesgoService` DEBE invocar `calculateRiesgo()` en `create()` y `update()` de cada DetalleRiesgo. Los campos calculados DEBEN persistirse: `evaluacionRiesgo`, `nivelRiesgo`, `metodoTratamiento`, `tipoControl`, `evaluacionRiesgoControl`, `nivelRiesgoControl`.
+El `DetalleRiesgoService` DEBE inyectar `ParametrosService`, leer `ConfiguracionRiesgo` vía `getConfiguracion()` antes de cada llamado a `calculateRiesgo()`, y pasar config como parámetro. Los campos calculados DEBEN persistirse: `evaluacionRiesgo`, `nivelRiesgo`, `metodoTratamiento`, `tipoControl`, `evaluacionRiesgoControl`, `nivelRiesgoControl`. Create, update, y calcular preview all SHALL use live DB config.
 
 #### Scenario: Create DetalleRiesgo calcula campos
 
 - GIVEN se crea un DetalleRiesgo con `amenazaIds = "[2]"`, `vulnerabilidadIds = "[3]"`
 - WHEN se llama `DetalleRiesgoService.create()`
-- THEN los campos derivados se calculan y persisten usando CIA promedio del padre
+- THEN los campos derivados se calculan y persisten usando CIA promedio del padre, con umbrales de DB
 
 #### Scenario: Update DetalleRiesgo recalcula campos
 
 - GIVEN un DetalleRiesgo existente con `evaluacionRiesgo = 8`
 - WHEN se actualiza `nivelVulnerabilidad` a 3
-- THEN `evaluacionRiesgo` y derivados se recalculan
+- THEN `evaluacionRiesgo` y derivados se recalculan con umbrales de DB
+
+#### Scenario: Create reads config from DB
+
+- GIVEN ConfiguracionRiesgo with riesgoBajoMax=4 stored
+- WHEN DetalleRiesgoService.create() is called
+- THEN calculateRiesgo() receives DB config and classifies with threshold 4
 
 ### Requirement: PATCH /detalle-riesgo/:id/calcular Endpoint
 
 El endpoint PATCH `/detalle-riesgo/:id/calcular` DEBE invocar `calculateRiesgo()` con los inputs del body y retornar los campos calculados sin persistir. DEBE aceptar `nivelAmenaza` (required), `nivelVulnerabilidad` (required), `VA` (optional).
+
+SHALL accept optional `config` field in request body. When provided, preview SHALL use submitted thresholds. When omitted, SHALL use DB config.
 
 #### Scenario: Preview recalcula sin persistir
 
@@ -48,7 +70,30 @@ El endpoint PATCH `/detalle-riesgo/:id/calcular` DEBE invocar `calculateRiesgo()
 - WHEN se ejecuta el endpoint
 - THEN retorna error 400 con mensaje de validación
 
+#### Scenario: Preview with submitted config
+
+- GIVEN body includes `config: { riesgoBajoMax: 6, riesgoMedioMax: 12, ... }`
+- WHEN PATCH /detalle-riesgo/:id/calcular
+- THEN response classifications use threshold 6 for BAJO/MEDIO boundary
+
+### Requirement: Backend Range Validation on Update
+
+ParametrosService.updateConfiguracion() SHALL reject updates where riesgoBajoMax >= riesgoMedioMax or riesgoMedioMax >= riesgoAltoMax. Same for control thresholds. Violation SHALL return HTTP 400.
+
+#### Scenario: Overlapping range rejected
+
+- GIVEN PUT body with riesgoBajoMax=10, riesgoMedioMax=5
+- WHEN updateConfiguracion() validates
+- THEN returns 400 with message "riesgoBajoMax debe ser menor que riesgoMedioMax"
+
+#### Scenario: Valid ascending ranges
+
+- GIVEN riesgoBajoMax=3, riesgoMedioMax=9, riesgoAltoMax=27
+- WHEN updateConfiguracion() validates
+- THEN validation passes, config saved
+
 ## Out of Scope
 
 - Persistencia de `riesgoResidual` como columna (se calcula en tiempo de query/display)
 - Modificación de schema Prisma (campos ya existen)
+- Migración/recálculo de valoraciones existentes

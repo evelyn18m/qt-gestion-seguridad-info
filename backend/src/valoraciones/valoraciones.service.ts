@@ -6,12 +6,21 @@ import {
   DetalleRiesgoDto,
 } from './dto/create-valoracion.dto';
 import { UpdateValoracionDto } from './dto/update-valoracion.dto';
-import { calculateRiesgo, RiesgoCalculado } from './calculo-riesgo.service';
+import {
+  calculateRiesgo,
+  RiesgoCalculado,
+  Thresholds,
+  DEFAULT_THRESHOLDS,
+} from './calculo-riesgo.service';
 import { CalcularDetalleDto } from './dto/calcular-detalle.dto';
+import { ParametrosService } from '../parametros/parametros.service';
 
 @Injectable()
 export class ValoracionesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly parametrosService: ParametrosService,
+  ) {}
 
   async findAll() {
     const items = await this.prisma.valoracionActivo.findMany({
@@ -31,6 +40,15 @@ export class ValoracionesService {
   async create(dto: CreateValoracionDto) {
     const { detallesRiesgo, ...data } = dto;
     const item = await this.prisma.valoracionActivo.create({ data });
+
+    // Read config once per request
+    let config: Thresholds = DEFAULT_THRESHOLDS;
+    try {
+      config = await this.parametrosService.getConfiguracion();
+    } catch {
+      // Fall back to defaults if config read fails
+    }
+
     if (
       detallesRiesgo &&
       Array.isArray(detallesRiesgo) &&
@@ -92,6 +110,7 @@ export class ValoracionesService {
               vulnNivelValores[i],
               nivelControlAmenaza[i],
               nivelControlVuln[i],
+              config,
             ),
           }),
         ),
@@ -107,6 +126,15 @@ export class ValoracionesService {
       where: { id },
       data,
     });
+
+    // Read config once per request
+    let config: Thresholds = DEFAULT_THRESHOLDS;
+    try {
+      config = await this.parametrosService.getConfiguracion();
+    } catch {
+      // Fall back to defaults
+    }
+
     if (
       detallesRiesgo &&
       Array.isArray(detallesRiesgo) &&
@@ -171,6 +199,7 @@ export class ValoracionesService {
               vulnNivelValores[i],
               nivelControlAmenaza[i],
               nivelControlVuln[i],
+              config,
             ),
           }),
         ),
@@ -199,12 +228,26 @@ export class ValoracionesService {
       );
     }
     const va = dto.VA ?? 3;
+
+    // Use dto.config if provided, otherwise read from DB
+    let config: Thresholds = DEFAULT_THRESHOLDS;
+    if (dto.config) {
+      config = dto.config;
+    } else {
+      try {
+        config = await this.parametrosService.getConfiguracion();
+      } catch {
+        // Fall back to defaults
+      }
+    }
+
     return calculateRiesgo(
       va,
       dto.nivelAmenaza,
       dto.nivelVulnerabilidad,
       dto.nivelAmenazaControl,
       dto.nivelVulnerabilidadControl,
+      config,
     );
   }
 
@@ -223,6 +266,7 @@ export class ValoracionesService {
     nivelVulnerabilidadValor?: number,
     nivelAmenazaControlValor?: number,
     nivelVulnerabilidadControlValor?: number,
+    config: Thresholds = DEFAULT_THRESHOLDS,
   ): Prisma.DetalleRiesgoUncheckedCreateInput {
     const data: Prisma.DetalleRiesgoUncheckedCreateInput = {
       valoracionActivoId,
@@ -284,6 +328,7 @@ export class ValoracionesService {
       nivelVulnerabilidad,
       nivelAmenazaControlValor,
       nivelVulnerabilidadControlValor,
+      config,
     );
     data.evaluacionRiesgo = riesgo.evaluacionRiesgo;
     data.nivelRiesgo = riesgo.nivelRiesgo;

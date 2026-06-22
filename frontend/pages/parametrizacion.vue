@@ -7,12 +7,21 @@ import { SessionExpiredError } from '~/composables/useApi'
 const DEFAULTS: ConfiguracionRiesgo = {
   id: 0,
   riesgoBajoMax: 3,
+  riesgoBajoDesde: 1,
   riesgoMedioMax: 9,
+  riesgoMedioDesde: 4,
   riesgoAltoMax: 27,
+  riesgoAltoDesde: 10,
   controlBajoMax: 3,
+  controlBajoDesde: 1,
   controlMedioMax: 9,
+  controlMedioDesde: 4,
   controlAltoMax: 27,
+  controlAltoDesde: 10,
   residualAceptableMax: 3,
+  residualAceptableDesde: 1,
+  residualInaceptableDesde: 4,
+  residualInaceptableMax: 27,
 }
 
 // ─── State ───
@@ -25,71 +34,138 @@ const successMessage = ref('')
 const showSessionExpired = ref(false)
 const config = ref<ConfiguracionRiesgo>({ ...DEFAULTS })
 
+// ─── Validation ───
+
+interface RangeError {
+  row: number
+  field: 'desde' | 'hasta'
+  message: string
+}
+
+const rangeErrors = ref<RangeError[]>([])
+
+function validateRanges(): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+  rangeErrors.value = []
+  const cfg = config.value
+
+  // Per-row: desde < hasta for each of the 9 rows
+  const rows: { desdeKey: keyof ConfiguracionRiesgo; hastaKey: keyof ConfiguracionRiesgo; label: string; ri: number }[] = [
+    { desdeKey: 'riesgoBajoDesde', hastaKey: 'riesgoBajoMax', label: 'Riesgo Bajo', ri: 0 },
+    { desdeKey: 'riesgoMedioDesde', hastaKey: 'riesgoMedioMax', label: 'Riesgo Medio', ri: 1 },
+    { desdeKey: 'riesgoAltoDesde', hastaKey: 'riesgoAltoMax', label: 'Riesgo Alto', ri: 2 },
+    { desdeKey: 'controlBajoDesde', hastaKey: 'controlBajoMax', label: 'Control Bajo', ri: 0 },
+    { desdeKey: 'controlMedioDesde', hastaKey: 'controlMedioMax', label: 'Control Medio', ri: 1 },
+    { desdeKey: 'controlAltoDesde', hastaKey: 'controlAltoMax', label: 'Control Alto', ri: 2 },
+    { desdeKey: 'residualAceptableDesde', hastaKey: 'residualAceptableMax', label: 'Residual Aceptable', ri: 0 },
+    { desdeKey: 'residualInaceptableDesde', hastaKey: 'residualInaceptableMax', label: 'Residual Inaceptable', ri: 1 },
+  ]
+
+  for (const row of rows) {
+    if ((cfg[row.desdeKey] as number) >= (cfg[row.hastaKey] as number)) {
+      errors.push(`${row.label}: Desde debe ser menor que Hasta`)
+      rangeErrors.value.push({ row: row.ri, field: 'desde', message: 'Desde ≥ Hasta' })
+      rangeErrors.value.push({ row: row.ri, field: 'hasta', message: 'Hasta ≤ Desde' })
+    }
+  }
+
+  // Cross-row per card: hastaN < desdeN+1 (no overlap, gaps allowed)
+  // Riesgo card
+  if (cfg.riesgoBajoMax >= cfg.riesgoMedioDesde) {
+    errors.push('Riesgo: Bajo.Hasta debe ser menor que Medio.Desde')
+    rangeErrors.value.push({ row: 0, field: 'hasta', message: '≤ Medio.Desde' })
+    rangeErrors.value.push({ row: 1, field: 'desde', message: '≥ Bajo.Hasta' })
+  }
+  if (cfg.riesgoMedioMax >= cfg.riesgoAltoDesde) {
+    errors.push('Riesgo: Medio.Hasta debe ser menor que Alto.Desde')
+    rangeErrors.value.push({ row: 1, field: 'hasta', message: '≤ Alto.Desde' })
+    rangeErrors.value.push({ row: 2, field: 'desde', message: '≥ Medio.Hasta' })
+  }
+
+  // Control card
+  if (cfg.controlBajoMax >= cfg.controlMedioDesde) {
+    errors.push('Control: Bajo.Hasta debe ser menor que Medio.Desde')
+    rangeErrors.value.push({ row: 0, field: 'hasta', message: '≤ Medio.Desde' })
+    rangeErrors.value.push({ row: 1, field: 'desde', message: '≥ Bajo.Hasta' })
+  }
+  if (cfg.controlMedioMax >= cfg.controlAltoDesde) {
+    errors.push('Control: Medio.Hasta debe ser menor que Alto.Desde')
+    rangeErrors.value.push({ row: 1, field: 'hasta', message: '≤ Alto.Desde' })
+    rangeErrors.value.push({ row: 2, field: 'desde', message: '≥ Medio.Hasta' })
+  }
+
+  // Residual card
+  if (cfg.residualAceptableMax >= cfg.residualInaceptableDesde) {
+    errors.push('Residual: Aceptable.Hasta debe ser menor que Inaceptable.Desde')
+    rangeErrors.value.push({ row: 0, field: 'hasta', message: '≤ Inaceptable.Desde' })
+    rangeErrors.value.push({ row: 1, field: 'desde', message: '≥ Aceptable.Hasta' })
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
+function hasInputError(ri: number, field: 'desde' | 'hasta'): boolean {
+  return rangeErrors.value.some((e) => e.row === ri && e.field === field)
+}
+
+const validation = computed(() => validateRanges())
+
 // ─── Umbral UI helpers ───
 
-interface UmbralInput {
-  key: keyof ConfiguracionRiesgo
+interface CardRango {
+  desde: number
+  hasta: number
+  clase: string
+  etiqueta: string
+  desdeKey: keyof ConfiguracionRiesgo
+  hastaKey: keyof ConfiguracionRiesgo
+}
+
+interface UmbralCard {
+  key: string
   label: string
   descripcion: string
   campo: string
-  rangos: { desde: number; hasta: number; clase: string; etiqueta: string }[]
+  rangos: CardRango[]
 }
 
-const umbrales: UmbralInput[] = [
-  {
-    key: 'riesgoAltoMax',
-    label: 'Nivel de Riesgo',
-    descripcion: 'Riesgo inherente calculado como VA × Amenaza × Vulnerabilidad.',
-    campo: 'evaluacionRiesgo',
-    rangos: [
-      { desde: 1, hasta: 0, clase: 'bajo', etiqueta: 'Bajo' },
-      { desde: 0, hasta: 0, clase: 'medio', etiqueta: 'Medio' },
-      { desde: 0, hasta: 0, clase: 'alto', etiqueta: 'Alto' },
-    ],
-  },
-  {
-    key: 'controlAltoMax',
-    label: 'Riesgo con Control',
-    descripcion: 'Riesgo residual tras aplicar controles.',
-    campo: 'evaluacionRiesgoControl',
-    rangos: [
-      { desde: 1, hasta: 0, clase: 'bajo', etiqueta: 'Bajo' },
-      { desde: 0, hasta: 0, clase: 'medio', etiqueta: 'Medio' },
-      { desde: 0, hasta: 0, clase: 'alto', etiqueta: 'Alto' },
-    ],
-  },
-  {
-    key: 'residualAceptableMax',
-    label: 'Riesgo Residual',
-    descripcion: 'Clasificación final del riesgo después del tratamiento.',
-    campo: 'evaluacionRiesgoControl',
-    rangos: [
-      { desde: 1, hasta: 0, clase: 'bajo', etiqueta: 'Aceptable' },
-      { desde: 0, hasta: 0, clase: 'alto', etiqueta: 'Inaceptable' },
-    ],
-  },
-]
-
-function buildRangos(u: UmbralInput): void {
+const umbralCards = computed<UmbralCard[]>(() => {
   const cfg = config.value
-  if (u.key === 'riesgoAltoMax') {
-    u.rangos[0].hasta = cfg.riesgoBajoMax
-    u.rangos[1].desde = cfg.riesgoBajoMax + 1
-    u.rangos[1].hasta = cfg.riesgoMedioMax
-    u.rangos[2].desde = cfg.riesgoMedioMax + 1
-    u.rangos[2].hasta = cfg.riesgoAltoMax
-  } else if (u.key === 'controlAltoMax') {
-    u.rangos[0].hasta = cfg.controlBajoMax
-    u.rangos[1].desde = cfg.controlBajoMax + 1
-    u.rangos[1].hasta = cfg.controlMedioMax
-    u.rangos[2].desde = cfg.controlMedioMax + 1
-    u.rangos[2].hasta = cfg.controlAltoMax
-  } else {
-    u.rangos[0].hasta = cfg.residualAceptableMax
-    u.rangos[1].desde = cfg.residualAceptableMax + 1
-    u.rangos[1].hasta = 27
-  }
-}
+  return [
+    {
+      key: 'riesgo',
+      label: 'Nivel de Riesgo',
+      descripcion: 'Riesgo inherente calculado como VA × Amenaza × Vulnerabilidad.',
+      campo: 'evaluacionRiesgo',
+      rangos: [
+        { desde: cfg.riesgoBajoDesde, hasta: cfg.riesgoBajoMax, clase: 'bajo', etiqueta: 'Bajo', desdeKey: 'riesgoBajoDesde', hastaKey: 'riesgoBajoMax' },
+        { desde: cfg.riesgoMedioDesde, hasta: cfg.riesgoMedioMax, clase: 'medio', etiqueta: 'Medio', desdeKey: 'riesgoMedioDesde', hastaKey: 'riesgoMedioMax' },
+        { desde: cfg.riesgoAltoDesde, hasta: cfg.riesgoAltoMax, clase: 'alto', etiqueta: 'Alto', desdeKey: 'riesgoAltoDesde', hastaKey: 'riesgoAltoMax' },
+      ],
+    },
+    {
+      key: 'control',
+      label: 'Riesgo con Control',
+      descripcion: 'Riesgo residual tras aplicar controles.',
+      campo: 'evaluacionRiesgoControl',
+      rangos: [
+        { desde: cfg.controlBajoDesde, hasta: cfg.controlBajoMax, clase: 'bajo', etiqueta: 'Bajo', desdeKey: 'controlBajoDesde', hastaKey: 'controlBajoMax' },
+        { desde: cfg.controlMedioDesde, hasta: cfg.controlMedioMax, clase: 'medio', etiqueta: 'Medio', desdeKey: 'controlMedioDesde', hastaKey: 'controlMedioMax' },
+        { desde: cfg.controlAltoDesde, hasta: cfg.controlAltoMax, clase: 'alto', etiqueta: 'Alto', desdeKey: 'controlAltoDesde', hastaKey: 'controlAltoMax' },
+      ],
+    },
+    {
+      key: 'residual',
+      label: 'Riesgo Residual',
+      descripcion: 'Clasificación final del riesgo después del tratamiento.',
+      campo: 'evaluacionRiesgoControl',
+      rangos: [
+        { desde: cfg.residualAceptableDesde, hasta: cfg.residualAceptableMax, clase: 'bajo', etiqueta: 'Aceptable', desdeKey: 'residualAceptableDesde', hastaKey: 'residualAceptableMax' },
+        { desde: cfg.residualInaceptableDesde, hasta: cfg.residualInaceptableMax, clase: 'alto', etiqueta: 'Inaceptable', desdeKey: 'residualInaceptableDesde', hastaKey: 'residualInaceptableMax' },
+      ],
+    },
+  ]
+})
 
 // ─── API ───
 
@@ -116,6 +192,13 @@ async function saveConfig() {
   saving.value = true
   errorMessage.value = ''
   successMessage.value = ''
+  // Re-validate before saving
+  const v = validateRanges()
+  if (!v.valid) {
+    errorMessage.value = v.errors.join('. ')
+    saving.value = false
+    return
+  }
   try {
     const { apiFetch } = useApi()
     const { id, ...data } = config.value
@@ -152,7 +235,7 @@ onMounted(() => {
         <h2>Parametrización</h2>
         <p>Umbrales de clasificación de riesgos según ISO 27005.</p>
       </div>
-      <button class="btn-save" :disabled="saving || loading" @click="saveConfig">
+      <button class="btn-save" :disabled="saving || loading || !validation.valid" @click="saveConfig">
         {{ saving ? 'Guardando...' : 'Guardar cambios' }}
       </button>
     </div>
@@ -167,68 +250,45 @@ onMounted(() => {
     </div>
 
     <div v-else class="cards-grid">
-      <div v-for="u in umbrales" :key="u.key" class="param-card">
-        <h3 class="card-title">{{ u.label }}</h3>
-        <p class="card-desc">{{ u.descripcion }}</p>
-        <p class="card-field">Campo: <code>{{ u.campo }}</code></p>
+      <div v-for="card in umbralCards" :key="card.key" class="param-card">
+        <h3 class="card-title">{{ card.label }}</h3>
+        <p class="card-desc">{{ card.descripcion }}</p>
+        <p class="card-field">Campo: <code>{{ card.campo }}</code></p>
 
         <table class="umbral-table">
           <thead>
             <tr>
               <th>Clasificación</th>
+              <th>Desde</th>
               <th>Hasta</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(r, ri) in u.rangos" :key="ri">
+            <tr v-for="(r, ri) in card.rangos" :key="ri">
               <td>
                 <span :class="`umbral-badge badge-${r.clase}`">{{ r.etiqueta }}</span>
               </td>
               <td>
-                <template v-if="ri < u.rangos.length - 1">
-                  {{ buildRangos(u) }}
-                  <input
-                    v-if="u.key === 'riesgoAltoMax'"
-                    :ref="(el: any) => {}"
-                    type="number"
-                    class="umbral-input"
-                    :min="r.desde"
-                    :max="27"
-                    :value="ri === 0 ? config.riesgoBajoMax : ri === 1 ? config.riesgoMedioMax : config.riesgoAltoMax"
-                    @input="(e: Event) => {
-                      const v = Number((e.target as HTMLInputElement).value)
-                      if (ri === 0) config.riesgoBajoMax = v
-                      else if (ri === 1) config.riesgoMedioMax = v
-                      else config.riesgoAltoMax = v
-                    }"
-                  />
-                  <input
-                    v-else-if="u.key === 'controlAltoMax'"
-                    type="number"
-                    class="umbral-input"
-                    :min="r.desde"
-                    :max="27"
-                    :value="ri === 0 ? config.controlBajoMax : ri === 1 ? config.controlMedioMax : config.controlAltoMax"
-                    @input="(e: Event) => {
-                      const v = Number((e.target as HTMLInputElement).value)
-                      if (ri === 0) config.controlBajoMax = v
-                      else if (ri === 1) config.controlMedioMax = v
-                      else config.controlAltoMax = v
-                    }"
-                  />
-                  <input
-                    v-else
-                    type="number"
-                    class="umbral-input"
-                    :min="r.desde"
-                    :max="27"
-                    :value="config.residualAceptableMax"
-                    @input="(e: Event) => {
-                      config.residualAceptableMax = Number((e.target as HTMLInputElement).value)
-                    }"
-                  />
-                </template>
-                <span v-else class="max-label">27 (máx)</span>
+                <input
+                  type="number"
+                  class="umbral-input"
+                  :class="{ 'input-error': hasInputError(ri, 'desde') }"
+                  :min="1"
+                  :max="27"
+                  :value="(config as any)[r.desdeKey]"
+                  @input="(e: Event) => { (config as any)[r.desdeKey] = Number((e.target as HTMLInputElement).value) }"
+                />
+              </td>
+              <td>
+                <input
+                  type="number"
+                  class="umbral-input"
+                  :class="{ 'input-error': hasInputError(ri, 'hasta') }"
+                  :min="1"
+                  :max="27"
+                  :value="(config as any)[r.hastaKey]"
+                  @input="(e: Event) => { (config as any)[r.hastaKey] = Number((e.target as HTMLInputElement).value) }"
+                />
               </td>
             </tr>
           </tbody>
@@ -236,12 +296,12 @@ onMounted(() => {
 
         <div class="rango-preview">
           <span
-            v-for="(r, ri) in u.rangos"
+            v-for="(r, ri) in card.rangos"
             :key="ri"
             :class="`umbral-badge badge-${r.clase}`"
             style="font-size:0.75rem;"
           >
-            {{ r.etiqueta }}: {{ r.desde }}–{{ r.hasta }}
+            {{ r.etiqueta }}: {{ (config as any)[r.desdeKey] }}–{{ (config as any)[r.hastaKey] }}
           </span>
         </div>
       </div>
@@ -344,7 +404,7 @@ onMounted(() => {
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 1.5rem;
 }
 
@@ -426,9 +486,19 @@ onMounted(() => {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
-.max-label {
+.umbral-input.input-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.umbral-fixed {
+  display: inline-block;
+  width: 80px;
+  padding: 0.35rem 0.6rem;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  text-align: center;
 }
 
 .umbral-badge {

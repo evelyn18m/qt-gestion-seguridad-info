@@ -196,12 +196,21 @@ model CategoriaControlesImplementar {
 model ConfiguracionRiesgo {
   id                   Int      @id @default(autoincrement())
   riesgoBajoMax        Int      @default(3)
+  riesgoBajoDesde      Int      @default(1)
   riesgoMedioMax       Int      @default(9)
+  riesgoMedioDesde     Int      @default(3)
   riesgoAltoMax        Int      @default(27)
+  riesgoAltoDesde      Int      @default(9)
   controlBajoMax       Int      @default(3)
+  controlBajoDesde     Int      @default(1)
   controlMedioMax      Int      @default(9)
+  controlMedioDesde    Int      @default(3)
   controlAltoMax       Int      @default(27)
+  controlAltoDesde     Int      @default(9)
   residualAceptableMax Int      @default(3)
+  residualAceptableDesde   Int @default(1)
+  residualInaceptableDesde Int @default(3)
+  residualInaceptableMax   Int @default(27)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

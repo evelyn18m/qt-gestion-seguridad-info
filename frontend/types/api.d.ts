@@ -222,10 +222,19 @@ export interface HeatmapSerieDto {
 export interface ConfiguracionRiesgo {
     id: number
     riesgoBajoMax: number
+    riesgoBajoDesde: number
     riesgoMedioMax: number
+    riesgoMedioDesde: number
     riesgoAltoMax: number
+    riesgoAltoDesde: number
     controlBajoMax: number
+    controlBajoDesde: number
     controlMedioMax: number
+    controlMedioDesde: number
     controlAltoMax: number
+    controlAltoDesde: number
     residualAceptableMax: number
+    residualAceptableDesde: number
+    residualInaceptableDesde: number
+    residualInaceptableMax: number
 }

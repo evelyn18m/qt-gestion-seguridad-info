@@ -26,10 +26,10 @@ describe('calculateRiesgo — boundary value tests', () => {
       expect(result.nivelRiesgo).toBe('MEDIO');
     });
 
-    it('(1,3,3) → evaluacionRiesgo=9, nivelRiesgo=ALTO', () => {
+    it('(1,3,3) → evaluacionRiesgo=9, nivelRiesgo=MEDIO (9 ≤ medioMax=9)', () => {
       const result = calculateRiesgo(1, 3, 3);
       expect(result.evaluacionRiesgo).toBe(9);
-      expect(result.nivelRiesgo).toBe('ALTO');
+      expect(result.nivelRiesgo).toBe('MEDIO');
     });
 
     it('(3,3,3) → evaluacionRiesgo=27, nivelRiesgo=ALTO', () => {
@@ -39,7 +39,7 @@ describe('calculateRiesgo — boundary value tests', () => {
     });
   });
 
-  describe('nivelRiesgo derivation: 1-3=BAJO, 4-8=MEDIO, 9-27=ALTO', () => {
+  describe('nivelRiesgo derivation: ≤3=BAJO, 4-9=MEDIO, 10-27=ALTO (defaults)', () => {
     it('evaluacionRiesgo=2 → nivelRiesgo=BAJO', () => {
       // VA=2, amenaza=1, vuln=2 → 2×1×2=4 → MEDIO by formula
       // To get evaluacionRiesgo=2 directly we need evaluate with the formula:
@@ -56,10 +56,10 @@ describe('calculateRiesgo — boundary value tests', () => {
       expect(result.nivelRiesgo).toBe('MEDIO');
     });
 
-    it('evaluacionRiesgo=9 → nivelRiesgo=ALTO', () => {
+    it('evaluacionRiesgo=9 → nivelRiesgo=MEDIO (9 ≤ medioMax=9)', () => {
       const result = calculateRiesgo(1, 3, 3);
       expect(result.evaluacionRiesgo).toBe(9);
-      expect(result.nivelRiesgo).toBe('ALTO');
+      expect(result.nivelRiesgo).toBe('MEDIO');
     });
   });
 
@@ -186,6 +186,54 @@ describe('calculateRiesgo — boundary value tests', () => {
       expect(result.evaluacionRiesgoControl).toBe(2);
       expect(result.nivelRiesgoControl).toBe('BAJO');
       expect(result.riesgoResidual).toBe('ACEPTABLE');
+    });
+  });
+
+  describe('with custom thresholds', () => {
+    const custom = {
+      riesgoBajoMax: 5,
+      riesgoMedioMax: 15,
+      riesgoAltoMax: 27,
+      controlBajoMax: 2,
+      controlMedioMax: 10,
+      controlAltoMax: 27,
+      residualAceptableMax: 5,
+    };
+
+    it('eval=5 → BAJO (≤ bajoMax=5)', () => {
+      // 5*1*1 = 5 → BAJO with custom bajoMax=5
+      const result = calculateRiesgo(5, 1, 1, undefined, undefined, custom);
+      expect(result.evaluacionRiesgo).toBe(5);
+      expect(result.nivelRiesgo).toBe('BAJO');
+    });
+
+    it('eval=9 → MEDIO with custom (defaults would give ALTO: 9>8)', () => {
+      // 9 would be ALTO with hardcoded 3/8/27 (9>8)
+      // With custom: 9 > 5 and 9 ≤ 15 → MEDIO
+      const result = calculateRiesgo(3, 3, 1, undefined, undefined, custom);
+      expect(result.evaluacionRiesgo).toBe(9);
+      expect(result.nivelRiesgo).toBe('MEDIO');
+    });
+
+    it('eval=10 → MEDIO with custom (defaults would give ALTO: 10>8)', () => {
+      // 10 would be ALTO with hardcoded 3/8/27 (10>8)
+      // With custom: 10 > 5 and 10 ≤ 15 → MEDIO
+      const result = calculateRiesgo(2, 5, 1, undefined, undefined, custom);
+      expect(result.evaluacionRiesgo).toBe(10);
+      expect(result.nivelRiesgo).toBe('MEDIO');
+    });
+
+    it('residual: evalControl=5 (≤ residualAceptableMax=5) → ACEPTABLE', () => {
+      const result = calculateRiesgo(5, 1, 1, 1, 1, custom);
+      expect(result.evaluacionRiesgoControl).toBe(5);
+      expect(result.riesgoResidual).toBe('ACEPTABLE');
+    });
+
+    it('residual: evalControl=6 (> residualAceptableMax=5) → INACEPTABLE', () => {
+      // VA=3, nAC=2, nVC=1 → 3*2*1 = 6 > 5 → INACEPTABLE
+      const result = calculateRiesgo(3, 1, 1, 2, 1, custom);
+      expect(result.evaluacionRiesgoControl).toBe(6);
+      expect(result.riesgoResidual).toBe('INACEPTABLE');
     });
   });
 });
