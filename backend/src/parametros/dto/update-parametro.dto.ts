@@ -11,9 +11,7 @@ import {
  * since class-level @Validate decorators are incompatible with NestJS legacy decorators.
  */
 @ValidatorConstraint({ name: 'isRangoConsistente', async: false })
-export class IsRangoConsistenteConstraint
-  implements ValidatorConstraintInterface
-{
+export class IsRangoConsistenteConstraint implements ValidatorConstraintInterface {
   validate(_value: unknown, args: ValidationArguments): boolean {
     const dto = args.object as UpdateParametroDto;
     if (dto.riesgoBajoMax >= dto.riesgoMedioMax) return false;

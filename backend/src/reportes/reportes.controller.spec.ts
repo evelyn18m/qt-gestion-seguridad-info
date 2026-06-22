@@ -167,7 +167,9 @@ describe('ReportesController', () => {
       getAnalisisRiesgoActivos: jest
         .fn()
         .mockResolvedValue(mockAnalisisRiesgoActivos),
-      exportAnalisisRiesgoActivos: jest.fn().mockResolvedValue(Buffer.from('test')),
+      exportAnalisisRiesgoActivos: jest
+        .fn()
+        .mockResolvedValue(Buffer.from('test')),
       getEvaluacionRiesgo: jest.fn().mockResolvedValue(mockEvaluacionRiesgo),
       exportEvaluacionRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
       getTratamientoRiesgo: jest.fn().mockResolvedValue(mockTratamientoRiesgo),

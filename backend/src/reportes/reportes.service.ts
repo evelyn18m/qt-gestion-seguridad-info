@@ -298,9 +298,7 @@ export class ReportesService {
       ]);
 
       const impactoMap = new Map(impactos.map((i) => [i.id, i.valor]));
-      const probMap = new Map(
-        probabilidades.map((p) => [p.id, p.valor]),
-      );
+      const probMap = new Map(probabilidades.map((p) => [p.id, p.valor]));
 
       const filtered = vas.filter((va) => va.probabilidadId != null);
 
@@ -349,12 +347,7 @@ export class ReportesService {
     filters: Record<string, string | undefined>,
   ): Promise<ValoracionActivoReporteDto[]> {
     try {
-      const {
-        q,
-        macroProcesoId,
-        formatoId,
-        custodioId,
-      } = filters;
+      const { q, macroProcesoId, formatoId, custodioId } = filters;
 
       const andConditions: Prisma.ValoracionActivoWhereInput[] = [];
 
@@ -575,17 +568,19 @@ export class ReportesService {
         });
 
       // Deduplicate by nombreActivo + amenazaIds/vulnerabilidadIds JSON arrays
-      const seenAnalisis = new Set<string>()
+      const seenAnalisis = new Set<string>();
       const dedupedAnalisis = enriched.filter((item) => {
-        const dr = detalles.find((d) => d.id === item.id)
-        const key = `${item.nombreActivo}|${dr?.amenazaIds ?? ''}|${dr?.vulnerabilidadIds ?? ''}`
-        if (seenAnalisis.has(key)) return false
-        seenAnalisis.add(key)
-        return true
-      })
+        const dr = detalles.find((d) => d.id === item.id);
+        const key = `${item.nombreActivo}|${dr?.amenazaIds ?? ''}|${dr?.vulnerabilidadIds ?? ''}`;
+        if (seenAnalisis.has(key)) return false;
+        seenAnalisis.add(key);
+        return true;
+      });
 
       // Sort by nombreActivo ascending
-      dedupedAnalisis.sort((a, b) => a.nombreActivo.localeCompare(b.nombreActivo));
+      dedupedAnalisis.sort((a, b) =>
+        a.nombreActivo.localeCompare(b.nombreActivo),
+      );
 
       return dedupedAnalisis;
     } catch (error) {
@@ -634,23 +629,26 @@ export class ReportesService {
       }
 
       // Stage 3: batch fetch all enrichment catalogs
-      const [valoracionActivos, riesgos, amenazas, vulnerabilidades, macroProcesos] =
-        await Promise.all([
-          this.prisma.valoracionActivo.findMany({
-            where: vaIds ? { id: { in: vaIds } } : {},
-          }),
-          this.prisma.riesgo.findMany(),
-          this.prisma.amenaza.findMany(),
-          this.prisma.vulnerabilidad.findMany(),
-          this.prisma.macroProceso.findMany(),
-        ]);
+      const [
+        valoracionActivos,
+        riesgos,
+        amenazas,
+        vulnerabilidades,
+        macroProcesos,
+      ] = await Promise.all([
+        this.prisma.valoracionActivo.findMany({
+          where: vaIds ? { id: { in: vaIds } } : {},
+        }),
+        this.prisma.riesgo.findMany(),
+        this.prisma.amenaza.findMany(),
+        this.prisma.vulnerabilidad.findMany(),
+        this.prisma.macroProceso.findMany(),
+      ]);
 
       const vaMap = new Map(valoracionActivos.map((va) => [va.id, va]));
       const riesgoMap = new Map(riesgos.map((r) => [r.id, r.nivel]));
       const amenazaMap = new Map(amenazas.map((a) => [a.id, a]));
-      const vulnerabilidadMap = new Map(
-        vulnerabilidades.map((v) => [v.id, v]),
-      );
+      const vulnerabilidadMap = new Map(vulnerabilidades.map((v) => [v.id, v]));
       const macroProcesoMap = new Map(
         macroProcesos.map((m) => [m.id, m.nombre]),
       );
@@ -679,7 +677,8 @@ export class ReportesService {
               .join(', '),
             impacto: va.impacto ?? null,
             nivelAmenaza: riesgoMap.get(dr.riesgoId ?? -1) ?? null,
-            nivelVulnerabilidad: riesgoMap.get(dr.vulnerabilidadRiesgoId ?? -1) ?? null,
+            nivelVulnerabilidad:
+              riesgoMap.get(dr.vulnerabilidadRiesgoId ?? -1) ?? null,
             evaluacionRiesgo: dr.evaluacionRiesgo,
             nivelRiesgo: dr.nivelRiesgo,
             controlesArea: dr.controlesArea ?? null,
@@ -719,23 +718,26 @@ export class ReportesService {
           }
           if (q) {
             const qLower = q.toLowerCase();
-            if (!item!.nombreActivo.toLowerCase().includes(qLower)) return false;
+            if (!item!.nombreActivo.toLowerCase().includes(qLower))
+              return false;
           }
           return true;
         });
 
       // Deduplicate by nombreActivo + amenazaIds/vulnerabilidadIds JSON arrays
-      const seenEval = new Set<string>()
-      const dedupedEval = (enriched as Array<{
-        _amenazaIds: number[];
-        _vulnIds: number[];
-        [key: string]: unknown;
-      }>).filter((item) => {
-        const key = `${item.nombreActivo}|${JSON.stringify(item._amenazaIds)}|${JSON.stringify(item._vulnIds)}`
-        if (seenEval.has(key)) return false
-        seenEval.add(key)
-        return true
-      })
+      const seenEval = new Set<string>();
+      const dedupedEval = (
+        enriched as Array<{
+          _amenazaIds: number[];
+          _vulnIds: number[];
+          [key: string]: unknown;
+        }>
+      ).filter((item) => {
+        const key = `${item.nombreActivo}|${JSON.stringify(item._amenazaIds)}|${JSON.stringify(item._vulnIds)}`;
+        if (seenEval.has(key)) return false;
+        seenEval.add(key);
+        return true;
+      });
 
       // Sort by nombreActivo ASC
       dedupedEval.sort((a, b) =>
@@ -817,9 +819,7 @@ export class ReportesService {
       const vaMap = new Map(valoracionActivos.map((va) => [va.id, va]));
       const riesgoMap = new Map(riesgos.map((r) => [r.id, r.nivel]));
       const amenazaMap = new Map(amenazas.map((a) => [a.id, a]));
-      const vulnerabilidadMap = new Map(
-        vulnerabilidades.map((v) => [v.id, v]),
-      );
+      const vulnerabilidadMap = new Map(vulnerabilidades.map((v) => [v.id, v]));
       const macroProcesoMap = new Map(
         macroProcesos.map((m) => [m.id, m.nombre]),
       );
@@ -856,12 +856,12 @@ export class ReportesService {
             metodoTratamiento: dr.metodoTratamiento ?? null,
             evaluacionRiesgoControl: dr.evaluacionRiesgoControl ?? null,
             nivelRiesgoControl: dr.nivelRiesgoControl ?? null,
-            tipoControl: dr.tipoControlId != null
-              ? (tipoControlMap.get(dr.tipoControlId) ?? null)
-              : null,
+            tipoControl:
+              dr.tipoControlId != null
+                ? (tipoControlMap.get(dr.tipoControlId) ?? null)
+                : null,
             riesgoResidual: dr.riesgoResidual ?? null,
-            controlesImplementar:
-              dr.controlesImplementar?.descripcion ?? null,
+            controlesImplementar: dr.controlesImplementar?.descripcion ?? null,
             // Internal fields for filtering
             _amenazaIds: amenazaIds,
             _vulnIds: vulnIds,
@@ -903,7 +903,7 @@ export class ReportesService {
         });
 
       // Deduplicate by nombreActivo + amenazaIds/vulnerabilidadIds JSON arrays
-      const seenTrat = new Set<string>()
+      const seenTrat = new Set<string>();
       const dedupedTrat = (
         enriched as Array<{
           _amenazaIds: number[];
@@ -912,11 +912,11 @@ export class ReportesService {
           [key: string]: unknown;
         }>
       ).filter((item) => {
-        const key = `${item.nombreActivo}|${JSON.stringify(item._amenazaIds)}|${JSON.stringify(item._vulnIds)}`
-        if (seenTrat.has(key)) return false
-        seenTrat.add(key)
-        return true
-      })
+        const key = `${item.nombreActivo}|${JSON.stringify(item._amenazaIds)}|${JSON.stringify(item._vulnIds)}`;
+        if (seenTrat.has(key)) return false;
+        seenTrat.add(key);
+        return true;
+      });
 
       // Sort by nombreActivo ASC
       dedupedTrat.sort((a, b) =>
@@ -976,11 +976,7 @@ export class ReportesService {
 
       const ws = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
       const wb = XLSX_STYLE.utils.book_new();
-      XLSX_STYLE.utils.book_append_sheet(
-        wb,
-        ws,
-        'Tratamiento de Riesgo',
-      );
+      XLSX_STYLE.utils.book_append_sheet(wb, ws, 'Tratamiento de Riesgo');
 
       // Header styles
       const headerStyle = {
@@ -1215,7 +1211,11 @@ export class ReportesService {
 
       const ws = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
       const wb = XLSX_STYLE.utils.book_new();
-      XLSX_STYLE.utils.book_append_sheet(wb, ws, 'Análisis de Riesgo de Activos');
+      XLSX_STYLE.utils.book_append_sheet(
+        wb,
+        ws,
+        'Análisis de Riesgo de Activos',
+      );
 
       // Header styles
       const headerStyle = {

@@ -66,13 +66,11 @@ export class ReportesController {
         },
         {
           ruta: 'GET /reportes/tratamiento-riesgo/export',
-          descripcion:
-            'Exportación Excel del reporte de tratamiento de riesgo',
+          descripcion: 'Exportación Excel del reporte de tratamiento de riesgo',
         },
         {
           ruta: 'GET /reportes/heatmap',
-          descripcion:
-            'Mapa de calor 3x3 de riesgos (Probabilidad × Impacto)',
+          descripcion: 'Mapa de calor 3x3 de riesgos (Probabilidad × Impacto)',
         },
       ],
     };
@@ -141,7 +139,8 @@ export class ReportesController {
     @Query() query: Record<string, string | undefined>,
     @Res() res: Response,
   ): Promise<void> {
-    const buffer = await this.reportesService.exportAnalisisRiesgoActivos(query);
+    const buffer =
+      await this.reportesService.exportAnalisisRiesgoActivos(query);
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

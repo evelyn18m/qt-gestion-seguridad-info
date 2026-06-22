@@ -10,7 +10,13 @@ import { ReportesModule } from './reportes/reportes.module';
 import { ParametrosModule } from './parametros/parametros.module';
 
 @Module({
-  imports: [CatalogosModule, ValoracionesModule, AuthModule, ReportesModule, ParametrosModule],
+  imports: [
+    CatalogosModule,
+    ValoracionesModule,
+    AuthModule,
+    ReportesModule,
+    ParametrosModule,
+  ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: AuthGuard }],
 })
