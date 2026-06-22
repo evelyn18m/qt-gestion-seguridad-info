@@ -204,7 +204,7 @@ async function saveConfig() {
     const { id, ...data } = config.value
     await apiFetch('/parametros', {
       method: 'PUT',
-      body: data,
+      body: JSON.stringify(data),
     } as RequestInit)
     successMessage.value = 'Configuración guardada correctamente.'
     setTimeout(() => (successMessage.value = ''), 3000)
