@@ -201,7 +201,7 @@ async function saveConfig() {
   }
   try {
     const { apiFetch } = useApi()
-    const { id, ...data } = config.value
+    const { id, createdAt, updatedAt, ...data } = config.value
     await apiFetch('/parametros', {
       method: 'PUT',
       body: JSON.stringify(data),

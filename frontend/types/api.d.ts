@@ -221,6 +221,8 @@ export interface HeatmapSerieDto {
 
 export interface ConfiguracionRiesgo {
     id: number
+    createdAt?: string
+    updatedAt?: string
     riesgoBajoMax: number
     riesgoBajoDesde: number
     riesgoMedioMax: number
