@@ -117,6 +117,13 @@ const catalogos = [
             </svg>
             <span>Parametrización</span>
           </NuxtLink>
+          <NuxtLink active-class="active" class="nav-item" to="/auditoria" @click="closeSidebar">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Auditoría</span>
+          </NuxtLink>
           <NuxtLink active-class="active" class="nav-item" to="/reportes/valoracion-activos" @click="closeSidebar">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
                  xmlns="http://www.w3.org/2000/svg">

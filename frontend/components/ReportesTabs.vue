@@ -18,9 +18,7 @@
     <NuxtLink to="/reportes/mapa-calor" class="tab-btn" active-class="active">
       Mapa de Calor
     </NuxtLink>
-    <NuxtLink to="/reportes/auditoria" class="tab-btn" active-class="active">
-      Auditoría
-    </NuxtLink>
+
   </div>
 </template>
 
