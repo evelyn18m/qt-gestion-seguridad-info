@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/auth.guard';
 import { ReportesModule } from './reportes/reportes.module';
 import { ParametrosModule } from './parametros/parametros.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ParametrosModule } from './parametros/parametros.module';
     AuthModule,
     ReportesModule,
     ParametrosModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: AuthGuard }],

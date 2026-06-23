@@ -131,8 +131,29 @@ model ValoracionActivo {
   evaluacionRiesgoControl    Float?
   nivelRiesgoControl         String?
 
+  // Audit fields
+  createdBy String? // username from JWT (preferred_username)
+  updatedBy String? // username from JWT (preferred_username)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  accion      String   // login, CREAR, ACTUALIZAR, EXPORTAR, REQUEST, page-visit
+  modulo      String   // auth, valoraciones, reportes, api, frontend
+  entidad     String?  // pagina, activo, reporte
+  usuarioId   String?  // Keycloak sub (userId)
+  usuario     String?  // preferred_username
+  detalle     String?  @db.Text // JSON string of details (diff, filters, etc.)
+  ip          String?  // client IP
+  dispositivo String?  // user-agent header
+  path        String?  // HTTP path or page path
+  metodo      String?  // HTTP method (GET, POST, PATCH, DELETE)
+  status      Int?     // HTTP status code
+  duracionMs  Int?     // request duration in ms
+  createdAt   DateTime @default(now())
 }
 
 model DetalleRiesgo {
