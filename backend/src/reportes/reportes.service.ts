@@ -1,6 +1,8 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { extractIp } from '../audit/ip.util';
 import {
   ResumenReporteDto,
   NivelCount,
@@ -32,7 +34,10 @@ const IMPACTO_LABELS: Record<number, string> = {
 
 @Injectable()
 export class ReportesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   private async fetchImpactoMap(): Promise<
     Map<number, { nivel: string; valor: number }>
@@ -305,8 +310,7 @@ export class ReportesService {
       impactoMap.get(va.disponibilidadId ?? 0) ?? 0,
     );
     const evalRiesgo = va.evaluacionRiesgo ?? 0;
-    const probabilidad =
-      evalRiesgo <= 3 ? 1 : evalRiesgo <= 8 ? 2 : 3;
+    const probabilidad = evalRiesgo <= 3 ? 1 : evalRiesgo <= 8 ? 2 : 3;
     return { impacto, probabilidad };
   }
 
@@ -993,6 +997,8 @@ export class ReportesService {
 
   async exportTratamientoRiesgo(
     filters: Record<string, string | undefined>,
+    user?: { userId: string; username: string } | null,
+    req?: { headers?: Record<string, string>; ip?: string },
   ): Promise<Buffer> {
     try {
       const data = await this.getTratamientoRiesgo(filters);
@@ -1066,6 +1072,25 @@ export class ReportesService {
       ws['!cols'] = colWidths;
 
       const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
+
+      // Audit log after buffer generation (fire-and-forget)
+      if (user) {
+        void this.auditService.log({
+          accion: 'EXPORTAR',
+          modulo: 'reportes',
+          entidad: 'reporte',
+          usuarioId: user.userId,
+          usuario: user.username,
+          ip: req ? extractIp(req) : undefined,
+          dispositivo: req?.headers?.['user-agent'],
+          metodo: 'GET',
+          detalle: JSON.stringify({
+            tipo: 'tratamiento-riesgo',
+            filtros: filters,
+          }),
+        });
+      }
+
       return Buffer.from(array);
     } catch (error) {
       throw new HttpException(
@@ -1077,6 +1102,8 @@ export class ReportesService {
 
   async exportEvaluacionRiesgo(
     filters: Record<string, string | undefined>,
+    user?: { userId: string; username: string } | null,
+    req?: { headers?: Record<string, string>; ip?: string },
   ): Promise<Buffer> {
     try {
       const data = await this.getEvaluacionRiesgo(filters);
@@ -1144,6 +1171,25 @@ export class ReportesService {
       ws['!cols'] = colWidths;
 
       const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
+
+      // Audit log after buffer generation (fire-and-forget)
+      if (user) {
+        void this.auditService.log({
+          accion: 'EXPORTAR',
+          modulo: 'reportes',
+          entidad: 'reporte',
+          usuarioId: user.userId,
+          usuario: user.username,
+          ip: req ? extractIp(req) : undefined,
+          dispositivo: req?.headers?.['user-agent'],
+          metodo: 'GET',
+          detalle: JSON.stringify({
+            tipo: 'evaluacion-riesgo',
+            filtros: filters,
+          }),
+        });
+      }
+
       return Buffer.from(array);
     } catch (error) {
       throw new HttpException(
@@ -1166,6 +1212,8 @@ export class ReportesService {
 
   async exportValoracionActivos(
     filters: Record<string, string | undefined>,
+    user?: { userId: string; username: string } | null,
+    req?: { headers?: Record<string, string>; ip?: string },
   ): Promise<Buffer> {
     try {
       const data = await this.getValoracionActivos(filters);
@@ -1233,6 +1281,25 @@ export class ReportesService {
       ws['!cols'] = colWidths;
 
       const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
+
+      // Audit log after buffer generation (fire-and-forget)
+      if (user) {
+        void this.auditService.log({
+          accion: 'EXPORTAR',
+          modulo: 'reportes',
+          entidad: 'reporte',
+          usuarioId: user.userId,
+          usuario: user.username,
+          ip: req ? extractIp(req) : undefined,
+          dispositivo: req?.headers?.['user-agent'],
+          metodo: 'GET',
+          detalle: JSON.stringify({
+            tipo: 'valoracion-activos',
+            filtros: filters,
+          }),
+        });
+      }
+
       return Buffer.from(array);
     } catch (error) {
       throw new HttpException(
@@ -1244,6 +1311,8 @@ export class ReportesService {
 
   async exportAnalisisRiesgoActivos(
     filters: Record<string, string | undefined>,
+    user?: { userId: string; username: string } | null,
+    req?: { headers?: Record<string, string>; ip?: string },
   ): Promise<Buffer> {
     try {
       const data = await this.getAnalisisRiesgoActivos(filters);
@@ -1305,6 +1374,25 @@ export class ReportesService {
       ws['!cols'] = colWidths;
 
       const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
+
+      // Audit log after buffer generation (fire-and-forget)
+      if (user) {
+        void this.auditService.log({
+          accion: 'EXPORTAR',
+          modulo: 'reportes',
+          entidad: 'reporte',
+          usuarioId: user.userId,
+          usuario: user.username,
+          ip: req ? extractIp(req) : undefined,
+          dispositivo: req?.headers?.['user-agent'],
+          metodo: 'GET',
+          detalle: JSON.stringify({
+            tipo: 'analisis-riesgo-activos',
+            filtros: filters,
+          }),
+        });
+      }
+
       return Buffer.from(array);
     } catch (error) {
       throw new HttpException(

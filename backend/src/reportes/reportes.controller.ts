@@ -1,6 +1,15 @@
-import { Controller, Get, Query, Res, HttpException, HttpStatus } from '@nestjs/common';
-import type { Response } from 'express';
+import {
+  Controller,
+  Get,
+  Query,
+  Res,
+  Req,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ReportesService } from './reportes.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import {
   ResumenReporteDto,
   RiesgoPorActivoDto,
@@ -71,7 +80,8 @@ export class ReportesController {
         },
         {
           ruta: 'GET /reportes/heatmap',
-          descripcion: 'Mapa de calor 3x3 de riesgos (Evaluación de Riesgo × Impacto)',
+          descripcion:
+            'Mapa de calor 3x3 de riesgos (Evaluación de Riesgo × Impacto)',
         },
         {
           ruta: 'GET /reportes/heatmap/cell',
@@ -125,8 +135,14 @@ export class ReportesController {
   async exportValoracionActivos(
     @Query() query: Record<string, string | undefined>,
     @Res() res: Response,
+    @CurrentUser() user: { userId: string; username: string } | null,
+    @Req() req: Request,
   ): Promise<void> {
-    const buffer = await this.reportesService.exportValoracionActivos(query);
+    const buffer = await this.reportesService.exportValoracionActivos(
+      query,
+      user,
+      req as any,
+    );
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -144,9 +160,14 @@ export class ReportesController {
   async exportAnalisisRiesgoActivos(
     @Query() query: Record<string, string | undefined>,
     @Res() res: Response,
+    @CurrentUser() user: { userId: string; username: string } | null,
+    @Req() req: Request,
   ): Promise<void> {
-    const buffer =
-      await this.reportesService.exportAnalisisRiesgoActivos(query);
+    const buffer = await this.reportesService.exportAnalisisRiesgoActivos(
+      query,
+      user,
+      req as any,
+    );
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -171,8 +192,14 @@ export class ReportesController {
   async exportEvaluacionRiesgo(
     @Query() query: Record<string, string | undefined>,
     @Res() res: Response,
+    @CurrentUser() user: { userId: string; username: string } | null,
+    @Req() req: Request,
   ): Promise<void> {
-    const buffer = await this.reportesService.exportEvaluacionRiesgo(query);
+    const buffer = await this.reportesService.exportEvaluacionRiesgo(
+      query,
+      user,
+      req as any,
+    );
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -220,8 +247,14 @@ export class ReportesController {
   async exportTratamientoRiesgo(
     @Query() query: Record<string, string | undefined>,
     @Res() res: Response,
+    @CurrentUser() user: { userId: string; username: string } | null,
+    @Req() req: Request,
   ): Promise<void> {
-    const buffer = await this.reportesService.exportTratamientoRiesgo(query);
+    const buffer = await this.reportesService.exportTratamientoRiesgo(
+      query,
+      user,
+      req as any,
+    );
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

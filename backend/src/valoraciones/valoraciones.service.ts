@@ -14,12 +14,15 @@ import {
 } from './calculo-riesgo.service';
 import { CalcularDetalleDto } from './dto/calcular-detalle.dto';
 import { ParametrosService } from '../parametros/parametros.service';
+import { AuditService } from '../audit/audit.service';
+import { extractIp } from '../audit/ip.util';
 
 @Injectable()
 export class ValoracionesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly parametrosService: ParametrosService,
+    private readonly auditService: AuditService,
   ) {}
 
   async findAll() {
@@ -37,9 +40,19 @@ export class ValoracionesService {
     return this.enrich(item);
   }
 
-  async create(dto: CreateValoracionDto) {
+  async create(
+    dto: CreateValoracionDto,
+    user?: { userId: string; username: string } | null,
+    req?: { headers?: Record<string, string>; ip?: string },
+  ) {
     const { detallesRiesgo, ...data } = dto;
-    const item = await this.prisma.valoracionActivo.create({ data });
+    const createData = {
+      ...data,
+      ...(user?.username ? { createdBy: user.username } : {}),
+    };
+    const item = await this.prisma.valoracionActivo.create({
+      data: createData,
+    });
 
     // Read config once per request
     let config: Thresholds = DEFAULT_THRESHOLDS;
@@ -156,16 +169,60 @@ export class ValoracionesService {
         }
       }
     }
+    // Audit: log asset creation (fire-and-forget)
+    if (user) {
+      void this.auditService.log({
+        accion: 'CREAR',
+        modulo: 'valoraciones',
+        entidad: 'activo',
+        usuarioId: user.userId,
+        usuario: user.username,
+        ip: req ? extractIp(req) : undefined,
+        dispositivo: req?.headers?.['user-agent'],
+        metodo: 'POST',
+        path: '/valoraciones',
+        detalle: JSON.stringify({
+          id: item.id,
+          nombreActivo: dto.nombreActivo,
+        }),
+      });
+    }
     return this.enrich(item);
   }
 
-  async update(id: number, dto: UpdateValoracionDto) {
-    await this.findOne(id);
+  async update(
+    id: number,
+    dto: UpdateValoracionDto,
+    user?: { userId: string; username: string } | null,
+    req?: { headers?: Record<string, string>; ip?: string },
+  ) {
+    const current = await this.findOne(id);
     const { detallesRiesgo, ...data } = dto;
+    const updateData: any = {
+      ...data,
+      ...(user?.username ? { updatedBy: user.username } : {}),
+    };
     const item = await this.prisma.valoracionActivo.update({
       where: { id },
-      data,
+      data: updateData,
     });
+
+    // Compute field-level diff for audit
+    if (user) {
+      const diff = this.computeDiff(current, dto);
+      void this.auditService.log({
+        accion: 'ACTUALIZAR',
+        modulo: 'valoraciones',
+        entidad: 'activo',
+        usuarioId: user.userId,
+        usuario: user.username,
+        ip: req ? extractIp(req) : undefined,
+        dispositivo: req?.headers?.['user-agent'],
+        metodo: 'PATCH',
+        path: `/valoraciones/${id}`,
+        detalle: JSON.stringify(diff),
+      });
+    }
 
     // Read config once per request
     let config: Thresholds = DEFAULT_THRESHOLDS;
@@ -599,6 +656,25 @@ export class ValoracionesService {
       Math.round(((impConf.valor + impInt.valor + impDisp.valor) / 3) * 100) /
       100
     );
+  }
+
+  /**
+   * Computes field-level diff between current record and update DTO.
+   * Only includes fields that actually changed — unchanged fields are omitted.
+   */
+  private computeDiff(
+    current: Record<string, unknown>,
+    dto: Record<string, unknown>,
+  ): Record<string, { old: unknown; new: unknown }> {
+    const diff: Record<string, { old: unknown; new: unknown }> = {};
+    for (const [key, newVal] of Object.entries(dto)) {
+      if (newVal === undefined || newVal === null) continue;
+      const oldVal = current[key];
+      if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+        diff[key] = { old: oldVal, new: newVal };
+      }
+    }
+    return diff;
   }
 
   private async enrich(

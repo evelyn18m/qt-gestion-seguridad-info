@@ -7,11 +7,14 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { ValoracionesService } from './valoraciones.service';
 import { CreateValoracionDto } from './dto/create-valoracion.dto';
 import { UpdateValoracionDto } from './dto/update-valoracion.dto';
 import { CalcularDetalleDto } from './dto/calcular-detalle.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('valoraciones')
 export class ValoracionesController {
@@ -28,16 +31,22 @@ export class ValoracionesController {
   }
 
   @Post()
-  create(@Body() dto: CreateValoracionDto) {
-    return this.valoracionesService.create(dto);
+  create(
+    @Body() dto: CreateValoracionDto,
+    @CurrentUser() user: { userId: string; username: string } | null,
+    @Req() req: Request,
+  ) {
+    return this.valoracionesService.create(dto, user, req as any);
   }
 
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateValoracionDto,
+    @CurrentUser() user: { userId: string; username: string } | null,
+    @Req() req: Request,
   ) {
-    return this.valoracionesService.update(id, dto);
+    return this.valoracionesService.update(id, dto, user, req as any);
   }
 
   @Patch(':id/detalles-riesgo/:detalleId/calcular')

@@ -278,8 +278,18 @@ describe('ReportesController', () => {
         write: jest.fn(),
         end: jest.fn(),
       } as any;
-      await controller.exportValoracionActivos(query, mockRes);
-      expect(service.exportValoracionActivos).toHaveBeenCalledWith(query);
+      await controller.exportValoracionActivos(
+        query,
+        mockRes,
+        null as any,
+        undefined as any,
+      );
+      expect(service.exportValoracionActivos).toHaveBeenCalled();
+      expect(service.exportValoracionActivos).toHaveBeenCalledWith(
+        query,
+        null,
+        undefined,
+      );
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -326,8 +336,18 @@ describe('ReportesController', () => {
         write: jest.fn(),
         end: jest.fn(),
       } as any;
-      await controller.exportAnalisisRiesgoActivos(query, mockRes);
-      expect(service.exportAnalisisRiesgoActivos).toHaveBeenCalledWith(query);
+      await controller.exportAnalisisRiesgoActivos(
+        query,
+        mockRes,
+        null as any,
+        undefined as any,
+      );
+      expect(service.exportAnalisisRiesgoActivos).toHaveBeenCalled();
+      expect(service.exportAnalisisRiesgoActivos).toHaveBeenCalledWith(
+        query,
+        null,
+        undefined,
+      );
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -377,8 +397,18 @@ describe('ReportesController', () => {
         write: jest.fn(),
         end: jest.fn(),
       } as any;
-      await controller.exportEvaluacionRiesgo(query, mockRes);
-      expect(service.exportEvaluacionRiesgo).toHaveBeenCalledWith(query);
+      await controller.exportEvaluacionRiesgo(
+        query,
+        mockRes,
+        null as any,
+        undefined as any,
+      );
+      expect(service.exportEvaluacionRiesgo).toHaveBeenCalled();
+      expect(service.exportEvaluacionRiesgo).toHaveBeenCalledWith(
+        query,
+        null,
+        undefined,
+      );
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -398,8 +428,18 @@ describe('ReportesController', () => {
         write: jest.fn(),
         end: jest.fn(),
       } as any;
-      await controller.exportEvaluacionRiesgo(query, mockRes);
-      expect(service.exportEvaluacionRiesgo).toHaveBeenCalledWith(query);
+      await controller.exportEvaluacionRiesgo(
+        query,
+        mockRes,
+        null as any,
+        undefined as any,
+      );
+      expect(service.exportEvaluacionRiesgo).toHaveBeenCalled();
+      expect(service.exportEvaluacionRiesgo).toHaveBeenCalledWith(
+        query,
+        null,
+        undefined,
+      );
     });
   });
 
@@ -446,8 +486,18 @@ describe('ReportesController', () => {
         write: jest.fn(),
         end: jest.fn(),
       } as any;
-      await controller.exportTratamientoRiesgo(query, mockRes);
-      expect(service.exportTratamientoRiesgo).toHaveBeenCalledWith(query);
+      await controller.exportTratamientoRiesgo(
+        query,
+        mockRes,
+        null as any,
+        undefined as any,
+      );
+      expect(service.exportTratamientoRiesgo).toHaveBeenCalled();
+      expect(service.exportTratamientoRiesgo).toHaveBeenCalledWith(
+        query,
+        null,
+        undefined,
+      );
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -467,8 +517,18 @@ describe('ReportesController', () => {
         write: jest.fn(),
         end: jest.fn(),
       } as any;
-      await controller.exportTratamientoRiesgo(query, mockRes);
-      expect(service.exportTratamientoRiesgo).toHaveBeenCalledWith(query);
+      await controller.exportTratamientoRiesgo(
+        query,
+        mockRes,
+        null as any,
+        undefined as any,
+      );
+      expect(service.exportTratamientoRiesgo).toHaveBeenCalled();
+      expect(service.exportTratamientoRiesgo).toHaveBeenCalledWith(
+        query,
+        null,
+        undefined,
+      );
     });
   });
 
@@ -506,7 +566,7 @@ describe('ReportesController', () => {
 
   describe('GET /reportes/heatmap/cell', () => {
     it('debe retornar 200 con lista de activos en la celda', async () => {
-      const result = await controller.getHeatmapCell(2, 1);
+      const result = await controller.getHeatmapCell('2', '1');
 
       expect(service.getHeatmapCell).toHaveBeenCalledWith(2, 1);
       expect(result).toEqual(mockHeatmapCell);
@@ -519,11 +579,11 @@ describe('ReportesController', () => {
     });
 
     it('debe retornar 400 para impacto fuera de rango (impacto=5)', () => {
-      expect(() => controller.getHeatmapCell(5, 1)).toThrow(HttpException);
+      expect(() => controller.getHeatmapCell('5', '1')).toThrow(HttpException);
     });
 
     it('debe retornar 400 para probabilidad fuera de rango (probabilidad=0)', () => {
-      expect(() => controller.getHeatmapCell(1, 0)).toThrow(HttpException);
+      expect(() => controller.getHeatmapCell('1', '0')).toThrow(HttpException);
     });
 
     it('debe incluir ruta heatmap/cell en el indice de endpoints', () => {

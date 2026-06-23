@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException } from '@nestjs/common';
 import { ReportesService } from './reportes.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { HeatmapCellDetailDto } from './dto/reporte-response.dto';
 
 const makeVa = (overrides: Record<string, unknown> = {}) => ({
@@ -127,6 +128,10 @@ describe('ReportesService', () => {
       providers: [
         ReportesService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: AuditService,
+          useValue: { log: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 

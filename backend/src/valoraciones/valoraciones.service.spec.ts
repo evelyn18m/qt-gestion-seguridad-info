@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ValoracionesService } from './valoraciones.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ParametrosService } from '../parametros/parametros.service';
+import { AuditService } from '../audit/audit.service';
 import {
   AtLeastOneConstraint,
   CreateValoracionDto,
@@ -55,6 +56,12 @@ const mockDefaultConfig = {
 const mockParametrosService = {
   getConfiguracion: jest.fn().mockResolvedValue(mockDefaultConfig),
   updateConfiguracion: jest.fn(),
+};
+
+const mockAuditService = {
+  log: jest.fn().mockResolvedValue(undefined),
+  findAll: jest.fn(),
+  findById: jest.fn(),
 };
 
 const mockItem = {
@@ -140,6 +147,7 @@ describe('ValoracionesService — Tab 2 new fields', () => {
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -413,6 +421,7 @@ describe('mapDetalleRiesgo with separate threat/vulnerability levels', () => {
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -571,6 +580,7 @@ describe('mapDetalleRiesgo() with controlesImplementarId', () => {
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -708,6 +718,7 @@ describe('mapDetalleRiesgo with vulnerabilidadControlId', () => {
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -925,6 +936,7 @@ describe('create() with control-level Riesgo lookups', () => {
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -1085,6 +1097,7 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -1246,6 +1259,7 @@ describe('mapDetalleRiesgo with VA from CIA impacto', () => {
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -1434,6 +1448,7 @@ describe('calcularDetalleRiesgo with parent CIA fallback', () => {
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -1527,6 +1542,7 @@ describe('create() persists ValoracionActivo.evaluacionRiesgo as MAX of hijos', 
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
@@ -1678,6 +1694,7 @@ describe('recalcular() recalculates with real VA', () => {
         ValoracionesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get<ValoracionesService>(ValoracionesService);
