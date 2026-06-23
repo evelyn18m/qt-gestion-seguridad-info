@@ -7,6 +7,8 @@ const mockAuditService = {
   log: jest.fn().mockResolvedValue(undefined),
   findAll: jest.fn(),
   findById: jest.fn(),
+  findAllReport: jest.fn(),
+  exportExcel: jest.fn(),
 };
 
 describe('AuditController', () => {
@@ -126,6 +128,43 @@ describe('AuditController', () => {
         limit: 10,
       });
       expect(result).toEqual(mockData);
+    });
+  });
+
+  describe('GET /audit/export', () => {
+    it('RED: should set xlsx content-type and content-disposition headers', async () => {
+      const excelBuffer = Buffer.from('fake-excel-data');
+      mockAuditService.exportExcel.mockResolvedValue(excelBuffer);
+
+      const mockRes = {
+        setHeader: jest.fn(),
+        write: jest.fn(),
+        end: jest.fn(),
+      } as any;
+
+      await controller.exportAuditoria(
+        { modulo: 'auth', fechaDesde: '2024-01-01' },
+        mockRes,
+      );
+
+      expect(mockAuditService.exportExcel).toHaveBeenCalledWith({
+        modulo: 'auth',
+        fechaDesde: '2024-01-01',
+      });
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Disposition',
+        expect.stringContaining('attachment; filename="auditoria-'),
+      );
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Length',
+        excelBuffer.length,
+      );
+      expect(mockRes.write).toHaveBeenCalledWith(excelBuffer);
+      expect(mockRes.end).toHaveBeenCalled();
     });
   });
 });

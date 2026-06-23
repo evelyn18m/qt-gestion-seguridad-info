@@ -205,6 +205,25 @@ export interface TratamientoRiesgoReporte {
     controlesImplementar: string | null
 }
 
+// ── Audit module ──────────────────────────────────────────────────────────────
+
+export interface AuditLogItem {
+    id: number
+    accion: string
+    modulo: string
+    entidad: string | null
+    usuarioId: string | null
+    usuario: string | null
+    detalle: string | null
+    ip: string | null
+    dispositivo: string | null
+    path: string | null
+    metodo: string | null
+    status: number | null
+    duracionMs: number | null
+    createdAt: string
+}
+
 // ── Heatmap module ────────────────────────────────────────────────────────────
 
 export interface HeatmapCellDto {

@@ -24,6 +24,10 @@ export class AuditQueryDto {
 
   @IsOptional()
   @IsString()
+  entidad?: string;
+
+  @IsOptional()
+  @IsString()
   usuarioId?: string;
 
   @IsOptional()

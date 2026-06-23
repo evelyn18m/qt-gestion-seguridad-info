@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { AuditService } from './audit.service';
 import { AuditQueryDto } from './dto/audit-query.dto';
 import { PageVisitDto } from './dto/page-visit.dto';
@@ -49,5 +49,24 @@ export class AuditController {
   @Get()
   findAll(@Query() query: AuditQueryDto) {
     return this.auditService.findAll(query);
+  }
+
+  @Get('export')
+  async exportAuditoria(
+    @Query() query: AuditQueryDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const buffer = await this.auditService.exportExcel(query);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="auditoria-${new Date().toISOString().split('T')[0]}.xlsx"`,
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.write(buffer);
+    res.end();
   }
 }
