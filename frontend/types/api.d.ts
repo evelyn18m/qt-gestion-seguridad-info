@@ -205,6 +205,18 @@ export interface TratamientoRiesgoReporte {
     controlesImplementar: string | null
 }
 
+// ── Usuarios module ───────────────────────────────────────────────────────────
+
+export interface Usuario {
+  id: string;
+  username: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  enabled: boolean;
+  realmRoles: string[];
+}
+
 // ── Audit module ──────────────────────────────────────────────────────────────
 
 export interface AuditLogItem {
