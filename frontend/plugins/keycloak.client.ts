@@ -25,6 +25,16 @@ export default defineNuxtPlugin(async () => {
             pkceMethod: 'S256',
         })
         loggedIn.value = keycloak.authenticated ?? false
+
+        // Fire-and-forget: audit login event (spec R1.1)
+        if (keycloak.authenticated && keycloak.tokenParsed?.sub) {
+            void $fetch('/api/audit/login', {
+                method: 'POST',
+                body: { userId: keycloak.tokenParsed.sub },
+            }).catch((e: unknown) => {
+                console.error('[audit] login event failed silently', e)
+            })
+        }
     } catch (e) {
         console.error('[keycloak] init failed', e)
     }
