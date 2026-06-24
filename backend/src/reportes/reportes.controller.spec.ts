@@ -281,7 +281,7 @@ describe('ReportesController', () => {
       await controller.exportValoracionActivos(
         query,
         mockRes,
-        null as any,
+        null,
         undefined as any,
       );
       expect(service.exportValoracionActivos).toHaveBeenCalled();
@@ -339,7 +339,7 @@ describe('ReportesController', () => {
       await controller.exportAnalisisRiesgoActivos(
         query,
         mockRes,
-        null as any,
+        null,
         undefined as any,
       );
       expect(service.exportAnalisisRiesgoActivos).toHaveBeenCalled();
@@ -400,7 +400,7 @@ describe('ReportesController', () => {
       await controller.exportEvaluacionRiesgo(
         query,
         mockRes,
-        null as any,
+        null,
         undefined as any,
       );
       expect(service.exportEvaluacionRiesgo).toHaveBeenCalled();
@@ -431,7 +431,7 @@ describe('ReportesController', () => {
       await controller.exportEvaluacionRiesgo(
         query,
         mockRes,
-        null as any,
+        null,
         undefined as any,
       );
       expect(service.exportEvaluacionRiesgo).toHaveBeenCalled();
@@ -489,7 +489,7 @@ describe('ReportesController', () => {
       await controller.exportTratamientoRiesgo(
         query,
         mockRes,
-        null as any,
+        null,
         undefined as any,
       );
       expect(service.exportTratamientoRiesgo).toHaveBeenCalled();
@@ -520,7 +520,7 @@ describe('ReportesController', () => {
       await controller.exportTratamientoRiesgo(
         query,
         mockRes,
-        null as any,
+        null,
         undefined as any,
       );
       expect(service.exportTratamientoRiesgo).toHaveBeenCalled();

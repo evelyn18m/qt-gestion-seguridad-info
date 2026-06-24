@@ -1,299 +1,209 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsuariosService } from './usuarios.service';
-import { HttpException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('UsuariosService', () => {
   let service: UsuariosService;
-  let fetchMock: jest.Mock;
+  let mockPrisma: {
+    usuario: {
+      findMany: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
+      findUnique: jest.Mock;
+    };
+  };
 
-  const mockKeycloakUsers = [
-    {
-      id: 'a1b2c3d4',
-      username: 'jdoe',
-      email: 'jdoe@example.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      enabled: true,
-      realmRoles: ['admin', 'user'],
-    },
-    {
-      id: 'e5f6g7h8',
-      username: 'asmith',
-      email: 'asmith@example.com',
-      firstName: 'Anna',
-      lastName: 'Smith',
-      enabled: false,
-      realmRoles: [],
-    },
-  ];
+  // Mock data WITHOUT passwordHash (as select would filter it out)
+  const mockUsuarioNoHash = {
+    id: 'uuid-1',
+    keycloakSub: 'kc-1',
+    username: 'jdoe',
+    email: 'jdoe@test.com',
+    primerInicio: false,
+    habilitado: true,
+    roles: '["admin","user"]',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
-  const mockTokenResponse = {
-    access_token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.mock',
-    refresh_token: 'refresh-mock',
-    expires_in: 300,
-    token_type: 'Bearer',
+  // Mock data WITH passwordHash (for existence checks)
+  const mockUsuarioFull = {
+    ...mockUsuarioNoHash,
+    passwordHash: '$2b$10$hashed',
   };
 
   beforeEach(async () => {
-    fetchMock = jest.fn();
-    global.fetch = fetchMock as unknown as typeof global.fetch;
-    jest.clearAllMocks();
+    mockPrisma = {
+      usuario: {
+        findMany: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        findUnique: jest.fn(),
+      },
+    };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UsuariosService],
+      providers: [
+        UsuariosService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
     }).compile();
+
     service = module.get<UsuariosService>(UsuariosService);
-
-    // Reset internal state between tests
-    (service as any).adminToken = null;
-    (service as any).tokenExpiry = 0;
+    jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    jest.restoreAllMocks();
+  // ── RED: findAll() ────────────────────────────────────────────────────
+
+  it('RED: should return all usuarios without passwordHash', async () => {
+    mockPrisma.usuario.findMany.mockResolvedValue([mockUsuarioNoHash]);
+
+    const result = await service.findAll();
+
+    expect(mockPrisma.usuario.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ passwordHash: false }),
+      }),
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toHaveProperty('passwordHash');
+    expect(result[0].id).toBe('uuid-1');
+    expect(result[0].username).toBe('jdoe');
+    expect(result[0].habilitado).toBe(true);
   });
 
-  describe('getUsers()', () => {
-    // ── RED: Successful fetch ──────────────────────────────────────────
+  // ── TRIANGULATE: findAll() empty ──────────────────────────────────────
 
-    it('RED: should fetch users from Keycloak and map to UsuarioDto[]', async () => {
-      // Token auth response
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as Response);
-      // Users fetch response
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockKeycloakUsers,
-      } as Response);
+  it('TRIANGULATE: should return empty array when no usuarios exist', async () => {
+    mockPrisma.usuario.findMany.mockResolvedValue([]);
 
-      const result = await service.getUsers();
+    const result = await service.findAll();
 
-      // First call: auth
-      expect(fetchMock).toHaveBeenNthCalledWith(
-        1,
-        expect.stringContaining('/protocol/openid-connect/token'),
-        expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        }),
-      );
+    expect(result).toEqual([]);
+  });
 
-      // Second call: users fetch with token
-      expect(fetchMock).toHaveBeenNthCalledWith(
-        2,
-        expect.stringContaining('/users?briefRepresentation=false'),
-        expect.objectContaining({
-          headers: { Authorization: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.mock' },
-        }),
-      );
+  // ── RED: create() ─────────────────────────────────────────────────────
 
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        id: 'a1b2c3d4',
-        username: 'jdoe',
-        email: 'jdoe@example.com',
-        firstName: 'John',
-        lastName: 'Doe',
-        enabled: true,
-        roles: ['admin', 'user'],
-      });
-      expect(result[1].username).toBe('asmith');
-      expect(result[1].enabled).toBe(false);
-      expect(result[1].roles).toEqual([]);
+  it('RED: should create usuario and return without passwordHash', async () => {
+    mockPrisma.usuario.create.mockResolvedValue(mockUsuarioNoHash);
+
+    const result = await service.create({
+      username: 'newuser',
+      email: 'new@test.com',
     });
 
-    // ── TRIANGULATE: 401 retry succeeds ─────────────────────────────────
+    expect(mockPrisma.usuario.create).toHaveBeenCalledWith({
+      data: {
+        username: 'newuser',
+        email: 'new@test.com',
+        roles: '[]',
+      },
+      select: expect.objectContaining({
+        passwordHash: false,
+      }),
+    });
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(result.username).toBe('jdoe');
+  });
 
-    it('TRIANGULATE: should retry on 401 by re-authenticating and re-fetching', async () => {
-      // Initial auth
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as Response);
-      // Users fetch → 401
-      fetchMock.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-      } as Response);
-      // Re-auth after 401
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          ...mockTokenResponse,
-          access_token: 'retry-token-xyz',
-        }),
-      } as Response);
-      // Retry users fetch → success
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => [mockKeycloakUsers[0]],
-      } as Response);
+  // ── TRIANGULATE: create() with duplicate username ─────────────────────
 
-      const result = await service.getUsers();
+  it('TRIANGULATE: should propagate Prisma unique constraint error', async () => {
+    const prismaError = { code: 'P2002', meta: { target: ['username'] } };
+    mockPrisma.usuario.create.mockRejectedValue(prismaError);
 
-      expect(fetchMock).toHaveBeenCalledTimes(4);
-      expect(result).toHaveLength(1);
-      expect(result[0].username).toBe('jdoe');
+    await expect(
+      service.create({ username: 'jdoe', email: 'dup@test.com' }),
+    ).rejects.toEqual(prismaError);
+  });
+
+  // ── RED: update() ─────────────────────────────────────────────────────
+
+  it('RED: should update usuario fields after verifying existence', async () => {
+    mockPrisma.usuario.findUnique.mockResolvedValue(mockUsuarioFull);
+    const updated = {
+      ...mockUsuarioNoHash,
+      email: 'newemail@test.com',
+      habilitado: false,
+    };
+    mockPrisma.usuario.update.mockResolvedValue(updated);
+
+    const result = await service.update('uuid-1', {
+      email: 'newemail@test.com',
+      habilitado: false,
     });
 
-    // ── TRIANGULATE: 401 retry also fails ───────────────────────────────
+    expect(mockPrisma.usuario.findUnique).toHaveBeenCalledWith({
+      where: { id: 'uuid-1' },
+    });
+    expect(mockPrisma.usuario.update).toHaveBeenCalledWith({
+      where: { id: 'uuid-1' },
+      data: { email: 'newemail@test.com', habilitado: false },
+      select: expect.objectContaining({ passwordHash: false }),
+    });
+    expect(result.email).toBe('newemail@test.com');
+    expect(result.habilitado).toBe(false);
+  });
 
-    it('TRIANGULATE: should throw when retry after 401 also fails', async () => {
-      // Initial auth
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as Response);
-      // Users fetch → 401
-      fetchMock.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-      } as Response);
-      // Re-auth OK
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as Response);
-      // Retry → 401 again
-      fetchMock.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        json: async () => ({}),
-      } as Response);
+  // ── TRIANGULATE: update() roles ───────────────────────────────────────
 
-      const promise = service.getUsers();
-      await expect(promise).rejects.toThrow(HttpException);
-      await expect(promise).rejects.toMatchObject({
-        status: 502,
-      });
+  it('TRIANGULATE: should update roles field as JSON string', async () => {
+    mockPrisma.usuario.findUnique.mockResolvedValue(mockUsuarioFull);
+    const withRoles = { ...mockUsuarioNoHash, roles: '["editor"]' };
+    mockPrisma.usuario.update.mockResolvedValue(withRoles);
+
+    const result = await service.update('uuid-1', {
+      roles: ['editor'],
     });
 
-    // ── TRIANGULATE: Auth failure → 500 ─────────────────────────────────
+    expect(result.roles).toBe('["editor"]');
+    expect(mockPrisma.usuario.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ roles: '["editor"]' }),
+      }),
+    );
+  });
 
-    it('TRIANGULATE: should throw 500 when admin auth fails', async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        json: async () => ({ error: 'invalid_grant' }),
-      } as Response);
+  // ── RED: delete() ─────────────────────────────────────────────────────
 
-      const promise = service.getUsers();
-      await expect(promise).rejects.toThrow(HttpException);
-      await expect(promise).rejects.toMatchObject({
-        status: 500,
-      });
+  it('RED: should delete usuario by id after verifying existence', async () => {
+    mockPrisma.usuario.findUnique.mockResolvedValue(mockUsuarioFull);
+    mockPrisma.usuario.delete.mockResolvedValue({ id: 'uuid-1' });
+
+    await service.delete('uuid-1');
+
+    expect(mockPrisma.usuario.findUnique).toHaveBeenCalledWith({
+      where: { id: 'uuid-1' },
     });
-
-    // ── TRIANGULATE: Network error → 502 ───────────────────────────────
-
-    it('TRIANGULATE: should throw 502 when Keycloak is unreachable (network error)', async () => {
-      fetchMock.mockRejectedValueOnce(new Error('fetch failed'));
-
-      await expect(service.getUsers()).rejects.toThrow(HttpException);
-      await expect(service.getUsers()).rejects.toMatchObject({
-        status: 502,
-      });
+    expect(mockPrisma.usuario.delete).toHaveBeenCalledWith({
+      where: { id: 'uuid-1' },
     });
+  });
 
-    // ── TRIANGULATE: Empty realm → 200 + [] ─────────────────────────────
+  // ── RED: findOne() ────────────────────────────────────────────────────
 
-    it('TRIANGULATE: should return empty array when realm has no users', async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as Response);
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      } as Response);
+  it('RED: should find usuario by id without passwordHash', async () => {
+    mockPrisma.usuario.findUnique.mockResolvedValue(mockUsuarioNoHash);
 
-      const result = await service.getUsers();
+    const result = await service.findOne('uuid-1');
 
-      expect(result).toEqual([]);
-      expect(Array.isArray(result)).toBe(true);
+    expect(mockPrisma.usuario.findUnique).toHaveBeenCalledWith({
+      where: { id: 'uuid-1' },
+      select: expect.objectContaining({ passwordHash: false }),
     });
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(result?.id).toBe('uuid-1');
+  });
 
-    // ── TRIANGULATE: Token reuse within expiry ──────────────────────────
+  // ── TRIANGULATE: findOne() not found ──────────────────────────────────
 
-    it('TRIANGULATE: should reuse cached token when not expired', async () => {
-      // First call: auth + users
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as Response);
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockKeycloakUsers,
-      } as Response);
+  it('TRIANGULATE: should return null when usuario not found', async () => {
+    mockPrisma.usuario.findUnique.mockResolvedValue(null);
 
-      await service.getUsers();
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+    const result = await service.findOne('nonexistent');
 
-      // Second call: should reuse token, only one more fetch
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => [mockKeycloakUsers[0]],
-      } as Response);
-
-      await service.getUsers();
-
-      // Should be 3 calls total (no auth call on second getUsers)
-      expect(fetchMock).toHaveBeenCalledTimes(3);
-    });
-
-    // ── TRIANGULATE: Map users with missing optional fields ─────────────
-
-    it('TRIANGULATE: should handle users with missing email/firstName/lastName', async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as Response);
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => [
-          {
-            id: 'minimal',
-            username: 'min',
-            enabled: true,
-            realmRoles: null,
-          },
-        ],
-      } as Response);
-
-      const result = await service.getUsers();
-
-      expect(result[0]).toEqual({
-        id: 'minimal',
-        username: 'min',
-        email: '',
-        firstName: '',
-        lastName: '',
-        enabled: true,
-        roles: [],
-      });
-    });
-
-    // ── TRIANGULATE: Non-401 HTTP errors on users fetch ─────────────────
-
-    it('TRIANGULATE: should throw on non-401 HTTP errors from Keycloak', async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockTokenResponse,
-      } as Response);
-      fetchMock.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        json: async () => ({ error: 'unknown_error' }),
-      } as Response);
-
-      const promise = service.getUsers();
-      await expect(promise).rejects.toThrow(HttpException);
-      await expect(promise).rejects.toMatchObject({
-        status: 502,
-      });
-    });
+    expect(result).toBeNull();
   });
 });
