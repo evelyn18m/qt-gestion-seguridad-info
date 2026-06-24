@@ -1,13 +1,4 @@
-# Auth Backend — JWT Validation + CORS + Local Auth
-
-## Metadata
-- change: hybrid-auth-local-users
-- domain: auth-backend
-- type: spec
-- status: active
-- previous_changes: corregir-auth-oidc
-
----
+# Delta for auth-backend
 
 ## MODIFIED Requirements
 
@@ -45,33 +36,6 @@ The backend MUST validate JWT access tokens on all `/api/*` routes. The guard SH
 - THEN the guard MUST return HTTP 401
 
 ## ADDED Requirements
-
-### Requirement: CORS restricted to frontend origin
-
-The backend MUST restrict CORS to `http://localhost:3000` exclusively. Requests from any other origin SHALL be rejected.
-
-#### Scenario: Frontend makes API request
-
-- GIVEN the frontend at `http://localhost:3000` makes an API request to `http://localhost:3001/api/*`
-- WHEN the request includes valid credentials
-- THEN CORS headers MUST allow the request
-
-#### Scenario: Unknown origin requests
-
-- GIVEN a request originates from `http://malicious-site.com`
-- WHEN it reaches the backend
-- THEN the response MUST NOT include CORS allow headers for that origin
-
-### Requirement: JWKS endpoint configuration
-
-The backend MUST fetch and cache Keycloak's public keys from the JWKS endpoint for JWT signature validation.
-
-#### Scenario: JWT signature validation
-
-- GIVEN a request with a valid Bearer token
-- WHEN the `AuthGuard` validates the token
-- THEN the guard MUST verify the signature using keys from `http://localhost:8080/realms/quito-turismo/protocol/openid-connect/certs`
-- AND MUST NOT accept tokens signed with unknown keys
 
 ### Requirement: POST /auth/login — Local Authentication
 

@@ -1,13 +1,4 @@
-# Auth Frontend — Dual Auth (Keycloak + Local)
-
-## Metadata
-- change: hybrid-auth-local-users
-- domain: auth-frontend
-- type: spec
-- status: active
-- previous_changes: corregir-auth-oidc
-
----
+# Delta for auth-frontend
 
 ## MODIFIED Requirements
 
@@ -50,7 +41,7 @@ The system MUST silently restore the authenticated session on page reload. For K
 
 ### Requirement: Logout clears session
 
-The system MUST clear the session on logout. For Keycloak: redirect to Keycloak logout endpoint. For local: clear sessionStorage token.
+The system MUST clear the session on logout. For Keycloak: redirect to Keycloak logout. For local: clear sessionStorage token.
 
 (Previously: only Keycloak logout existed)
 
@@ -100,9 +91,3 @@ After first Keycloak login, the system MUST detect `primerInicio: true` on the s
 - GIVEN `SetPasswordModal` is open
 - WHEN user enters and confirms password (min 8 chars)
 - THEN `POST /auth/set-password` is called; modal closes on 200
-
-## REMOVED Requirements
-
-### Requirement: Callback route handled
-
-(Reason: keycloak-js processes the redirect callback entirely in the browser at `/` — no dedicated `/auth/callback` server route is needed. The callback is handled by keycloak-js initialization with `checkLoginIframe: false` and the token exchange happens client-side.)
