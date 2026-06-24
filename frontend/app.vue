@@ -1,38 +1,29 @@
 <script lang="ts" setup>
 const $auth = useAuth()
+const route = useRoute()
 
-const login = () => $auth.login()
-const logout = () => $auth.logout()
+// Redirect unauthenticated users to /login (except /login itself)
+watch(
+  () => $auth.loggedIn.value,
+  (isLoggedIn) => {
+    if (!isLoggedIn && route.path !== '/login') {
+      navigateTo('/login')
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <div>
-    <div v-if="!$auth.loggedIn.value" class="premium-container">
-      <div class="login-card">
-        <div class="logo-section">
-          <img alt="Quito Turismo" class="logo-img"
-               src="https://turismo.quito.gob.ec/wp-content/uploads/2024/06/logoQT-1024x166.png">
-          <h1>Gestión de Seguridad</h1>
-          <p>Sistema de Seguridad de la Información (SGSI)</p>
-        </div>
+    <!-- Login page renders with its own layout=false, no wrapper needed -->
+    <NuxtPage v-if="$auth.loggedIn.value || route.path === '/login'" />
 
-        <button class="login-btn" @click="login">
-          <span>Iniciar Sesión</span>
-          <svg fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;" viewBox="0 0 24 24"
-               xmlns="http://www.w3.org/2000/svg">
-            <path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-
-        <div class="footer-text">
-          © 2026 Quito Turismo. Todos los derechos reservados.
-        </div>
-      </div>
-    </div>
-
-    <NuxtLayout v-else>
-      <NuxtPage/>
-    </NuxtLayout>
+    <!-- SetPasswordModal shows when user has primerInicio -->
+    <SetPasswordModal
+      v-if="$auth.loggedIn.value && $auth.primerInicio.value"
+      @close="$auth.primerInicio.value = false"
+    />
   </div>
 </template>
 
@@ -77,7 +68,7 @@ body {
   align-items: center;
   justify-content: center;
   background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent),
-  radial-gradient(circle at bottom left, rgba(79, 70, 229, 0.1), transparent);
+    radial-gradient(circle at bottom left, rgba(79, 70, 229, 0.1), transparent);
 }
 
 .login-card {

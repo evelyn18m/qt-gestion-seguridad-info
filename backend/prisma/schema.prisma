@@ -244,3 +244,16 @@ model ControlesImplementar {
   categoria      CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
   detallesRiesgo DetalleRiesgo[]
 }
+
+model Usuario {
+  id           String   @id @default(uuid())
+  keycloakSub  String?  @unique
+  username     String   @unique
+  email        String   @default("")
+  passwordHash String?
+  primerInicio Boolean  @default(true)
+  habilitado   Boolean  @default(true)
+  roles        String   @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

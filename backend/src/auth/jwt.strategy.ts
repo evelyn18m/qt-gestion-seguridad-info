@@ -5,7 +5,7 @@ import { passportJwtSecret } from 'jwks-rsa';
 import { extractJwtPayload, JwtPayload } from './jwt.types';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt-keycloak') {
   constructor() {
     const jwksUri = process.env['KEYCLOAK_JWKS_URI'];
 
@@ -27,6 +27,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   // eslint-disable-next-line @typescript-eslint/require-await
   async validate(payload: JwtPayload) {
-    return extractJwtPayload(payload);
+    return {
+      ...extractJwtPayload(payload),
+      source: 'keycloak' as const,
+    };
   }
 }

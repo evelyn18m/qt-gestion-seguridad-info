@@ -1,104 +1,81 @@
-import { Injectable, HttpException } from '@nestjs/common';
-import { UsuarioDto } from './dto/usuario.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
-interface KeycloakUser {
-  id: string;
-  username: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  enabled?: boolean;
-  realmRoles?: string[];
-}
+const usuarioSelect = {
+  id: true,
+  keycloakSub: true,
+  username: true,
+  email: true,
+  primerInicio: true,
+  habilitado: true,
+  roles: true,
+  createdAt: true,
+  updatedAt: true,
+  passwordHash: false,
+} as const;
 
 @Injectable()
 export class UsuariosService {
-  private adminToken: string | null = null;
-  private tokenExpiry = 0;
+  constructor(private readonly prisma: PrismaService) {}
 
-  async getUsers(): Promise<UsuarioDto[]> {
-    const token = await this.getAdminToken();
-    const url = `${process.env.KEYCLOAK_ADMIN_URL}/admin/realms/${process.env.KEYCLOAK_REALM}/users?briefRepresentation=false`;
+  async findAll() {
+    return this.prisma.usuario.findMany({
+      select: usuarioSelect,
+    });
+  }
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
+  async findOne(id: string) {
+    return this.prisma.usuario.findUnique({
+      where: { id },
+      select: usuarioSelect,
+    });
+  }
+
+  async create(dto: CreateUsuarioDto) {
+    return this.prisma.usuario.create({
+      data: {
+        username: dto.username,
+        email: dto.email,
+        roles: '[]',
+      },
+      select: usuarioSelect,
+    });
+  }
+
+  async update(id: string, dto: UpdateUsuarioDto) {
+    const existing = await this.prisma.usuario.findUnique({
+      where: { id },
     });
 
-    if (res.status === 401) {
-      this.adminToken = null;
-      const newToken = await this.getAdminToken();
-      const retryRes = await fetch(url, {
-        headers: { Authorization: `Bearer ${newToken}` },
-      });
-      if (!retryRes.ok) {
-        throw new HttpException(
-          'Keycloak no disponible tras reintento',
-          502,
-        );
-      }
-      const users = (await retryRes.json()) as KeycloakUser[];
-      return users.map(this.mapUser);
+    if (!existing) {
+      throw new NotFoundException('Usuario no encontrado');
     }
 
-    if (!res.ok) {
-      throw new HttpException(
-        `Keycloak error: ${res.status}`,
-        502,
-      );
-    }
+    const data: Record<string, unknown> = {};
+    if (dto.email !== undefined) data['email'] = dto.email;
+    if (dto.habilitado !== undefined) data['habilitado'] = dto.habilitado;
+    if (dto.roles !== undefined) data['roles'] = JSON.stringify(dto.roles);
 
-    const users = (await res.json()) as KeycloakUser[];
-    return users.map(this.mapUser);
+    return this.prisma.usuario.update({
+      where: { id },
+      data,
+      select: usuarioSelect,
+    });
   }
 
-  private async getAdminToken(): Promise<string> {
-    if (this.adminToken && Date.now() < this.tokenExpiry) {
-      return this.adminToken;
+  async delete(id: string) {
+    const existing = await this.prisma.usuario.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Usuario no encontrado');
     }
 
-    try {
-      const res = await fetch(
-        `${process.env.KEYCLOAK_ADMIN_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            grant_type: 'password',
-            client_id: 'admin-cli',
-            username: process.env.KEYCLOAK_ADMIN_USER!,
-            password: process.env.KEYCLOAK_ADMIN_PASSWORD!,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        throw new HttpException(
-          'Error de autenticación con Keycloak',
-          500,
-        );
-      }
-
-      const data = await res.json();
-      this.adminToken = data.access_token;
-      this.tokenExpiry = Date.now() + (data.expires_in - 30) * 1000;
-      return this.adminToken!;
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      throw new HttpException('Keycloak no disponible', 502);
-    }
-  }
-
-  private mapUser(kcUser: KeycloakUser): UsuarioDto {
-    return {
-      id: kcUser.id,
-      username: kcUser.username,
-      email: kcUser.email ?? '',
-      firstName: kcUser.firstName ?? '',
-      lastName: kcUser.lastName ?? '',
-      enabled: kcUser.enabled ?? false,
-      roles: kcUser.realmRoles ?? [],
-    };
+    await this.prisma.usuario.delete({
+      where: { id },
+    });
   }
 }

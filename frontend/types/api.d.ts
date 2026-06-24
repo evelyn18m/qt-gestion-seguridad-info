@@ -209,12 +209,24 @@ export interface TratamientoRiesgoReporte {
 
 export interface Usuario {
   id: string;
+  keycloakSub: string | null;
   username: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  enabled: boolean;
-  realmRoles: string[];
+  email: string;
+  primerInicio: boolean;
+  habilitado: boolean;
+  roles: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  usuario: {
+    id: string;
+    username: string;
+    email: string;
+    roles: string[];
+  };
 }
 
 // ── Audit module ──────────────────────────────────────────────────────────────

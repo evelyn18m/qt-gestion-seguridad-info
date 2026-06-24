@@ -69,6 +69,7 @@ services:
       - KEYCLOAK_REALM=quito-turismo
       - KEYCLOAK_ADMIN_USER=superadmin
       - KEYCLOAK_ADMIN_PASSWORD=admin
+      - JWT_SECRET=183d5efddabbad705fbd8118804b02460a63cc7145f5c2f699e5bb1fc5d382fa
     ports:
       - "3001:3001"
     command: sh -c "npm install && npm run build && node dist/src/main.js"

@@ -2,8 +2,20 @@
 const isSidebarOpen = ref(false)
 const catalogosOpen = ref(false)
 const route = useRoute()
-const {user, logout} = useAuth()
-const {secondsRemaining, isWarning, isExpired, refreshSession} = useSession()
+const { usuario, logout } = useAuth()
+const { secondsRemaining, isWarning, isExpired, refreshSession } = useSession()
+
+// Parse roles from JSON string for display
+const displayName = computed(() => usuario.value?.username || 'Usuario')
+const displayRole = computed(() => {
+  if (!usuario.value?.roles) return 'Usuario'
+  try {
+    const roles = JSON.parse(usuario.value.roles)
+    return roles[0] || 'Usuario'
+  } catch {
+    return 'Usuario'
+  }
+})
 
 function closeSidebar() {
   isSidebarOpen.value = false
@@ -45,11 +57,11 @@ const catalogos = [
       <div class="header-right">
         <div class="user-info">
           <div class="user-details">
-            <span class="user-name">{{ user?.name || user?.preferred_username }}</span>
-            <span class="user-role">{{ user?.realm_access?.roles?.[0] || 'Usuario' }}</span>
+            <span class="user-name">{{ displayName }}</span>
+            <span class="user-role">{{ displayRole }}</span>
           </div>
           <div class="user-avatar">
-            {{ (user?.name || user?.preferred_username || 'U').charAt(0).toUpperCase() }}
+            {{ (displayName).charAt(0).toUpperCase() }}
           </div>
         </div>
         <button class="logout-mini-btn" title="Cerrar Sesión" @click="logout">

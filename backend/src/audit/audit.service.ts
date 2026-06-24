@@ -138,7 +138,7 @@ export class AuditService {
     const range = XLSX_STYLE.utils.decode_range(ws['!ref'] || 'A1');
     for (let col = range.s.c; col <= range.e.c; col++) {
       const cellRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: col });
-      if (ws[cellRef]) (ws[cellRef] as any).s = headerStyle;
+      if (ws[cellRef]) ws[cellRef].s = headerStyle;
     }
 
     // Column widths

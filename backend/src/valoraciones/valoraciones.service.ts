@@ -209,7 +209,10 @@ export class ValoracionesService {
 
     // Compute field-level diff for audit
     if (user) {
-      const diff = this.computeDiff(current as unknown as Record<string, unknown>, dto as unknown as Record<string, unknown>);
+      const diff = this.computeDiff(
+        current,
+        dto as unknown as Record<string, unknown>,
+      );
       void this.auditService.log({
         accion: 'ACTUALIZAR',
         modulo: 'valoraciones',
