@@ -61,14 +61,20 @@ describe('UsuariosController', () => {
 
   // ── RED: POST /usuarios ───────────────────────────────────────────────
 
-  it('RED: should create usuario and return result', async () => {
-    mockUsuariosService.create.mockResolvedValue(mockUsuarioResponse);
+  it('RED: should create usuario and return compound response with contraseñaGenerada', async () => {
+    const createResponse = {
+      usuario: mockUsuarioResponse,
+      contraseñaGenerada: 'abcdef1234567890abcdef1234567890',
+    };
+    mockUsuariosService.create.mockResolvedValue(createResponse);
 
     const dto = { username: 'newuser', email: 'new@test.com' };
     const result = await controller.create(dto);
 
     expect(mockUsuariosService.create).toHaveBeenCalledWith(dto);
-    expect(result).toEqual(mockUsuarioResponse);
+    expect(result).toEqual(createResponse);
+    expect(result).toHaveProperty('usuario');
+    expect(result).toHaveProperty('contraseñaGenerada');
   });
 
   // ── RED: PATCH /usuarios/:id ──────────────────────────────────────────

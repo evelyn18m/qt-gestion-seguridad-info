@@ -219,6 +219,11 @@ export interface Usuario {
   updatedAt: string;
 }
 
+export interface CreateUsuarioResponse {
+  usuario: Usuario;
+  contraseñaGenerada: string;
+}
+
 export interface LoginResponse {
   access_token: string;
   usuario: {

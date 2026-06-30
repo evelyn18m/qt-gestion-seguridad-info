@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsuariosService } from './usuarios.service';
 import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 describe('UsuariosService', () => {
   let service: UsuariosService;
@@ -84,9 +85,9 @@ describe('UsuariosService', () => {
     expect(result).toEqual([]);
   });
 
-  // ── RED: create() ─────────────────────────────────────────────────────
+  // ── RED: create() returns compound response ────────────────────────────
 
-  it('RED: should create usuario and return without passwordHash', async () => {
+  it('RED: should create usuario with auto-generated password and return compound response', async () => {
     mockPrisma.usuario.create.mockResolvedValue(mockUsuarioNoHash);
 
     const result = await service.create({
@@ -94,21 +95,73 @@ describe('UsuariosService', () => {
       email: 'new@test.com',
     });
 
-    expect(mockPrisma.usuario.create).toHaveBeenCalledWith({
-      data: {
-        username: 'newuser',
-        email: 'new@test.com',
-        roles: '[]',
-      },
-      select: expect.objectContaining({
-        passwordHash: false,
+    expect(mockPrisma.usuario.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          username: 'newuser',
+          email: 'new@test.com',
+          roles: '[]',
+          passwordHash: expect.any(String),
+          primerInicio: true,
+        }),
+        select: expect.objectContaining({
+          passwordHash: false,
+        }),
       }),
-    });
-    expect(result).not.toHaveProperty('passwordHash');
-    expect(result.username).toBe('jdoe');
+    );
+    expect(result).toHaveProperty('usuario');
+    expect(result).toHaveProperty('contraseñaGenerada');
+    expect(result.usuario).not.toHaveProperty('passwordHash');
+    expect(result.usuario.username).toBe('jdoe');
+    expect(result.contraseñaGenerada).toEqual(expect.any(String));
+    expect(result.contraseñaGenerada.length).toBe(32);
   });
 
-  // ── TRIANGULATE: create() with duplicate username ─────────────────────
+  // ── RED: contraseñaGenerada is bcrypt-verifiable ───────────────────────
+
+  it('RED: contraseñaGenerada should be bcrypt-verifiable against stored passwordHash', async () => {
+    let capturedCreateArgs: { data: { passwordHash: string } } | null = null;
+    mockPrisma.usuario.create.mockImplementation(
+      (args: { data: { passwordHash: string } }) => {
+        capturedCreateArgs = args;
+        return Promise.resolve(mockUsuarioNoHash);
+      },
+    );
+
+    const result = await service.create({
+      username: 'bcryptuser',
+      email: 'bcrypt@test.com',
+    });
+
+    const storedPasswordHash = capturedCreateArgs!.data.passwordHash;
+    const plainPassword = result.contraseñaGenerada;
+
+    const isValid = await bcrypt.compare(plainPassword, storedPasswordHash);
+    expect(isValid).toBe(true);
+  });
+
+  // ── TRIANGULATE: two creates produce different passwords ───────────────
+
+  it('TRIANGULATE: two create() calls should produce different contraseñaGenerada', async () => {
+    const user1 = { ...mockUsuarioNoHash, username: 'user1' };
+    const user2 = { ...mockUsuarioNoHash, username: 'user2' };
+    mockPrisma.usuario.create
+      .mockResolvedValueOnce(user1)
+      .mockResolvedValueOnce(user2);
+
+    const result1 = await service.create({
+      username: 'user1',
+      email: 'u1@test.com',
+    });
+    const result2 = await service.create({
+      username: 'user2',
+      email: 'u2@test.com',
+    });
+
+    expect(result1.contraseñaGenerada).not.toBe(result2.contraseñaGenerada);
+  });
+
+  // ── TRIANGULATE: create() with duplicate username (regression) ─────────
 
   it('TRIANGULATE: should propagate Prisma unique constraint error', async () => {
     const prismaError = { code: 'P2002', meta: { target: ['username'] } };

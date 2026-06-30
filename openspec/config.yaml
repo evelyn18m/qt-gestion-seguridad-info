@@ -1,14 +1,14 @@
 project: qt-gestion-seguridad-info
 description: SGSI (Sistema de Gestión de Seguridad de la Información) — monorepo with NestJS backend and Nuxt 4 frontend
 initialized: 2026-05-27
-re-detected: 2026-06-15
+re-detected: 2026-06-30
 mode: hybrid
 
 context:
   backend: NestJS 11, TypeScript 5.7, Prisma 7.8, @prisma/adapter-mariadb, MySQL 8.0, port 3001
-  frontend: Nuxt 4.4, Vue 3.5, nuxt-oidc-auth (Keycloak), port 3000
+  frontend: Nuxt 4.4, Vue 3.5, keycloak-js OIDC, port 3000
   infra: Docker Compose — services mysql, keycloak, backend, frontend, adminer
-  auth: Keycloak 24 (OIDC provider, port 8080)
+  auth: Keycloak 24 (OIDC provider, port 8080) + backend local JWT strategy
   commands: all via "docker compose exec <service> <command>"
   db: sgsi_db on MySQL container, user sgsi_user/sgsi_password
 

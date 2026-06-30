@@ -1,14 +1,12 @@
-# local-usuarios-crud Specification
+# Delta for local-usuarios-crud
 
-## Purpose
-
-CRUD management of local `Usuario` records, replacing the read-only Keycloak admin-client proxy.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Full CRUD on /usuarios
 
 The system MUST provide `GET`, `POST`, `PATCH`, and `DELETE` on `/usuarios` operating on the local `Usuario` table. Endpoints MUST be protected by the composite JWT guard. The `passwordHash` field SHALL NOT appear in any response. On user creation via `POST /usuarios`, the system MUST generate a 32-character random hex password, hash it with bcrypt (cost factor 10), store the hash, set `primerInicio: true`, and return `{ usuario, contraseñaGenerada }`.
+
+(Previously: Created usuario with `passwordHash: null` and responded with just the Usuario object. No password generation.)
 
 #### Scenario: List usuarios
 
@@ -49,11 +47,10 @@ The system MUST provide `GET`, `POST`, `PATCH`, and `DELETE` on `/usuarios` oper
 - WHEN `DELETE /usuarios/:id`
 - THEN Usuario is removed, respond 204
 
-### Requirement: Remove Keycloak Admin-Client Dependency
+## ADDED Requirements
 
-The `UsuariosModule` MUST NOT import or depend on `@keycloak/keycloak-admin-client`. User queries SHALL target the local `Usuario` table exclusively.
+None.
 
-#### Scenario: No admin-client import
+## REMOVED Requirements
 
-- GIVEN a developer inspects `src/usuarios/`
-- THEN no import from `@keycloak/keycloak-admin-client` exists
+None.

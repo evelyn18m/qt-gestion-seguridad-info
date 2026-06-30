@@ -62,6 +62,11 @@ export function useApi() {
       throw err
     }
 
+    // 204 No Content — successful but no body to parse
+    if (res.status === 204) {
+      return undefined as T
+    }
+
     return res.json() as Promise<T>
   }
 
