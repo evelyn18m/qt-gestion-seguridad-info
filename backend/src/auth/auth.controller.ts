@@ -1,6 +1,5 @@
 import { Controller, Post, Body, HttpCode } from '@nestjs/common';
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
-import { Roles } from './decorators/roles.decorator';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
@@ -60,7 +59,6 @@ export class AuthController {
   }
 
   @Post('set-password')
-  @Roles('administrador')
   setPassword(
     @CurrentUser() user: { userId: string },
     @Body() body: SetPasswordDto,
