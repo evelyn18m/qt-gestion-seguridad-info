@@ -125,13 +125,15 @@ async function saveEdit() {
 
   try {
     const { apiFetch } = useApi()
+    const patchBody: Record<string, unknown> = {
+      email: editFormData.value.email || undefined,
+      habilitado: editFormData.value.habilitado,
+      roles: rolesArr,
+    }
+    if (!patchBody.email) delete patchBody.email
     await apiFetch(`/usuarios/${editingUsuario.value.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({
-        email: editFormData.value.email,
-        habilitado: editFormData.value.habilitado,
-        roles: rolesArr,
-      }),
+      body: JSON.stringify(patchBody),
     })
     closeEditModal()
     await fetchUsuarios()
