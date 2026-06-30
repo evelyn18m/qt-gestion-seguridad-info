@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import * as passport from 'passport';
+import passport from 'passport';
 import * as jwt from 'jsonwebtoken';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
 
