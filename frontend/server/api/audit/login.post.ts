@@ -8,9 +8,11 @@ export default defineEventHandler(async (event) => {
 
   // Forward authorization header
   const authHeader = getHeader(event, 'authorization')
-  if (authHeader) {
-    headers['authorization'] = authHeader
+  if (!authHeader) {
+    // No active session; skip backend audit to avoid 401 noise.
+    return { ok: true }
   }
+  headers['authorization'] = authHeader
 
   // Forward user-agent
   const userAgent = getHeader(event, 'user-agent')

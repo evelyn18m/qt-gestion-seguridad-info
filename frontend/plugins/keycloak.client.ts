@@ -30,6 +30,9 @@ export default defineNuxtPlugin(async () => {
         if (keycloak.authenticated && keycloak.tokenParsed?.sub) {
             void $fetch('/api/audit/login', {
                 method: 'POST',
+                headers: keycloak.token
+                    ? { Authorization: `Bearer ${keycloak.token}` }
+                    : undefined,
                 body: { userId: keycloak.tokenParsed.sub },
             }).catch((e: unknown) => {
                 console.error('[audit] login event failed silently', e)
