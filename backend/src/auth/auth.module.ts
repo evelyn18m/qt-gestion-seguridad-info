@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
@@ -29,6 +30,7 @@ export const AUTH_GUARD = 'auth-guard';
     AuthService,
     PrismaService,
     { provide: AUTH_GUARD, useClass: AuthGuard },
+    { provide: APP_INTERCEPTOR, useClass: SyncInterceptor },
   ],
   exports: [PassportModule, AUTH_GUARD, AuthService],
 })

@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { KeycloakAdminService } from '../keycloak/keycloak-admin.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
@@ -20,7 +21,12 @@ const usuarioSelect = {
 
 @Injectable()
 export class UsuariosService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(UsuariosService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly keycloak: KeycloakAdminService,
+  ) {}
 
   async findAll() {
     return this.prisma.usuario.findMany({
@@ -43,12 +49,37 @@ export class UsuariosService {
       data: {
         username: dto.username,
         email: dto.email,
-        roles: '[]',
+        roles: dto.roles ? JSON.stringify(dto.roles) : '[]',
         passwordHash,
         primerInicio: true,
       },
       select: usuarioSelect,
     });
+
+    // Best-effort Keycloak sync
+    try {
+      const kcUserId = await this.keycloak.createUser({
+        username: dto.username,
+        email: dto.email,
+        enabled: true,
+        credentials: [
+          { type: 'password', value: password, temporary: false },
+        ],
+      });
+
+      await this.prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { keycloakSub: kcUserId },
+      });
+
+      if (dto.roles && dto.roles.length > 0) {
+        await this.keycloak.assignClientRoles(kcUserId, dto.roles);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Keycloak sync failed on create for user "${dto.username}": ${String(error)}`,
+      );
+    }
 
     return { usuario, contraseñaGenerada: password };
   }
@@ -67,11 +98,34 @@ export class UsuariosService {
     if (dto.habilitado !== undefined) data['habilitado'] = dto.habilitado;
     if (dto.roles !== undefined) data['roles'] = JSON.stringify(dto.roles);
 
-    return this.prisma.usuario.update({
+    const updated = await this.prisma.usuario.update({
       where: { id },
       data,
       select: usuarioSelect,
     });
+
+    // Best-effort Keycloak sync (only if keycloakSub exists)
+    if (existing.keycloakSub) {
+      try {
+        await this.keycloak.updateUser(existing.keycloakSub, {
+          email: dto.email,
+          enabled: dto.habilitado,
+        });
+
+        if (dto.roles !== undefined) {
+          await this.keycloak.assignClientRoles(
+            existing.keycloakSub,
+            dto.roles,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Keycloak sync failed on update for user "${existing.username}": ${String(error)}`,
+        );
+      }
+    }
+
+    return updated;
   }
 
   async delete(id: string) {
@@ -86,5 +140,16 @@ export class UsuariosService {
     await this.prisma.usuario.delete({
       where: { id },
     });
+
+    // Best-effort Keycloak delete (only if keycloakSub exists)
+    if (existing.keycloakSub) {
+      try {
+        await this.keycloak.deleteUser(existing.keycloakSub);
+      } catch (error) {
+        this.logger.warn(
+          `Keycloak sync failed on delete for user "${existing.username}": ${String(error)}`,
+        );
+      }
+    }
   }
 }
