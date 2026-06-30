@@ -2,23 +2,37 @@ import type { KeycloakTokenParsed } from 'keycloak-js'
 import type { Usuario, LoginResponse } from '~/types/api'
 
 const LOCAL_TOKEN_KEY = 'auth_token'
+const LOCAL_USER_KEY = 'auth_user'
+const LOCAL_PRIMER_INICIO_KEY = 'auth_primer_inicio'
+
+  // Module-level shared state so every consumer of useAuth sees the same session.
+function readStorage(key: string): string | null {
+  if (import.meta.client) {
+    return sessionStorage.getItem(key)
+  }
+  return null
+}
+
+function parseStoredUser(raw: string | null): Usuario | null {
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as Usuario
+  } catch {
+    return null
+  }
+}
+
+const storedToken = readStorage(LOCAL_TOKEN_KEY)
+const storedUser = parseStoredUser(readStorage(LOCAL_USER_KEY))
+const storedPrimerInicio = readStorage(LOCAL_PRIMER_INICIO_KEY) === 'true'
+
+const localToken = ref<string | null>(storedToken)
+const localUsuario = ref<Usuario | null>(storedUser)
+const primerInicio = ref<boolean>(storedPrimerInicio)
 
 export const useAuth = () => {
   const { $keycloak, $kcLoggedIn } = useNuxtApp()
   const config = useRuntimeConfig()
-
-  // ── Local session state ──────────────────────────────────────────────
-  const localToken = ref<string | null>(null)
-  const localUsuario = ref<Usuario | null>(null)
-  const primerInicio = ref(false)
-
-  // Restore from sessionStorage on init
-  if (import.meta.client) {
-    const stored = sessionStorage.getItem(LOCAL_TOKEN_KEY)
-    if (stored) {
-      localToken.value = stored
-    }
-  }
 
   // ── Computed flags ───────────────────────────────────────────────────
   const isLocal = computed(() => localToken.value !== null)
@@ -93,24 +107,26 @@ export const useAuth = () => {
       },
     )
 
-    localToken.value = res.access_token
-    sessionStorage.setItem(LOCAL_TOKEN_KEY, res.access_token)
-    localUsuario.value = {
+    const userRecord: Usuario = {
       id: res.usuario.id,
       keycloakSub: null,
       username: res.usuario.username,
       email: res.usuario.email,
-      primerInicio: false,
+      primerInicio: res.usuario.primerInicio ?? false,
       habilitado: true,
       roles: JSON.stringify(res.usuario.roles),
       createdAt: '',
       updatedAt: '',
     }
-    primerInicio.value = false
 
-    // Check if primerInicio flag came through
-    if (res.usuario.primerInicio) {
-      primerInicio.value = true
+    localToken.value = res.access_token
+    localUsuario.value = userRecord
+    primerInicio.value = userRecord.primerInicio
+
+    if (import.meta.client) {
+      sessionStorage.setItem(LOCAL_TOKEN_KEY, res.access_token)
+      sessionStorage.setItem(LOCAL_USER_KEY, JSON.stringify(userRecord))
+      sessionStorage.setItem(LOCAL_PRIMER_INICIO_KEY, String(userRecord.primerInicio))
     }
   }
 
@@ -127,6 +143,12 @@ export const useAuth = () => {
     if (localUsuario.value) {
       localUsuario.value.primerInicio = false
     }
+    if (import.meta.client) {
+      sessionStorage.setItem(LOCAL_PRIMER_INICIO_KEY, 'false')
+      if (localUsuario.value) {
+        sessionStorage.setItem(LOCAL_USER_KEY, JSON.stringify(localUsuario.value))
+      }
+    }
   }
 
   // ── Unified logout ───────────────────────────────────────────────────
@@ -136,7 +158,12 @@ export const useAuth = () => {
     }
     localToken.value = null
     localUsuario.value = null
-    sessionStorage.removeItem(LOCAL_TOKEN_KEY)
+    primerInicio.value = false
+    if (import.meta.client) {
+      sessionStorage.removeItem(LOCAL_TOKEN_KEY)
+      sessionStorage.removeItem(LOCAL_USER_KEY)
+      sessionStorage.removeItem(LOCAL_PRIMER_INICIO_KEY)
+    }
     if (!isKeycloak.value) {
       navigateTo('/login')
     }
