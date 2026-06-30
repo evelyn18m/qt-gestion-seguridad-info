@@ -115,11 +115,17 @@ Keycloak failures SHALL log WARN but MUST NOT reject HTTP requests. Local data i
 
 ### Requirement: Role Validation
 
-Roles MUST be validated against `['administradoregsi', 'usuarioegsi']`. Unknown roles SHALL respond 400.
+Roles MUST be validated against `['administrador', 'usuario']`. Unknown roles SHALL respond 400.
 
 #### Scenario: Valid role
 
-- GIVEN `roles: ["administradoregsi"]`
+- GIVEN `roles: ["administrador"]`
+- WHEN creating/updating user
+- THEN accepted
+
+#### Scenario: Valid usuario role
+
+- GIVEN `roles: ["usuario"]`
 - WHEN creating/updating user
 - THEN accepted
 

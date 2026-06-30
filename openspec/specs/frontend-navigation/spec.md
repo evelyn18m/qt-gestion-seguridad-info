@@ -125,17 +125,48 @@ The `ReportesTabs.vue` component MUST include five tabs. The tab order SHALL be:
 - AND the heatmap page loads with its own default (unfiltered) state
 - AND returning to Valoración tab preserves the previous filter state
 
+### Requirement: Role-Conditional Sidebar Items
+
+> **Added by change**: `modulo-roles-permisos` (2026-06-30)
+
+Sidebar links for admin-only pages (`/parametrizacion`, `/usuarios`, `/roles`) MUST render only when `tieneRol('administrador')` returns `true`. Links for all-authenticated pages (`/`, `/catalogos`, `/valoracion`, `/reportes`) SHALL render for any authenticated user.
+
+#### Scenario: Admin sees all links
+
+- GIVEN user with role `'administrador'`
+- WHEN sidebar renders
+- THEN all links including Parametrización, Usuarios, and Roles are visible
+
+#### Scenario: Usuario hides admin links
+
+- GIVEN user with role `'usuario'`
+- WHEN sidebar renders
+- THEN Parametrización, Usuarios, and Roles links are absent from DOM
+
+#### Scenario: All-authenticated links always visible
+
+- GIVEN authenticated user with any role
+- WHEN sidebar renders
+- THEN Inicio, Catálogos, Valoración, and Reportes links are present
+
 ### Requirement: Sidebar Parametrización Link
 
 > **Added by change**: `modulo-parametrizacion` (2026-06-15)
+> **Modified by change**: `modulo-roles-permisos` (2026-06-30)
 
-The sidebar MUST include a `NuxtLink` to `/parametrizacion` between "Valoración de Activos" and "Reportes".
+The sidebar MUST include a `NuxtLink` to `/parametrizacion` between "Valoración de Activos" and "Reportes". This link SHALL render conditionally — visible only to users with role `'administrador'`.
 
-#### Scenario: Parametrización link renders
+#### Scenario: Parametrización link renders for admin
 
-- GIVEN the sidebar is rendered on any page
-- WHEN inspecting the nav items
+- GIVEN the sidebar is rendered, user has role `'administrador'`
+- WHEN inspecting nav items
 - THEN a `NuxtLink to="/parametrizacion"` with label "Parametrización" is present between "Valoración de Activos" and "Reportes"
+
+#### Scenario: Parametrización link hidden for usuario
+
+- GIVEN the sidebar is rendered, user has role `'usuario'`
+- WHEN inspecting nav items
+- THEN no Parametrización link is present
 
 #### Scenario: Active state highlights correctly
 
