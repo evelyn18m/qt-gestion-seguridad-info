@@ -21,8 +21,19 @@ async function fetchUsuarios() {
   }
 }
 
-function formatRoles(roles: string[]): string {
-  return roles.length > 0 ? roles.join(', ') : '—'
+function parseRoles(roles: string | undefined): string[] {
+  if (!roles) return []
+  try {
+    const parsed = JSON.parse(roles)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function formatRoles(roles: string[] | undefined): string {
+  if (!roles || roles.length === 0) return '—'
+  return roles.join(', ')
 }
 
 onMounted(() => {
@@ -37,7 +48,7 @@ onMounted(() => {
         <div class="main-header">
           <div>
             <h2>Usuarios</h2>
-            <p class="subtitle">Listado de usuarios registrados en Keycloak.</p>
+            <p class="subtitle">Listado de usuarios registrados en el sistema.</p>
           </div>
         </div>
 
@@ -81,11 +92,11 @@ onMounted(() => {
                 <tr v-for="usuario in usuarios" :key="usuario.id">
                   <td>{{ usuario.username }}</td>
                   <td>{{ usuario.email || '—' }}</td>
-                  <td>{{ [usuario.firstName, usuario.lastName].filter(Boolean).join(' ') || '—' }}</td>
-                  <td>{{ formatRoles(usuario.realmRoles) }}</td>
+                  <td>—</td>
+                  <td>{{ formatRoles(parseRoles(usuario.roles)) }}</td>
                   <td>
-                    <span class="estado-badge" :class="usuario.enabled ? 'estado-activo' : 'estado-inactivo'">
-                      {{ usuario.enabled ? 'Activo' : 'Inactivo' }}
+                    <span class="estado-badge" :class="usuario.habilitado ? 'estado-activo' : 'estado-inactivo'">
+                      {{ usuario.habilitado ? 'Activo' : 'Inactivo' }}
                     </span>
                   </td>
                 </tr>
