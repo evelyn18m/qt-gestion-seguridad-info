@@ -1,6 +1,6 @@
 import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-const ALLOWED_ROLES = ['administradoregsi', 'usuarioegsi'];
+const ALLOWED_ROLES = ['administrador', 'usuario'];
 
 export class CreateUsuarioDto {
   @IsString()
@@ -14,7 +14,7 @@ export class CreateUsuarioDto {
   @IsString({ each: true })
   @IsIn(ALLOWED_ROLES, {
     each: true,
-    message: 'roles must be one of: administradoregsi, usuarioegsi',
+    message: 'roles must be one of: administrador, usuario',
   })
   roles?: string[];
 }

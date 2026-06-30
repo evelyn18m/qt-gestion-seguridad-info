@@ -10,6 +10,7 @@ import {
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { ValoracionesService } from './valoraciones.service';
 import { CreateValoracionDto } from './dto/create-valoracion.dto';
 import { UpdateValoracionDto } from './dto/update-valoracion.dto';
@@ -31,6 +32,7 @@ export class ValoracionesController {
   }
 
   @Post()
+  @Roles('administrador')
   create(
     @Body() dto: CreateValoracionDto,
     @CurrentUser() user: { userId: string; username: string } | null,
@@ -40,6 +42,7 @@ export class ValoracionesController {
   }
 
   @Patch(':id')
+  @Roles('administrador')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateValoracionDto,
@@ -50,6 +53,7 @@ export class ValoracionesController {
   }
 
   @Patch(':id/detalles-riesgo/:detalleId/calcular')
+  @Roles('administrador')
   calcularDetalleRiesgo(
     @Param('id', ParseIntPipe) id: number,
     @Param('detalleId', ParseIntPipe) detalleId: number,
@@ -59,11 +63,13 @@ export class ValoracionesController {
   }
 
   @Delete(':id')
+  @Roles('administrador')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.valoracionesService.remove(id);
   }
 
   @Post(':id/recalcular')
+  @Roles('administrador')
   recalcular(@Param('id', ParseIntPipe) id: number) {
     return this.valoracionesService.recalcular(id);
   }

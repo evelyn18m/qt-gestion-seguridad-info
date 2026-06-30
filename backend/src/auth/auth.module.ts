@@ -6,6 +6,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { LocalJwtStrategy } from './local-jwt.strategy';
 import { LocalStrategy } from './local.strategy';
 import { AuthGuard } from './auth.guard';
+import { RolesGuard } from './roles.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { SyncInterceptor } from './sync.interceptor';
@@ -30,8 +31,9 @@ export const AUTH_GUARD = 'auth-guard';
     AuthService,
     PrismaService,
     { provide: AUTH_GUARD, useClass: AuthGuard },
+    RolesGuard,
     { provide: APP_INTERCEPTOR, useClass: SyncInterceptor },
   ],
-  exports: [PassportModule, AUTH_GUARD, AuthService],
+  exports: [PassportModule, AUTH_GUARD, AuthService, RolesGuard],
 })
 export class AuthModule {}

@@ -319,12 +319,12 @@ describe('UsuariosService', () => {
       await service.create({
         username: 'roleuser',
         email: 'role@test.com',
-        roles: ['administradoregsi'],
+        roles: ['administrador'],
       });
 
       expect(mockKeycloak.assignClientRoles).toHaveBeenCalledWith(
         'kc-new-uuid-456',
-        ['administradoregsi'],
+        ['administrador'],
       );
     });
 
@@ -372,12 +372,12 @@ describe('UsuariosService', () => {
       mockPrisma.usuario.update.mockResolvedValue(mockUsuarioNoHash);
 
       await service.update('uuid-1', {
-        roles: ['usuarioegsi'],
+        roles: ['usuario'],
       });
 
       expect(mockKeycloak.assignClientRoles).toHaveBeenCalledWith(
         'kc-1',
-        ['usuarioegsi'],
+        ['usuario'],
       );
     });
 

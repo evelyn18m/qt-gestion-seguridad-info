@@ -8,6 +8,7 @@ import {
   Body,
   HttpCode,
 } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
@@ -22,17 +23,20 @@ export class UsuariosController {
   }
 
   @Post()
+  @Roles('administrador')
   create(@Body() dto: CreateUsuarioDto) {
     return this.usuariosService.create(dto);
   }
 
   @Patch(':id')
+  @Roles('administrador')
   update(@Param('id') id: string, @Body() dto: UpdateUsuarioDto) {
     return this.usuariosService.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(204)
+  @Roles('administrador')
   delete(@Param('id') id: string) {
     return this.usuariosService.delete(id);
   }
