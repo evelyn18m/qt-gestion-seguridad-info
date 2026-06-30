@@ -16,8 +16,11 @@ watch(
 
 <template>
   <div>
-    <!-- Login page renders with its own layout=false, no wrapper needed -->
-    <NuxtPage v-if="$auth.loggedIn.value || route.path === '/login'" />
+    <!-- Wrap NuxtPage with NuxtLayout so page layouts (e.g. layouts/default.vue) are applied. -->
+    <!-- login.vue uses definePageMeta({ layout: false }) so it remains unwrapped. -->
+    <NuxtLayout>
+      <NuxtPage v-if="$auth.loggedIn.value || route.path === '/login'" />
+    </NuxtLayout>
 
     <!-- SetPasswordModal shows when user has primerInicio -->
     <SetPasswordModal
