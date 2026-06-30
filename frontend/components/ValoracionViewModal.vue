@@ -166,7 +166,7 @@ function resumenControl(v: ValoracionActivo) {
               <span v-if="calculateRowCiaAverage(viewItem) > 0" class="view-value">
                 <span class="cia-average-level" style="display:inline-block;">{{
                     calculateRowCiaAverage(viewItem).toFixed(2)
-                  }} — {{ getCiaLevel(calculateRowCiaAverage(viewItem)) }}</span>
+                  }}</span>
               </span>
               <span v-else class="view-value">Pendiente</span>
             </div>

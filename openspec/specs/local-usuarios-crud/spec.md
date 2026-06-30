@@ -2,58 +2,129 @@
 
 ## Purpose
 
-CRUD management of local `Usuario` records, replacing the read-only Keycloak admin-client proxy.
+CRUD management of local `Usuario` records, synced bidirectionally with Keycloak 24.
 
 ## Requirements
 
 ### Requirement: Full CRUD on /usuarios
 
-The system MUST provide `GET`, `POST`, `PATCH`, and `DELETE` on `/usuarios` operating on the local `Usuario` table. Endpoints MUST be protected by the composite JWT guard. The `passwordHash` field SHALL NOT appear in any response. On user creation via `POST /usuarios`, the system MUST generate a 32-character random hex password, hash it with bcrypt (cost factor 10), store the hash, set `primerInicio: true`, and return `{ usuario, contraseñaGenerada }`.
+The system MUST provide `GET`, `POST`, `PATCH`, and `DELETE` on `/usuarios` (composite JWT guard). `passwordHash` SHALL NOT appear in responses. On `POST`, MUST generate 32-char hex password, bcrypt-hash it (10 rounds), set `primerInicio: true`, create user in Keycloak, store `keycloakSub`, return `{ usuario, contraseñaGenerada }`.
+
+#### Scenario: Create with generated password and Keycloak sync
+
+- GIVEN `{ username, email }`
+- WHEN `POST /usuarios`
+- THEN user created with `passwordHash`, `primerInicio: true`, `keycloakSub`
+- AND response 201 with `{ usuario: { ..., keycloakSub }, contraseñaGenerada }`
 
 #### Scenario: List usuarios
 
 - GIVEN authenticated request
 - WHEN `GET /usuarios`
-- THEN respond 200 with array of Usuario objects (no passwordHash)
-
-#### Scenario: Create usuario with auto-generated password
-
-- GIVEN authenticated request with `{ username, email }`
-- WHEN `POST /usuarios`
-- THEN usuario created with `passwordHash` set (bcrypt-hashed)
-- AND `primerInicio: true`
-- AND response 201 with `{ usuario: { id, username, email, habilitado, roles, primerInicio }, contraseñaGenerada: "<32-char-hex>" }`
-- AND `contraseñaGenerada` differs across consecutive calls (randomness)
+- THEN respond 200 with Usuario array (no passwordHash)
 
 #### Scenario: Generated password is bcrypt-verifiable
 
-- GIVEN a successful `POST /usuarios` returning `contraseñaGenerada`
-- WHEN comparing `contraseñaGenerada` against stored `passwordHash` via `bcrypt.compare`
+- GIVEN `POST /usuarios` returning `contraseñaGenerada`
+- WHEN comparing against stored `passwordHash` via `bcrypt.compare`
 - THEN comparison succeeds
 
 #### Scenario: passwordHash never returned by GET
 
-- GIVEN a created usuario
+- GIVEN created usuario
 - WHEN `GET /usuarios` or `GET /usuarios/:id`
-- THEN response object SHALL NOT contain `passwordHash`
+- THEN response SHALL NOT contain `passwordHash`
 
 #### Scenario: Update usuario
 
 - GIVEN authenticated request
 - WHEN `PATCH /usuarios/:id` with `{ email, habilitado, roles }`
-- THEN Usuario is updated, respond 200
+- THEN Usuario updated, respond 200
 
 #### Scenario: Delete usuario
 
 - GIVEN authenticated request
 - WHEN `DELETE /usuarios/:id`
-- THEN Usuario is removed, respond 204
+- THEN Usuario removed, respond 204
 
 ### Requirement: Remove Keycloak Admin-Client Dependency
 
-The `UsuariosModule` MUST NOT import or depend on `@keycloak/keycloak-admin-client`. User queries SHALL target the local `Usuario` table exclusively.
+`UsuariosModule` MUST NOT depend on `@keycloak/keycloak-admin-client`. Keycloak communication SHALL use REST via `KeycloakAdminService` (`@nestjs/axios`).
 
 #### Scenario: No admin-client import
 
-- GIVEN a developer inspects `src/usuarios/`
-- THEN no import from `@keycloak/keycloak-admin-client` exists
+- GIVEN inspect `src/usuarios/`
+- THEN no `@keycloak/keycloak-admin-client` import
+
+#### Scenario: REST via KeycloakAdminService
+
+- GIVEN UsuariosModule loaded
+- THEN `KeycloakAdminService` injected; all Keycloak ops use REST
+
+### Requirement: Keycloak Sync on Create
+
+`POST /usuarios` MUST also create the user in Keycloak via `KeycloakAdminService`, store the UUID as `keycloakSub`, and set the generated password as the Keycloak credential. Keycloak unavailability SHALL NOT block the local create.
+
+#### Scenario: Created in both systems
+
+- GIVEN `{ username, email }`
+- WHEN `POST /usuarios`
+- THEN local user created, Keycloak user created, `keycloakSub` saved
+
+#### Scenario: Keycloak unavailable
+
+- GIVEN Keycloak unreachable
+- WHEN `POST /usuarios`
+- THEN local user created, `keycloakSub: null`, warning logged, 201
+
+### Requirement: Keycloak Sync on Update
+
+`PATCH /usuarios/:id` MUST sync `email`, `habilitado`, and `roles` to Keycloak. Null `keycloakSub` SHALL skip the sync.
+
+#### Scenario: Update synced
+
+- GIVEN Usuario with `keycloakSub`
+- WHEN `PATCH /usuarios/:id` with `{ email, roles }`
+- THEN local record and Keycloak fields updated
+
+#### Scenario: Keycloak unavailable
+
+- GIVEN Keycloak unreachable
+- WHEN `PATCH /usuarios/:id`
+- THEN local record updated, warning logged
+
+### Requirement: Keycloak Sync on Delete
+
+`DELETE /usuarios/:id` MUST delete the Keycloak user. Null `keycloakSub` SHALL skip deletion.
+
+#### Scenario: Deleted from both
+
+- GIVEN Usuario with `keycloakSub`
+- WHEN `DELETE /usuarios/:id`
+- THEN local record and Keycloak user deleted
+
+### Requirement: Best-Effort Keycloak Integration
+
+Keycloak failures SHALL log WARN but MUST NOT reject HTTP requests. Local data integrity always takes precedence.
+
+#### Scenario: Sync fails gracefully
+
+- GIVEN Keycloak down
+- WHEN any CRUD operation runs
+- THEN local operation succeeds, WARN logged
+
+### Requirement: Role Validation
+
+Roles MUST be validated against `['administradoregsi', 'usuarioegsi']`. Unknown roles SHALL respond 400.
+
+#### Scenario: Valid role
+
+- GIVEN `roles: ["administradoregsi"]`
+- WHEN creating/updating user
+- THEN accepted
+
+#### Scenario: Invalid role
+
+- GIVEN `roles: ["superadmin"]`
+- WHEN creating/updating user
+- THEN 400 listing invalid roles

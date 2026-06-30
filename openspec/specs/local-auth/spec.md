@@ -68,7 +68,7 @@ The system MUST provide `POST /auth/set-password` accepting `{ password }`. For 
 
 ### Requirement: Keycloak→Local Sync Interceptor
 
-The system MUST intercept authenticated requests with Keycloak tokens and upsert a `Usuario` record by `keycloakSub`, syncing email, username, and roles. New syncs SHALL set `primerInicio: true`.
+The system MUST intercept authenticated requests with Keycloak tokens and upsert a `Usuario` record by `keycloakSub`, syncing email, username, and roles. New syncs SHALL set `primerInicio: true`. The interceptor MUST be registered as an `APP_INTERCEPTOR` so it applies globally to all controllers.
 
 #### Scenario: First Keycloak login creates Usuario
 
