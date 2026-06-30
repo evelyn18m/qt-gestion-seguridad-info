@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -10,6 +14,7 @@ export interface LoginResult {
     username: string;
     email: string;
     roles: string[];
+    primerInicio: boolean;
   };
 }
 
@@ -49,7 +54,73 @@ export class AuthService {
         username: user.username,
         email: user.email,
         roles: user.roles,
+        primerInicio: user.primerInicio ?? false,
       },
+    };
+  }
+
+  async validateLocalUser(
+    username: string,
+    password: string,
+  ): Promise<LocalUser> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { username },
+    });
+
+    if (!usuario || !usuario.habilitado || !usuario.passwordHash) {
+      throw new UnauthorizedException();
+    }
+
+    const valid = await bcrypt.compare(password, usuario.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException();
+    }
+
+    const roles: string[] = JSON.parse(usuario.roles) as string[];
+
+    return {
+      userId: usuario.id,
+      username: usuario.username,
+      email: usuario.email,
+      roles,
+      source: 'local',
+      primerInicio: usuario.primerInicio,
+    };
+  }
+
+  async bootstrapFirstUser(body: {
+    username: string;
+    password: string;
+    email: string;
+  }): Promise<LocalUser> {
+    const count = await this.prisma.usuario.count();
+    if (count > 0) {
+      throw new BadRequestException(
+        'Bootstrap is only allowed on empty user table',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(body.password, 10);
+    const roles = JSON.stringify(['admin']);
+
+    const usuario = await this.prisma.usuario.create({
+      data: {
+        username: body.username,
+        email: body.email,
+        passwordHash,
+        roles,
+        primerInicio: false,
+        habilitado: true,
+      },
+    });
+
+    return {
+      userId: usuario.id,
+      username: usuario.username,
+      email: usuario.email,
+      roles: ['admin'],
+      source: 'local',
+      primerInicio: false,
     };
   }
 

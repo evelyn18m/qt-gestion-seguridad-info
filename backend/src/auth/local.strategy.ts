@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
 import * as bcrypt from 'bcrypt';
@@ -36,11 +32,7 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
       throw new UnauthorizedException();
     }
 
-    if (usuario.primerInicio) {
-      throw new ForbiddenException('Debe configurar su contraseña');
-    }
-
-    const roles: string[] = JSON.parse(usuario.roles);
+    const roles: string[] = JSON.parse(usuario.roles) as string[];
 
     return {
       userId: usuario.id,

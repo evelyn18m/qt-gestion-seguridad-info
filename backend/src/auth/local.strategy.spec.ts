@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { LocalStrategy } from './local.strategy';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -70,6 +70,7 @@ describe('LocalStrategy', () => {
     mockPrisma.usuario.findUnique.mockResolvedValue({
       id: 'user-1',
       username: 'jdoe',
+      roles: '["admin"]',
       passwordHash,
       primerInicio: false,
       habilitado: true,
@@ -90,21 +91,30 @@ describe('LocalStrategy', () => {
     );
   });
 
-  // ── TRIANGULATE: primerInicio → 403 ───────────────────────────────────
+  // ── TRIANGULATE: primerInicio → allow login with flag ─────────────────
 
-  it('TRIANGULATE: should throw 403 when primerInicio is true', async () => {
+  it('TRIANGULATE: should allow login and return primerInicio flag when true', async () => {
     const passwordHash = await bcrypt.hash('secret123', 10);
     mockPrisma.usuario.findUnique.mockResolvedValue({
       id: 'user-1',
       username: 'jdoe',
+      email: 'jdoe@test.com',
+      roles: '["admin"]',
       passwordHash,
       primerInicio: true,
       habilitado: true,
     });
 
-    await expect(strategy.validate('jdoe', 'secret123')).rejects.toThrow(
-      ForbiddenException,
-    );
+    const result = await strategy.validate('jdoe', 'secret123');
+
+    expect(result).toEqual({
+      userId: 'user-1',
+      username: 'jdoe',
+      email: 'jdoe@test.com',
+      roles: ['admin'],
+      source: 'local',
+      primerInicio: true,
+    });
   });
 
   // ── TRIANGULATE: habilitado: false → 401 ──────────────────────────────
@@ -114,6 +124,7 @@ describe('LocalStrategy', () => {
     mockPrisma.usuario.findUnique.mockResolvedValue({
       id: 'user-1',
       username: 'jdoe',
+      roles: '["admin"]',
       passwordHash,
       primerInicio: false,
       habilitado: false,
@@ -130,6 +141,7 @@ describe('LocalStrategy', () => {
     mockPrisma.usuario.findUnique.mockResolvedValue({
       id: 'user-1',
       username: 'jdoe',
+      roles: '["admin"]',
       passwordHash: null,
       primerInicio: false,
       habilitado: true,

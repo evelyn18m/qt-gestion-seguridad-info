@@ -1,15 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  UnauthorizedException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService, LocalUser } from './auth.service';
 
 const mockAuthService = {
   generateToken: jest.fn(),
   setPassword: jest.fn(),
+  validateLocalUser: jest.fn(),
 };
 
 describe('AuthController', () => {
@@ -28,7 +25,7 @@ describe('AuthController', () => {
 
   // ── RED: POST /auth/login successful ──────────────────────────────────
 
-  it('RED: should return access_token and usuario on successful login', () => {
+  it('RED: should return access_token and usuario on successful login', async () => {
     const localUser: LocalUser = {
       userId: 'user-123',
       username: 'jdoe',
@@ -37,6 +34,7 @@ describe('AuthController', () => {
       source: 'local',
     };
 
+    mockAuthService.validateLocalUser.mockResolvedValue(localUser);
     mockAuthService.generateToken.mockReturnValue({
       access_token: 'mock-jwt-token',
       usuario: {
@@ -44,12 +42,19 @@ describe('AuthController', () => {
         username: 'jdoe',
         email: 'jdoe@test.com',
         roles: ['admin'],
+        primerInicio: false,
       },
     });
 
-    const req = { user: localUser };
-    const result = controller.login(req);
+    const result = await controller.login({
+      username: 'jdoe',
+      password: 'secret123',
+    });
 
+    expect(mockAuthService.validateLocalUser).toHaveBeenCalledWith(
+      'jdoe',
+      'secret123',
+    );
     expect(mockAuthService.generateToken).toHaveBeenCalledWith(localUser);
     expect(result).toEqual({
       access_token: 'mock-jwt-token',
@@ -58,6 +63,7 @@ describe('AuthController', () => {
         username: 'jdoe',
         email: 'jdoe@test.com',
         roles: ['admin'],
+        primerInicio: false,
       },
     });
   });
@@ -95,23 +101,36 @@ describe('AuthController', () => {
 
   // ── TRIANGULATE: login passes user to service regardless ─────────────
 
-  it('TRIANGULATE: should pass req.user to authService even if some fields are missing', () => {
-    const partialUser = {
+  it('TRIANGULATE: should pass validated user to authService even if some fields are missing', async () => {
+    const partialUser: LocalUser = {
       userId: 'user-min',
       username: 'min',
       email: '',
       roles: [],
-      source: 'local' as const,
+      source: 'local',
     };
 
+    mockAuthService.validateLocalUser.mockResolvedValue(partialUser);
     mockAuthService.generateToken.mockReturnValue({
       access_token: 'token',
-      usuario: { id: 'user-min', username: 'min', email: '', roles: [] },
+      usuario: {
+        id: 'user-min',
+        username: 'min',
+        email: '',
+        roles: [],
+        primerInicio: false,
+      },
     });
 
-    const req = { user: partialUser };
-    const result = controller.login(req);
+    const result = await controller.login({
+      username: 'min',
+      password: 'secret123',
+    });
 
+    expect(mockAuthService.validateLocalUser).toHaveBeenCalledWith(
+      'min',
+      'secret123',
+    );
     expect(result.access_token).toBe('token');
     expect(result.usuario.username).toBe('min');
   });
