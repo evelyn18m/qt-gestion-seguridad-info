@@ -14,6 +14,16 @@ export class SessionExpiredError extends Error {
   }
 }
 
+export class ForbiddenError extends Error {
+  statusCode = 403
+  code = 'FORBIDDEN'
+
+  constructor(message = 'No tenés permisos para realizar esta acción') {
+    super(message)
+    this.name = 'ForbiddenError'
+  }
+}
+
 export function useApi() {
   const config = useRuntimeConfig()
   const { token, isLocal } = useAuth()
@@ -56,6 +66,9 @@ export function useApi() {
       }
       if (res.status === 401) {
         throw new SessionExpiredError(message)
+      }
+      if (res.status === 403) {
+        throw new ForbiddenError(message)
       }
       const err = new Error(message) as Error & { statusCode: number }
       err.statusCode = res.status

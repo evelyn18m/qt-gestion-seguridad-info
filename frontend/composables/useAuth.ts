@@ -1,5 +1,6 @@
 import type { KeycloakTokenParsed } from 'keycloak-js'
 import type { Usuario, LoginResponse } from '~/types/api'
+import { FRONTEND_ROLE_MAP } from '~/types/roles'
 
 const LOCAL_TOKEN_KEY = 'auth_token'
 const LOCAL_USER_KEY = 'auth_user'
@@ -151,6 +152,20 @@ export const useAuth = () => {
     }
   }
 
+  // ── Role check ───────────────────────────────────────────────────────
+  function tieneRol(rol: string): boolean {
+    if (!usuario.value) return false
+    const parsed: string[] = (() => {
+      try {
+        return JSON.parse(usuario.value.roles) as string[]
+      } catch {
+        return []
+      }
+    })()
+    const normalized = parsed.map((r: string) => FRONTEND_ROLE_MAP[r] || r)
+    return normalized.includes(rol)
+  }
+
   // ── Unified logout ───────────────────────────────────────────────────
   function logout() {
     if (isKeycloak.value) {
@@ -181,5 +196,6 @@ export const useAuth = () => {
     logout,
     isLocal,
     isKeycloak,
+    tieneRol,
   }
 }
