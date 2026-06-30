@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { Usuario, CreateUsuarioResponse } from '~/types/api'
+import { ROLES_DISPONIBLES, ROLE_LABELS } from '~/types/roles'
 
 definePageMeta({ layout: 'default' })
 
@@ -94,7 +95,8 @@ async function copyPassword() {
 
 const showEditModal = ref(false)
 const editingUsuario = ref<Usuario | null>(null)
-const editFormData = ref({ email: '', habilitado: true, roles: '' })
+const editFormData = ref({ email: '', habilitado: true })
+const selectedRoles = ref<Set<string>>(new Set())
 const editError = ref('')
 const saving = ref(false)
 
@@ -103,10 +105,20 @@ function openEditModal(usuario: Usuario) {
   editFormData.value = {
     email: usuario.email || '',
     habilitado: usuario.habilitado,
-    roles: parseRoles(usuario.roles).join(', '),
   }
+  selectedRoles.value = new Set(parseRoles(usuario.roles))
   editError.value = ''
   showEditModal.value = true
+}
+
+function toggleRole(rol: string) {
+  const roles = new Set(selectedRoles.value)
+  if (roles.has(rol)) {
+    roles.delete(rol)
+  } else {
+    roles.add(rol)
+  }
+  selectedRoles.value = roles
 }
 
 function closeEditModal() {
@@ -118,10 +130,7 @@ async function saveEdit() {
   if (!editingUsuario.value) return
   saving.value = true
   editError.value = ''
-  const rolesArr = editFormData.value.roles
-    .split(',')
-    .map((r) => r.trim())
-    .filter((r) => r.length > 0)
+  const rolesArr = [...selectedRoles.value]
 
   try {
     const { apiFetch } = useApi()
@@ -138,7 +147,11 @@ async function saveEdit() {
     closeEditModal()
     await fetchUsuarios()
   } catch (e: unknown) {
-    editError.value = e instanceof Error ? e.message : 'Error al guardar'
+    if (e instanceof Error && (e as any).statusCode === 403) {
+      editError.value = 'No tenés permisos para realizar esta acción'
+    } else {
+      editError.value = e instanceof Error ? e.message : 'Error al guardar'
+    }
   } finally {
     saving.value = false
   }
@@ -340,8 +353,21 @@ onMounted(() => {
             </label>
           </div>
           <div class="form-group">
-            <label for="edit-roles">Roles (separados por coma)</label>
-            <textarea id="edit-roles" v-model="editFormData.roles" placeholder="admin, editor" rows="3"></textarea>
+            <label>Roles</label>
+            <div class="roles-checkboxes">
+              <label
+                v-for="rol in ROLES_DISPONIBLES"
+                :key="rol"
+                class="checkbox-label role-checkbox"
+              >
+                <input
+                  type="checkbox"
+                  :checked="selectedRoles.has(rol)"
+                  @change="toggleRole(rol)"
+                />
+                <span>{{ ROLE_LABELS[rol] || rol }}</span>
+              </label>
+            </div>
           </div>
           <div v-if="editError" class="modal-error">{{ editError }}</div>
         </div>
@@ -847,6 +873,22 @@ onMounted(() => {
 
 .checkbox-label input[type="checkbox"] {
   width: auto;
+}
+
+.roles-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.role-checkbox {
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.role-checkbox:hover {
+  background: rgba(99, 102, 241, 0.05);
 }
 
 /* ── Password Banner ───────────────────────────────────────────────────────── */
