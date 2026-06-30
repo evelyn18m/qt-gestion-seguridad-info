@@ -1,4 +1,6 @@
-import { IsBoolean, IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsOptional, IsString } from 'class-validator';
+
+const ALLOWED_ROLES = ['administradoregsi', 'usuarioegsi'];
 
 export class UpdateUsuarioDto {
   @IsOptional()
@@ -11,5 +13,9 @@ export class UpdateUsuarioDto {
 
   @IsOptional()
   @IsString({ each: true })
+  @IsIn(ALLOWED_ROLES, {
+    each: true,
+    message: 'roles must be one of: administradoregsi, usuarioegsi',
+  })
   roles?: string[];
 }
