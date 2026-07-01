@@ -11,6 +11,7 @@ import { ReportesModule } from './reportes/reportes.module';
 import { ParametrosModule } from './parametros/parametros.module';
 import { AuditModule } from './audit/audit.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { PlanTratamientoModule } from './plan-tratamiento/plan-tratamiento.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     ParametrosModule,
     AuditModule,
     UsuariosModule,
+    PlanTratamientoModule,
   ],
   controllers: [AppController],
   providers: [

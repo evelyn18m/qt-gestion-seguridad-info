@@ -24,6 +24,8 @@ const TIPO_MAP: Record<string, string> = {
   probabilidades: 'probabilidad',
   'categorias-controles-implementar': 'categoriaControlesImplementar',
   'controles-implementar': 'controlesImplementar',
+  'opciones-tratamiento': 'opcionTratamiento',
+  'estados-plan-tratamiento': 'estadoPlanTratamiento',
 };
 
 const FIELD_MAP: Record<string, readonly string[]> = {
@@ -42,6 +44,8 @@ const FIELD_MAP: Record<string, readonly string[]> = {
   probabilidad: ['nombre'],
   categoriaControlesImplementar: ['nombre'],
   controlesImplementar: ['seccion', 'descripcion', 'categoriaId'],
+  opcionTratamiento: ['nombre'],
+  estadoPlanTratamiento: ['nombre'],
 };
 
 @Injectable()

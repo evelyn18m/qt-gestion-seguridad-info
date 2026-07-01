@@ -64,11 +64,12 @@ model MacroProceso {
 }
 
 model TipoActivo {
-  id        Int      @id @default(autoincrement())
-  nombre    String
-  detalle   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              Int               @id @default(autoincrement())
+  nombre          String
+  detalle         String            @db.Text
+  planesTratamiento PlanTratamiento[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
 model Valoracion {
@@ -79,17 +80,19 @@ model Valoracion {
 }
 
 model Funcionario {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                Int               @id @default(autoincrement())
+  nombre            String            @db.Text
+  planesTratamiento PlanTratamiento[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model Area {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                Int               @id @default(autoincrement())
+  nombre            String            @db.Text
+  planesTratamiento PlanTratamiento[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model ValoracionActivo {
@@ -200,12 +203,13 @@ model Probabilidad {
 }
 
 model Riesgo {
-  id        Int      @id @default(autoincrement())
-  tipo      String // Amenaza, Vulnerabilidad
-  nivel     String // Alto, Medio, Bajo
-  valor     Int // 3=Alto, 2=Medio, 1=Bajo
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                Int               @id @default(autoincrement())
+  tipo              String // Amenaza, Vulnerabilidad
+  nivel             String // Alto, Medio, Bajo
+  valor             Int // 3=Alto, 2=Medio, 1=Bajo
+  planesTratamiento PlanTratamiento[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model CategoriaControlesImplementar {
@@ -243,6 +247,50 @@ model ControlesImplementar {
   categoriaId    Int
   categoria      CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
   detallesRiesgo DetalleRiesgo[]
+  planesTratamiento PlanTratamiento[]
+}
+
+model OpcionTratamiento {
+  id                Int               @id @default(autoincrement())
+  nombre            String            @db.Text
+  planesTratamiento PlanTratamiento[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model EstadoPlanTratamiento {
+  id                Int               @id @default(autoincrement())
+  nombre            String            @db.Text
+  planesTratamiento PlanTratamiento[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model PlanTratamiento {
+  id                         Int      @id @default(autoincrement())
+  idRiesgo                   String   @db.Text
+  tipoActivoId               Int
+  nivelRiesgoId              Int
+  opcionTratamientoId        Int
+  controlesImplementarId     Int?
+  descripcionActividades     String   @db.Text
+  responsableImplementacionId Int?
+  areaFuncionalId            Int?
+  plazoImplementacion        DateTime?
+  recursos                   String?  @db.Text
+  estadoId                   Int
+  observaciones              String?  @db.Text
+
+  tipoActivo           TipoActivo            @relation(fields: [tipoActivoId], references: [id], onDelete: Restrict)
+  nivelRiesgo          Riesgo                @relation(fields: [nivelRiesgoId], references: [id], onDelete: Restrict)
+  opcionTratamiento    OpcionTratamiento     @relation(fields: [opcionTratamientoId], references: [id], onDelete: Restrict)
+  controlesImplementar ControlesImplementar? @relation(fields: [controlesImplementarId], references: [id], onDelete: SetNull)
+  responsable          Funcionario?          @relation(fields: [responsableImplementacionId], references: [id], onDelete: SetNull)
+  area                 Area?                 @relation(fields: [areaFuncionalId], references: [id], onDelete: SetNull)
+  estado               EstadoPlanTratamiento @relation(fields: [estadoId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Usuario {

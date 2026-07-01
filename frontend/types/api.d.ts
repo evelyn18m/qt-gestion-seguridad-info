@@ -296,3 +296,31 @@ export interface ConfiguracionRiesgo {
     residualInaceptableDesde: number
     residualInaceptableMax: number
 }
+
+// ── Plan de Tratamiento module ────────────────────────────────────────────────
+
+export interface PlanTratamiento {
+    id: number
+    idRiesgo: string
+    tipoActivoId: number
+    nivelRiesgoId: number
+    opcionTratamientoId: number
+    controlesImplementarId?: number | null
+    descripcionActividades: string
+    responsableImplementacionId?: number | null
+    areaFuncionalId?: number | null
+    plazoImplementacion?: string | null
+    recursos?: string | null
+    estadoId: number
+    observaciones?: string | null
+    createdAt?: string
+    updatedAt?: string
+    // Joined relations
+    tipoActivo?: { id: number; nombre: string }
+    nivelRiesgo?: { id: number; nivel: string }
+    opcionTratamiento?: { id: number; nombre: string }
+    controlesImplementar?: { id: number; seccion: string; descripcion: string }
+    responsable?: { id: number; nombre: string }
+    area?: { id: number; nombre: string }
+    estado?: { id: number; nombre: string }
+}
