@@ -34,6 +34,12 @@ export class UsuariosController {
     return this.usuariosService.update(id, dto);
   }
 
+  @Post(':id/reset-password')
+  @Roles('administrador')
+  resetPassword(@Param('id') id: string) {
+    return this.usuariosService.resetPassword(id);
+  }
+
   @Delete(':id')
   @HttpCode(204)
   @Roles('administrador')

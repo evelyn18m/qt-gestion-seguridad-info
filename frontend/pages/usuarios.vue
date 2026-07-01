@@ -95,7 +95,7 @@ async function copyPassword() {
 
 const showEditModal = ref(false)
 const editingUsuario = ref<Usuario | null>(null)
-const editFormData = ref({ email: '', habilitado: true })
+const editFormData = ref({ email: '', password: '', habilitado: true })
 const selectedRoles = ref<Set<string>>(new Set())
 const editError = ref('')
 const saving = ref(false)
@@ -104,6 +104,7 @@ function openEditModal(usuario: Usuario) {
   editingUsuario.value = usuario
   editFormData.value = {
     email: usuario.email || '',
+    password: '',
     habilitado: usuario.habilitado,
   }
   selectedRoles.value = new Set(parseRoles(usuario.roles))
@@ -140,6 +141,9 @@ async function saveEdit() {
       roles: rolesArr,
     }
     if (!patchBody.email) delete patchBody.email
+    if (editFormData.value.password && editFormData.value.password.length >= 6) {
+      patchBody.password = editFormData.value.password
+    }
     await apiFetch(`/usuarios/${editingUsuario.value.id}`, {
       method: 'PATCH',
       body: JSON.stringify(patchBody),
@@ -345,6 +349,10 @@ onMounted(() => {
           <div class="form-group">
             <label for="edit-email">Email</label>
             <input id="edit-email" v-model="editFormData.email" type="email" placeholder="Email" />
+          </div>
+          <div class="form-group">
+            <label for="edit-password">Contraseña</label>
+            <input id="edit-password" v-model="editFormData.password" type="password" placeholder="Mínimo 6 caracteres — dejar en blanco para no cambiar" />
           </div>
           <div class="form-group">
             <label class="checkbox-label">
@@ -667,6 +675,28 @@ onMounted(() => {
 }
 
 .btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 10px;
+  padding: 0.6rem 1.5rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-warning:hover {
+  background: rgba(245, 158, 11, 0.25);
+}
+
+.btn-warning:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

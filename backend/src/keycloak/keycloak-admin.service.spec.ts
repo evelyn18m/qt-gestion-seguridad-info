@@ -5,12 +5,16 @@ import { of, throwError } from 'rxjs';
 import { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 // Helper to build a realistic AxiosResponse
-function axiosRes<T>(data: T, status = 200, headers: Record<string, string> = {}): AxiosResponse<T> {
+function axiosRes<T>(
+  data: T,
+  status = 200,
+  headers: Record<string, string> = {},
+): AxiosResponse<T> {
   return {
     data,
     status,
     statusText: status === 200 ? 'OK' : 'Error',
-    headers: headers as any,
+    headers: headers,
     config: {} as InternalAxiosRequestConfig,
   };
 }
@@ -36,7 +40,12 @@ const REALM = 'quito-turismo';
 
 describe('KeycloakAdminService', () => {
   let service: KeycloakAdminService;
-  let mockHttpService: { get: jest.Mock; post: jest.Mock; put: jest.Mock; delete: jest.Mock };
+  let mockHttpService: {
+    get: jest.Mock;
+    post: jest.Mock;
+    put: jest.Mock;
+    delete: jest.Mock;
+  };
 
   beforeEach(async () => {
     process.env['KEYCLOAK_ADMIN_URL'] = ADMIN_URL;
@@ -152,7 +161,9 @@ describe('KeycloakAdminService', () => {
         username: 'newuser',
         email: 'new@test.com',
         enabled: true,
-        credentials: [{ type: 'password', value: 'secret123', temporary: false }],
+        credentials: [
+          { type: 'password', value: 'secret123', temporary: false },
+        ],
       },
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -176,7 +187,11 @@ describe('KeycloakAdminService', () => {
     );
 
     const user = await service.findUserByUsername('jdoe');
-    expect(user).toEqual({ id: 'kc-1', username: 'jdoe', email: 'jdoe@test.com' });
+    expect(user).toEqual({
+      id: 'kc-1',
+      username: 'jdoe',
+      email: 'jdoe@test.com',
+    });
     expect(mockHttpService.get).toHaveBeenCalledWith(
       `${ADMIN_URL}/admin/realms/${REALM}/users`,
       expect.objectContaining({
@@ -208,9 +223,7 @@ describe('KeycloakAdminService', () => {
     mockHttpService.post.mockReturnValueOnce(
       of(axiosRes({ access_token: 'tk', expires_in: 300 })),
     );
-    mockHttpService.delete.mockReturnValueOnce(
-      of(axiosRes(undefined, 204)),
-    );
+    mockHttpService.delete.mockReturnValueOnce(of(axiosRes(undefined, 204)));
 
     await service.deleteUser('kc-uuid-delete');
 
@@ -265,23 +278,21 @@ describe('KeycloakAdminService', () => {
     );
     // 3. Get all client roles
     mockHttpService.get.mockReturnValueOnce(
-      of(axiosRes([
-        { id: 'role-id-admin', name: 'administradoregsi' },
-        { id: 'role-id-user', name: 'usuarioegsi' },
-      ])),
+      of(
+        axiosRes([
+          { id: 'role-id-admin', name: 'administradoregsi' },
+          { id: 'role-id-user', name: 'usuarioegsi' },
+        ]),
+      ),
     );
     // 4. Get existing user client roles (currently has 'usuarioegsi')
     mockHttpService.get.mockReturnValueOnce(
       of(axiosRes([{ id: 'role-id-user', name: 'usuarioegsi' }])),
     );
     // 5. Delete existing roles
-    mockHttpService.delete.mockReturnValueOnce(
-      of(axiosRes(undefined, 204)),
-    );
+    mockHttpService.delete.mockReturnValueOnce(of(axiosRes(undefined, 204)));
     // 6. Assign new roles
-    mockHttpService.post.mockReturnValueOnce(
-      of(axiosRes(undefined, 204)),
-    );
+    mockHttpService.post.mockReturnValueOnce(of(axiosRes(undefined, 204)));
 
     await service.assignClientRoles('user-uuid-1', ['administradoregsi']);
 
@@ -316,19 +327,19 @@ describe('KeycloakAdminService', () => {
     );
     // Get all client roles (needed even when just removing)
     mockHttpService.get.mockReturnValueOnce(
-      of(axiosRes([
-        { id: 'role-id-admin', name: 'administradoregsi' },
-        { id: 'role-id-user', name: 'usuarioegsi' },
-      ])),
+      of(
+        axiosRes([
+          { id: 'role-id-admin', name: 'administradoregsi' },
+          { id: 'role-id-user', name: 'usuarioegsi' },
+        ]),
+      ),
     );
     // Get existing user client roles
     mockHttpService.get.mockReturnValueOnce(
       of(axiosRes([{ id: 'role-id-admin', name: 'administradoregsi' }])),
     );
     // Delete existing roles
-    mockHttpService.delete.mockReturnValueOnce(
-      of(axiosRes(undefined, 204)),
-    );
+    mockHttpService.delete.mockReturnValueOnce(of(axiosRes(undefined, 204)));
 
     await service.assignClientRoles('user-uuid-2', []);
 
@@ -340,8 +351,8 @@ describe('KeycloakAdminService', () => {
       }),
     );
     // No POST should happen for role assignment when roles is empty
-    const assignCalls = mockHttpService.post.mock.calls.filter(
-      (call: any[]) => call[0]?.includes('role-mappings'),
+    const assignCalls = mockHttpService.post.mock.calls.filter((call: any[]) =>
+      call[0]?.includes('role-mappings'),
     );
     expect(assignCalls).toHaveLength(0);
   });
@@ -354,9 +365,7 @@ describe('KeycloakAdminService', () => {
     mockHttpService.post.mockReturnValueOnce(
       of(axiosRes({ access_token: 'tk', expires_in: 300 })),
     );
-    mockHttpService.put.mockReturnValueOnce(
-      of(axiosRes(undefined, 204)),
-    );
+    mockHttpService.put.mockReturnValueOnce(of(axiosRes(undefined, 204)));
 
     await service.updateUser('kc-uuid-x', {
       email: 'updated@test.com',
@@ -394,7 +403,11 @@ describe('KeycloakAdminService', () => {
 
     const user = await service.findUserByUsername('jdoe');
 
-    expect(user).toEqual({ id: 'kc-1', username: 'jdoe', email: 'jdoe@test.com' });
+    expect(user).toEqual({
+      id: 'kc-1',
+      username: 'jdoe',
+      email: 'jdoe@test.com',
+    });
     // Two token requests: initial + refresh
     expect(mockHttpService.post).toHaveBeenCalledTimes(2);
     // Two GET calls: first failed with 401, second succeeded

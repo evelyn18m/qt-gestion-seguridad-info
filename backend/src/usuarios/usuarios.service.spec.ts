@@ -295,7 +295,11 @@ describe('UsuariosService', () => {
         email: 'sync@test.com',
         enabled: true,
         credentials: [
-          { type: 'password', value: result.contraseñaGenerada, temporary: false },
+          {
+            type: 'password',
+            value: result.contraseñaGenerada,
+            temporary: false,
+          },
         ],
       });
 
@@ -375,10 +379,9 @@ describe('UsuariosService', () => {
         roles: ['usuario'],
       });
 
-      expect(mockKeycloak.assignClientRoles).toHaveBeenCalledWith(
-        'kc-1',
-        ['usuario'],
-      );
+      expect(mockKeycloak.assignClientRoles).toHaveBeenCalledWith('kc-1', [
+        'usuario',
+      ]);
     });
 
     // ── TRIANGULATE: update() skips Keycloak when no keycloakSub ────────

@@ -73,7 +73,9 @@ export class KeycloakAdminService {
       return await operation(token);
     } catch (error) {
       if (this.isAxios401(error)) {
-        this.logger.warn('Keycloak returned 401, refreshing token and retrying');
+        this.logger.warn(
+          'Keycloak returned 401, refreshing token and retrying',
+        );
         this.clearTokenCache();
         const newToken = await this.getAdminToken();
         return operation(newToken);
@@ -195,6 +197,24 @@ export class KeycloakAdminService {
     });
   }
 
+  // ── Password Reset ───────────────────────────────────────────────────
+
+  async resetUserPassword(
+    userId: string,
+    password: string,
+    temporary = false,
+  ): Promise<void> {
+    return this.executeWithAuth(async (token) => {
+      await firstValueFrom(
+        this.httpService.put(
+          `${this.adminUrl}/admin/realms/${this.realm}/users/${userId}/reset-password`,
+          { type: 'password', value: password, temporary },
+          { headers: this.authHeaders(token) },
+        ),
+      );
+    });
+  }
+
   // ── Role Mapping ─────────────────────────────────────────────────────
 
   async assignClientRoles(userId: string, roles: string[]): Promise<void> {
@@ -203,9 +223,7 @@ export class KeycloakAdminService {
 
       // 1. Get all client roles (to resolve names → ids)
       const allRolesResponse = await firstValueFrom(
-        this.httpService.get<
-          Array<{ id: string; name: string }>
-        >(
+        this.httpService.get<Array<{ id: string; name: string }>>(
           `${this.adminUrl}/admin/realms/${this.realm}/clients/${clientUuid}/roles`,
           { headers: this.authHeaders(token) },
         ),
@@ -214,9 +232,7 @@ export class KeycloakAdminService {
 
       // 2. Get existing user client roles
       const existingRolesResponse = await firstValueFrom(
-        this.httpService.get<
-          Array<{ id: string; name: string }>
-        >(
+        this.httpService.get<Array<{ id: string; name: string }>>(
           `${this.adminUrl}/admin/realms/${this.realm}/users/${userId}/role-mappings/clients/${clientUuid}`,
           { headers: this.authHeaders(token) },
         ),

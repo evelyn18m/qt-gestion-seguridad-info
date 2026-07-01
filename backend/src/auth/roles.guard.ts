@@ -44,14 +44,18 @@ export class RolesGuard implements CanActivate {
     const userRoles: string[] | undefined = request.user?.roles;
 
     if (!userRoles || !Array.isArray(userRoles)) {
-      throw new ForbiddenException('No tenés permisos para realizar esta acción');
+      throw new ForbiddenException(
+        'No tenés permisos para realizar esta acción',
+      );
     }
 
     const normalized = normalizeRoles(userRoles);
     const hasRole = requiredRoles.some((role) => normalized.includes(role));
 
     if (!hasRole) {
-      throw new ForbiddenException('No tenés permisos para realizar esta acción');
+      throw new ForbiddenException(
+        'No tenés permisos para realizar esta acción',
+      );
     }
 
     return true;

@@ -62,9 +62,7 @@ export class UsuariosService {
         username: dto.username,
         email: dto.email,
         enabled: true,
-        credentials: [
-          { type: 'password', value: password, temporary: false },
-        ],
+        credentials: [{ type: 'password', value: password, temporary: false }],
       });
 
       await this.prisma.usuario.update({
@@ -97,6 +95,10 @@ export class UsuariosService {
     if (dto.email !== undefined) data['email'] = dto.email;
     if (dto.habilitado !== undefined) data['habilitado'] = dto.habilitado;
     if (dto.roles !== undefined) data['roles'] = JSON.stringify(dto.roles);
+    if (dto.password !== undefined) {
+      data['passwordHash'] = await bcrypt.hash(dto.password, 10);
+      data['primerInicio'] = false;
+    }
 
     const updated = await this.prisma.usuario.update({
       where: { id },
@@ -118,6 +120,13 @@ export class UsuariosService {
             dto.roles,
           );
         }
+
+        if (dto.password !== undefined) {
+          await this.keycloak.resetUserPassword(
+            existing.keycloakSub,
+            dto.password,
+          );
+        }
       } catch (error) {
         this.logger.warn(
           `Keycloak sync failed on update for user "${existing.username}": ${String(error)}`,
@@ -126,6 +135,40 @@ export class UsuariosService {
     }
 
     return updated;
+  }
+
+  async resetPassword(id: string): Promise<{ contraseñaGenerada: string }> {
+    const existing = await this.prisma.usuario.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const password = crypto.randomBytes(16).toString('hex');
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await this.prisma.usuario.update({
+      where: { id },
+      data: {
+        passwordHash,
+        primerInicio: true,
+      },
+    });
+
+    // Best-effort Keycloak sync (only if keycloakSub exists)
+    if (existing.keycloakSub) {
+      try {
+        await this.keycloak.resetUserPassword(existing.keycloakSub, password);
+      } catch (error) {
+        this.logger.warn(
+          `Keycloak sync failed on resetPassword for user "${existing.username}": ${String(error)}`,
+        );
+      }
+    }
+
+    return { contraseñaGenerada: password };
   }
 
   async delete(id: string) {

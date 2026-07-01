@@ -1,4 +1,12 @@
-import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, ValidateIf } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 const ALLOWED_ROLES = ['administrador', 'usuario'];
 
@@ -7,6 +15,11 @@ export class UpdateUsuarioDto {
   @ValidateIf((o) => o.email !== '' && o.email !== undefined)
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(6)
+  password?: string;
 
   @IsOptional()
   @IsBoolean()

@@ -1,8 +1,4 @@
-import {
-  RolesGuard,
-  ROLE_MAP,
-  normalizeRoles,
-} from './roles.guard';
+import { RolesGuard, ROLE_MAP, normalizeRoles } from './roles.guard';
 import { ROLES_KEY } from './decorators/roles.decorator';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
 import { ForbiddenException } from '@nestjs/common';
@@ -15,15 +11,18 @@ describe('RolesGuard', () => {
 
   // ── Helpers ──────────────────────────────────────────────────────
 
-  function mockExecutionContext(overrides: {
-    isPublic?: boolean;
-    requiredRoles?: string[];
-    userRoles?: string[] | null | undefined;
-  } = {}): ExecutionContext {
+  function mockExecutionContext(
+    overrides: {
+      isPublic?: boolean;
+      requiredRoles?: string[];
+      userRoles?: string[] | null | undefined;
+    } = {},
+  ): ExecutionContext {
     const request = {
-      user: overrides.userRoles !== undefined
-        ? { roles: overrides.userRoles }
-        : { roles: [] },
+      user:
+        overrides.userRoles !== undefined
+          ? { roles: overrides.userRoles }
+          : { roles: [] },
     };
 
     const handler = {};
@@ -38,19 +37,17 @@ describe('RolesGuard', () => {
       getClass: () => cls,
     } as ExecutionContext;
 
-    jest.spyOn(reflector, 'getAllAndOverride').mockImplementation(
-      (key: string) => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
         if (key === IS_PUBLIC_KEY) return overrides.isPublic ?? false;
         return undefined;
-      },
-    );
+      });
 
-    jest.spyOn(reflector, 'get').mockImplementation(
-      (key: string) => {
-        if (key === ROLES_KEY) return overrides.requiredRoles;
-        return undefined;
-      },
-    );
+    jest.spyOn(reflector, 'get').mockImplementation((key: string) => {
+      if (key === ROLES_KEY) return overrides.requiredRoles;
+      return undefined;
+    });
 
     return ctx;
   }
@@ -114,9 +111,9 @@ describe('RolesGuard', () => {
     });
 
     it('should handle mixed legacy and normal roles', () => {
-      expect(
-        normalizeRoles(['admin', 'usuarioegsi', 'administrador']),
-      ).toEqual(['administrador', 'usuario']);
+      expect(normalizeRoles(['admin', 'usuarioegsi', 'administrador'])).toEqual(
+        ['administrador', 'usuario'],
+      );
     });
   });
 
