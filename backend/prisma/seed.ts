@@ -4,6 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
@@ -281,6 +282,28 @@ async function main() {
   for (const p of probabilidades) {
     await prisma.probabilidad.create({ data: p });
   }
+
+  // --- Usuario admin local ---
+  console.log('Seeding local admin user...');
+  const passwordHash = await bcrypt.hash('admin123', 10);
+  const admin = await prisma.usuario.upsert({
+    where: { username: 'admin' },
+    create: {
+      username: 'admin',
+      email: 'admin@example.com',
+      passwordHash,
+      roles: JSON.stringify(['administrador']),
+      primerInicio: false,
+      habilitado: true,
+    },
+    update: {
+      passwordHash,
+      roles: JSON.stringify(['administrador']),
+      primerInicio: false,
+      habilitado: true,
+    },
+  });
+  console.log(`Admin user seeded: ${admin.username} (id: ${admin.id})`);
 
   console.log('Seeding completed!');
 }
