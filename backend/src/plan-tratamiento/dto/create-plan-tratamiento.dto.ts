@@ -37,8 +37,16 @@ export class CreatePlanTratamientoDto {
   areaFuncionalId?: number;
 
   @IsOptional()
+  @IsInt()
+  plazoImplementacionId?: number;
+
+  @IsOptional()
   @IsDateString()
-  plazoImplementacion?: string;
+  fechaInicioImplementacion?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fechaFinImplementacion?: string;
 
   @IsOptional()
   @IsString()

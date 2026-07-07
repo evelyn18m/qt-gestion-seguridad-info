@@ -37,3 +37,21 @@ export async function seedEstadosPlanTratamiento(
     });
   }
 }
+
+export async function seedPlazosImplementacion(
+  prisma: PrismaClient,
+): Promise<void> {
+  const plazos = [
+    { id: 1, codigo: 'C', nombre: 'Corto' },
+    { id: 2, codigo: 'M', nombre: 'Medio' },
+    { id: 3, codigo: 'L', nombre: 'Largo' },
+  ];
+
+  for (const plazo of plazos) {
+    await prisma.plazoImplementacion.upsert({
+      where: { id: plazo.id },
+      update: { codigo: plazo.codigo, nombre: plazo.nombre },
+      create: plazo,
+    });
+  }
+}

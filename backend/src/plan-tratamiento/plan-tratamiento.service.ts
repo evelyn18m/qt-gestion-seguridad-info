@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlanTratamientoDto } from './dto/create-plan-tratamiento.dto';
 import { UpdatePlanTratamientoDto } from './dto/update-plan-tratamiento.dto';
@@ -10,6 +14,7 @@ const planInclude = {
   controlesImplementar: true,
   responsable: true,
   area: true,
+  plazoImplementacion: true,
   estado: true,
 } as const;
 
@@ -72,12 +77,51 @@ export class PlanTratamientoService {
       data['responsableImplementacionId'] = dto.responsableImplementacionId;
     if (dto.areaFuncionalId !== undefined)
       data['areaFuncionalId'] = dto.areaFuncionalId;
-    if (dto.plazoImplementacion !== undefined)
-      data['plazoImplementacion'] = new Date(dto.plazoImplementacion);
+
+    this.applyTimeframe(
+      data,
+      dto.plazoImplementacionId,
+      dto.fechaInicioImplementacion,
+      dto.fechaFinImplementacion,
+    );
+
     if (dto.recursos !== undefined) data['recursos'] = dto.recursos;
     if (dto.estadoId !== undefined) data['estadoId'] = dto.estadoId;
     if (dto.observaciones !== undefined)
       data['observaciones'] = dto.observaciones;
     return data as never;
+  }
+
+  private applyTimeframe(
+    data: Record<string, unknown>,
+    plazoId?: number,
+    fechaInicio?: string,
+    fechaFin?: string,
+  ) {
+    const hasPlazo = plazoId !== undefined && plazoId !== null;
+    const inicio = this.parseDate(fechaInicio);
+    const fin = this.parseDate(fechaFin);
+
+    if (hasPlazo) {
+      if (inicio === undefined || fin === undefined) {
+        throw new BadRequestException(
+          'Cuando se selecciona un plazo de implementación deben indicarse la fecha de inicio y la fecha de fin.',
+        );
+      }
+      if (fin.getTime() <= inicio.getTime()) {
+        throw new BadRequestException(
+          'La fecha de fin de implementación debe ser posterior a la fecha de inicio.',
+        );
+      }
+    }
+
+    if (hasPlazo) data['plazoImplementacionId'] = plazoId;
+    if (inicio !== undefined) data['fechaInicioImplementacion'] = inicio;
+    if (fin !== undefined) data['fechaFinImplementacion'] = fin;
+  }
+
+  private parseDate(value?: string): Date | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    return new Date(value);
   }
 }

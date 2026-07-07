@@ -13,6 +13,7 @@ import { parseRiesgoRows } from '../src/catalogos/riesgo-parser';
 import {
   seedEstadosPlanTratamiento,
   seedOpcionesTratamiento,
+  seedPlazosImplementacion,
 } from './seed-plan-tratamiento';
 
 const connectionString = process.env.DATABASE_URL as string;
@@ -292,6 +293,8 @@ async function main() {
   await seedOpcionesTratamiento(prisma);
   console.log('Seeding EstadoPlanTratamiento...');
   await seedEstadosPlanTratamiento(prisma);
+  console.log('Seeding PlazoImplementacion...');
+  await seedPlazosImplementacion(prisma);
 
   // --- Usuario admin local ---
   console.log('Seeding local admin user...');

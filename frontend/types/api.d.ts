@@ -299,6 +299,12 @@ export interface ConfiguracionRiesgo {
 
 // ── Plan de Tratamiento module ────────────────────────────────────────────────
 
+export interface PlazoImplementacion {
+    id: number
+    codigo: string
+    nombre: string
+}
+
 export interface PlanTratamiento {
     id: number
     idRiesgo: string
@@ -309,7 +315,9 @@ export interface PlanTratamiento {
     descripcionActividades: string
     responsableImplementacionId?: number | null
     areaFuncionalId?: number | null
-    plazoImplementacion?: string | null
+    plazoImplementacionId?: number | null
+    fechaInicioImplementacion?: string | null
+    fechaFinImplementacion?: string | null
     recursos?: string | null
     estadoId: number
     observaciones?: string | null
@@ -322,5 +330,6 @@ export interface PlanTratamiento {
     controlesImplementar?: { id: number; seccion: string; descripcion: string }
     responsable?: { id: number; nombre: string }
     area?: { id: number; nombre: string }
+    plazoImplementacion?: PlazoImplementacion | null
     estado?: { id: number; nombre: string }
 }

@@ -15,7 +15,7 @@ const loadCatalogoTipos = async () => {
   try {
     // fetchCatalog with comma-separated would hit /catalogos/tipos-activo,formatos,... which is wrong
     // Load tipos individually in parallel
-    const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'categorias-controles-implementar', 'controles-implementar', 'opciones-tratamiento', 'estados-plan-tratamiento']
+    const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'categorias-controles-implementar', 'controles-implementar', 'opciones-tratamiento', 'estados-plan-tratamiento', 'plazos-implementacion']
     await Promise.all(tipos.map(t => fetchCatalog(t)))
     // Also load the tipo list itself
     const {apiFetch} = useApi()

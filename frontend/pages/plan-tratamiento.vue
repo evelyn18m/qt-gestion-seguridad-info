@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { PlanTratamiento, CatalogoItem, ControlesImplementarItem } from '~/types/api'
+import type { PlanTratamiento, CatalogoItem, ControlesImplementarItem, PlazoImplementacion } from '~/types/api'
 
 definePageMeta({ layout: 'default' })
 
@@ -9,6 +9,7 @@ const error = ref('')
 
 // Catalogs
 const catalogos = ref<Record<string, CatalogoItem[]>>({})
+const plazosImplementacion = ref<PlazoImplementacion[]>([])
 const controlesImplementar = ref<ControlesImplementarItem[]>([])
 
 async function fetchCatalogs() {
@@ -25,6 +26,14 @@ async function fetchCatalogs() {
   types.forEach((t, i) => {
     catalogos.value[t] = results[i] as CatalogoItem[]
   })
+
+  // plazos-implementacion has special endpoint (read-only catalog)
+  try {
+    const { apiFetch } = useApi()
+    plazosImplementacion.value = await apiFetch<PlazoImplementacion[]>('/catalogos/plazos-implementacion')
+  } catch {
+    plazosImplementacion.value = []
+  }
 
   // controles-implementar has special endpoint
   try {
@@ -61,7 +70,9 @@ const form = ref({
   descripcionActividades: '',
   responsableImplementacionId: null as number | null,
   areaFuncionalId: null as number | null,
-  plazoImplementacion: '',
+  plazoImplementacionId: null as number | null,
+  fechaInicioImplementacion: '',
+  fechaFinImplementacion: '',
   recursos: '',
   estadoId: null as number | null,
   observaciones: '',
@@ -80,7 +91,9 @@ function openCreateModal() {
     descripcionActividades: '',
     responsableImplementacionId: null,
     areaFuncionalId: null,
-    plazoImplementacion: '',
+    plazoImplementacionId: null,
+    fechaInicioImplementacion: '',
+    fechaFinImplementacion: '',
     recursos: '',
     estadoId: null,
     observaciones: '',
@@ -100,7 +113,9 @@ function openEditModal(plan: PlanTratamiento) {
     descripcionActividades: plan.descripcionActividades,
     responsableImplementacionId: plan.responsableImplementacionId ?? null,
     areaFuncionalId: plan.areaFuncionalId ?? null,
-    plazoImplementacion: plan.plazoImplementacion ? (String(plan.plazoImplementacion).split('T')[0] || '') : '',
+    plazoImplementacionId: plan.plazoImplementacionId ?? null,
+    fechaInicioImplementacion: plan.fechaInicioImplementacion ? (String(plan.fechaInicioImplementacion).split('T')[0] || '') : '',
+    fechaFinImplementacion: plan.fechaFinImplementacion ? (String(plan.fechaFinImplementacion).split('T')[0] || '') : '',
     recursos: plan.recursos ?? '',
     estadoId: plan.estadoId,
     observaciones: plan.observaciones ?? '',
@@ -114,6 +129,25 @@ function closeModal() {
   editingId.value = null
 }
 
+function formatPlazoLabel(item: PlazoImplementacion): string {
+  return `[${item.codigo}] ${item.nombre}`
+}
+
+const hasPlazo = computed(() => form.value.plazoImplementacionId !== null)
+
+const timeframeValidation = computed(() => {
+  if (!hasPlazo.value) return { valid: true, message: '' }
+  if (!form.value.fechaInicioImplementacion || !form.value.fechaFinImplementacion) {
+    return { valid: false, message: 'Debe indicar la fecha de inicio y la fecha de fin cuando selecciona un plazo.' }
+  }
+  const start = new Date(form.value.fechaInicioImplementacion)
+  const end = new Date(form.value.fechaFinImplementacion)
+  if (end.getTime() <= start.getTime()) {
+    return { valid: false, message: 'La fecha de fin debe ser posterior a la fecha de inicio.' }
+  }
+  return { valid: true, message: '' }
+})
+
 const formValid = computed(() => {
   return (
     form.value.idRiesgo.trim() !== '' &&
@@ -121,7 +155,8 @@ const formValid = computed(() => {
     form.value.nivelRiesgoId !== null &&
     form.value.opcionTratamientoId !== null &&
     form.value.descripcionActividades.trim() !== '' &&
-    form.value.estadoId !== null
+    form.value.estadoId !== null &&
+    timeframeValidation.value.valid
   )
 })
 
@@ -143,7 +178,9 @@ async function savePlan() {
   if (form.value.responsableImplementacionId !== null)
     body.responsableImplementacionId = form.value.responsableImplementacionId
   if (form.value.areaFuncionalId !== null) body.areaFuncionalId = form.value.areaFuncionalId
-  if (form.value.plazoImplementacion) body.plazoImplementacion = form.value.plazoImplementacion
+  if (form.value.plazoImplementacionId !== null) body.plazoImplementacionId = form.value.plazoImplementacionId
+  if (form.value.fechaInicioImplementacion) body.fechaInicioImplementacion = form.value.fechaInicioImplementacion
+  if (form.value.fechaFinImplementacion) body.fechaFinImplementacion = form.value.fechaFinImplementacion
   if (form.value.recursos) body.recursos = form.value.recursos
   if (form.value.observaciones) body.observaciones = form.value.observaciones
 
@@ -253,6 +290,7 @@ onMounted(() => {
                   <th>Tipo Activo</th>
                   <th>Nivel Riesgo</th>
                   <th>Opción Tratamiento</th>
+                  <th>Plazo</th>
                   <th>Estado</th>
                   <th>Responsable</th>
                   <th>Área</th>
@@ -265,6 +303,7 @@ onMounted(() => {
                   <td>{{ plan.tipoActivo?.nombre || '—' }}</td>
                   <td>{{ plan.nivelRiesgo?.nivel || '—' }}</td>
                   <td>{{ plan.opcionTratamiento?.nombre || '—' }}</td>
+                  <td>{{ plan.plazoImplementacion ? formatPlazoLabel(plan.plazoImplementacion) : '—' }}</td>
                   <td>
                     <span class="estado-badge" :class="'estado-' + (plan.estado?.nombre?.toLowerCase() || 'default')">
                       {{ plan.estado?.nombre || '—' }}
@@ -351,7 +390,18 @@ onMounted(() => {
             </div>
             <div class="form-group">
               <label for="pt-plazo">Plazo de Implementación</label>
-              <input id="pt-plazo" v-model="form.plazoImplementacion" type="date" />
+              <select id="pt-plazo" v-model="form.plazoImplementacionId">
+                <option :value="null">Seleccionar...</option>
+                <option v-for="item in plazosImplementacion" :key="item.id" :value="item.id">{{ formatPlazoLabel(item) }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="pt-fecha-inicio">Fecha de inicio</label>
+              <input id="pt-fecha-inicio" v-model="form.fechaInicioImplementacion" type="date" />
+            </div>
+            <div class="form-group">
+              <label for="pt-fecha-fin">Fecha de fin</label>
+              <input id="pt-fecha-fin" v-model="form.fechaFinImplementacion" type="date" />
             </div>
             <div class="form-group">
               <label for="pt-estado">Estado <span class="required">*</span></label>
@@ -373,6 +423,7 @@ onMounted(() => {
               <textarea id="pt-observaciones" v-model="form.observaciones" rows="2" placeholder="Observaciones adicionales..."></textarea>
             </div>
           </div>
+          <div v-if="timeframeValidation.message" class="modal-error">{{ timeframeValidation.message }}</div>
           <div v-if="modalError" class="modal-error">{{ modalError }}</div>
         </div>
         <div class="modal-footer">

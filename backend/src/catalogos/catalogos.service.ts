@@ -26,6 +26,7 @@ const TIPO_MAP: Record<string, string> = {
   'controles-implementar': 'controlesImplementar',
   'opciones-tratamiento': 'opcionTratamiento',
   'estados-plan-tratamiento': 'estadoPlanTratamiento',
+  'plazos-implementacion': 'plazoImplementacion',
 };
 
 const FIELD_MAP: Record<string, readonly string[]> = {
@@ -46,6 +47,7 @@ const FIELD_MAP: Record<string, readonly string[]> = {
   controlesImplementar: ['seccion', 'descripcion', 'categoriaId'],
   opcionTratamiento: ['nombre'],
   estadoPlanTratamiento: ['nombre'],
+  plazoImplementacion: ['codigo', 'nombre'],
 };
 
 @Injectable()

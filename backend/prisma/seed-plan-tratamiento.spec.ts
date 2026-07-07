@@ -1,12 +1,14 @@
+import { PrismaClient } from '@prisma/client';
 import {
   seedOpcionesTratamiento,
   seedEstadosPlanTratamiento,
+  seedPlazosImplementacion,
 } from './seed-plan-tratamiento';
 
 describe('seedOpcionesTratamiento', () => {
   it('upserts the four expected treatment options with stable ids', async () => {
     const upsert = jest.fn();
-    const prisma = { opcionTratamiento: { upsert } } as any;
+    const prisma = { opcionTratamiento: { upsert } } as unknown as PrismaClient;
 
     await seedOpcionesTratamiento(prisma);
 
@@ -39,7 +41,7 @@ describe('seedOpcionesTratamiento', () => {
     const prisma = {
       opcionTratamiento: { upsert },
       estadoPlanTratamiento: { upsert: estadoUpsert },
-    } as any;
+    } as unknown as PrismaClient;
 
     await seedOpcionesTratamiento(prisma);
 
@@ -50,7 +52,9 @@ describe('seedOpcionesTratamiento', () => {
 describe('seedEstadosPlanTratamiento', () => {
   it('upserts the four expected plan statuses with stable ids', async () => {
     const upsert = jest.fn();
-    const prisma = { estadoPlanTratamiento: { upsert } } as any;
+    const prisma = {
+      estadoPlanTratamiento: { upsert },
+    } as unknown as PrismaClient;
 
     await seedEstadosPlanTratamiento(prisma);
 
@@ -83,10 +87,63 @@ describe('seedEstadosPlanTratamiento', () => {
     const prisma = {
       estadoPlanTratamiento: { upsert },
       opcionTratamiento: { upsert: opcionUpsert },
-    } as any;
+    } as unknown as PrismaClient;
 
     await seedEstadosPlanTratamiento(prisma);
 
     expect(opcionUpsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('seedPlazosImplementacion', () => {
+  it('upserts the three expected plazos with stable ids', async () => {
+    const upsert = jest.fn();
+    const prisma = {
+      plazoImplementacion: { upsert },
+    } as unknown as PrismaClient;
+
+    await seedPlazosImplementacion(prisma);
+
+    expect(upsert).toHaveBeenCalledTimes(3);
+    expect(upsert).toHaveBeenNthCalledWith(1, {
+      where: { id: 1 },
+      update: { codigo: 'C', nombre: 'Corto' },
+      create: { id: 1, codigo: 'C', nombre: 'Corto' },
+    });
+    expect(upsert).toHaveBeenNthCalledWith(2, {
+      where: { id: 2 },
+      update: { codigo: 'M', nombre: 'Medio' },
+      create: { id: 2, codigo: 'M', nombre: 'Medio' },
+    });
+    expect(upsert).toHaveBeenNthCalledWith(3, {
+      where: { id: 3 },
+      update: { codigo: 'L', nombre: 'Largo' },
+      create: { id: 3, codigo: 'L', nombre: 'Largo' },
+    });
+  });
+
+  it('does not touch unrelated models', async () => {
+    const upsert = jest.fn();
+    const opcionUpsert = jest.fn();
+    const prisma = {
+      plazoImplementacion: { upsert },
+      opcionTratamiento: { upsert: opcionUpsert },
+    } as unknown as PrismaClient;
+
+    await seedPlazosImplementacion(prisma);
+
+    expect(opcionUpsert).not.toHaveBeenCalled();
+  });
+
+  it('is idempotent because it uses upsert by stable id', async () => {
+    const upsert = jest.fn();
+    const prisma = {
+      plazoImplementacion: { upsert },
+    } as unknown as PrismaClient;
+
+    await seedPlazosImplementacion(prisma);
+    await seedPlazosImplementacion(prisma);
+
+    expect(upsert).toHaveBeenCalledTimes(6);
   });
 });
