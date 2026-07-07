@@ -10,6 +10,10 @@ import * as path from 'path';
 import * as XLSX from 'xlsx';
 import { seedControlCatalogFromSql } from '../src/catalogos/control-catalog-seed';
 import { parseRiesgoRows } from '../src/catalogos/riesgo-parser';
+import {
+  seedEstadosPlanTratamiento,
+  seedOpcionesTratamiento,
+} from './seed-plan-tratamiento';
 
 const connectionString = process.env.DATABASE_URL as string;
 const adapter = new PrismaMariaDb(connectionString);
@@ -282,6 +286,12 @@ async function main() {
   for (const p of probabilidades) {
     await prisma.probabilidad.create({ data: p });
   }
+
+  // --- Plan de Tratamiento reference catalogs ---
+  console.log('Seeding OpcionTratamiento...');
+  await seedOpcionesTratamiento(prisma);
+  console.log('Seeding EstadoPlanTratamiento...');
+  await seedEstadosPlanTratamiento(prisma);
 
   // --- Usuario admin local ---
   console.log('Seeding local admin user...');

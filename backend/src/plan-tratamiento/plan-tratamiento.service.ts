@@ -60,7 +60,8 @@ export class PlanTratamientoService {
     const data: Record<string, unknown> = {};
     if (dto.idRiesgo !== undefined) data['idRiesgo'] = dto.idRiesgo;
     if (dto.tipoActivoId !== undefined) data['tipoActivoId'] = dto.tipoActivoId;
-    if (dto.nivelRiesgoId !== undefined) data['nivelRiesgoId'] = dto.nivelRiesgoId;
+    if (dto.nivelRiesgoId !== undefined)
+      data['nivelRiesgoId'] = dto.nivelRiesgoId;
     if (dto.opcionTratamientoId !== undefined)
       data['opcionTratamientoId'] = dto.opcionTratamientoId;
     if (dto.controlesImplementarId !== undefined)

@@ -15,7 +15,7 @@ const loadCatalogoTipos = async () => {
   try {
     // fetchCatalog with comma-separated would hit /catalogos/tipos-activo,formatos,... which is wrong
     // Load tipos individually in parallel
-    const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'categorias-controles-implementar', 'controles-implementar']
+    const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'categorias-controles-implementar', 'controles-implementar', 'opciones-tratamiento', 'estados-plan-tratamiento']
     await Promise.all(tipos.map(t => fetchCatalog(t)))
     // Also load the tipo list itself
     const {apiFetch} = useApi()
@@ -55,6 +55,8 @@ const FIELD_MAP: Record<string, string[]> = {
   probabilidades: ['nombre'],
   'controles-implementar': ['seccion', 'descripcion', 'categoriaId'],
   'categorias-controles-implementar': ['nombre'],
+  'opciones-tratamiento': ['nombre'],
+  'estados-plan-tratamiento': ['nombre'],
 }
 
 const catalogoFormVisible = ref(false)
