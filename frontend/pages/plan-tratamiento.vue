@@ -74,6 +74,8 @@ const form = ref({
   fechaInicioImplementacion: '',
   fechaFinImplementacion: '',
   recursos: '',
+  horaDia: '',
+  monto_USD: '',
   estadoId: null as number | null,
   observaciones: '',
 })
@@ -95,6 +97,8 @@ function openCreateModal() {
     fechaInicioImplementacion: '',
     fechaFinImplementacion: '',
     recursos: '',
+    horaDia: '',
+    monto_USD: '',
     estadoId: null,
     observaciones: '',
   }
@@ -117,6 +121,8 @@ function openEditModal(plan: PlanTratamiento) {
     fechaInicioImplementacion: plan.fechaInicioImplementacion ? (String(plan.fechaInicioImplementacion).split('T')[0] || '') : '',
     fechaFinImplementacion: plan.fechaFinImplementacion ? (String(plan.fechaFinImplementacion).split('T')[0] || '') : '',
     recursos: plan.recursos ?? '',
+    horaDia: plan.horaDia ?? '',
+    monto_USD: plan.monto_USD ?? '',
     estadoId: plan.estadoId,
     observaciones: plan.observaciones ?? '',
   }
@@ -182,6 +188,8 @@ async function savePlan() {
   if (form.value.fechaInicioImplementacion) body.fechaInicioImplementacion = form.value.fechaInicioImplementacion
   if (form.value.fechaFinImplementacion) body.fechaFinImplementacion = form.value.fechaFinImplementacion
   if (form.value.recursos) body.recursos = form.value.recursos
+  if (form.value.horaDia) body.horaDia = form.value.horaDia
+  if (form.value.monto_USD) body.recursos = form.value.monto_USD
   if (form.value.observaciones) body.observaciones = form.value.observaciones
 
   try {
@@ -395,6 +403,7 @@ onMounted(() => {
                 <option v-for="item in plazosImplementacion" :key="item.id" :value="item.id">{{ formatPlazoLabel(item) }}</option>
               </select>
             </div>
+            </div>
             <div class="form-group">
               <label for="pt-fecha-inicio">Fecha de inicio</label>
               <input id="pt-fecha-inicio" v-model="form.fechaInicioImplementacion" type="date" />
@@ -402,6 +411,14 @@ onMounted(() => {
             <div class="form-group">
               <label for="pt-fecha-fin">Fecha de fin</label>
               <input id="pt-fecha-fin" v-model="form.fechaFinImplementacion" type="date" />
+            </div>
+            <div class="form-group">
+              <label for="pt-hora-dia">Hora x Dia</label>
+              <input id="pt-hora-dia" v-model="form.horaDia" />
+            </div>
+            <div class="form-group">
+              <label for="pt-monto-usd">Monto_USD</label>
+              <input id="pt-monto-usd" v-model="form.monto_USD" />
             </div>
             <div class="form-group">
               <label for="pt-estado">Estado <span class="required">*</span></label>
@@ -415,23 +432,20 @@ onMounted(() => {
               <textarea id="pt-descripcion" v-model="form.descripcionActividades" rows="3" placeholder="Describa las actividades a realizar..."></textarea>
             </div>
             <div class="form-group form-group-full">
-              <label for="pt-recursos">Recursos</label>
-              <input id="pt-recursos" v-model="form.recursos" placeholder="Recursos necesarios" />
-            </div>
-            <div class="form-group form-group-full">
               <label for="pt-observaciones">Observaciones</label>
               <textarea id="pt-observaciones" v-model="form.observaciones" rows="2" placeholder="Observaciones adicionales..."></textarea>
             </div>
-          </div>
-          <div v-if="timeframeValidation.message" class="modal-error">{{ timeframeValidation.message }}</div>
-          <div v-if="modalError" class="modal-error">{{ modalError }}</div>
-        </div>
-        <div class="modal-footer">
+            <div class="modal-footer">
           <button class="btn-cancel" @click="closeModal">Cancelar</button>
           <button :disabled="!formValid || saving" class="btn-primary" @click="savePlan">
             {{ saving ? 'Guardando...' : (editingId !== null ? 'Guardar' : 'Crear') }}
           </button>
         </div>
+          </div>
+          <div v-if="timeframeValidation.message" class="modal-error">{{ timeframeValidation.message }}</div>
+          <div v-if="modalError" class="modal-error">{{ modalError }}</div>
+        </div>
+        
       </div>
     </div>
 
@@ -456,7 +470,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <style scoped>
