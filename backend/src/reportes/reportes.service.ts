@@ -845,11 +845,6 @@ export class ReportesService {
       const detalleWhere = vaIds ? { valoracionActivoId: { in: vaIds } } : {};
       const detalles = await this.prisma.detalleRiesgo.findMany({
         where: detalleWhere,
-        include: {
-          controlesImplementar: {
-            include: { categoria: true },
-          },
-        },
       });
 
       if (detalles.length === 0) {
@@ -920,7 +915,7 @@ export class ReportesService {
                 ? (tipoControlMap.get(dr.tipoControlId) ?? null)
                 : null,
             riesgoResidual: dr.riesgoResidual ?? null,
-            controlesImplementar: dr.controlesImplementar?.descripcion ?? null,
+            // controlesImplementar: dr.controlesImplementar?.descripcion ?? null,
             // Internal fields for filtering
             _amenazaIds: amenazaIds,
             _vulnIds: vulnIds,

@@ -122,8 +122,8 @@ export class DetalleRiesgoDto {
   controlesArea?: string;
 
   @IsOptional()
-  @IsNumber()
-  controlesImplementarId?: number;
+  @IsString()
+  controlesImplementarId?: string;
 }
 
 export class CreateValoracionDto {

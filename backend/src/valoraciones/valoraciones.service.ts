@@ -719,7 +719,6 @@ export class ValoracionesService {
     const detallesRiesgo = await this.prisma.detalleRiesgo.findMany({
       where: { valoracionActivoId: item.id },
       orderBy: { id: 'asc' },
-      include: { controlesImplementar: { include: { categoria: true } } },
     });
     return {
       ...item,

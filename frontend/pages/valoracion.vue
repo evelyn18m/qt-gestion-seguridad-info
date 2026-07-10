@@ -55,7 +55,7 @@ const evaluacionForm = ref({
 const tratamientoForm = ref({
   metodoTratamiento: '',
   tipoControl: '',
-  controlesImplementar: '',
+  controlesImplementar: [],
   nivelAmenazaControl: '',
   nivelVulnerabilidadControl: '',
 })
@@ -289,7 +289,7 @@ async function submitValoracion() {
       controlesImplementados: d.controlesImplementados || null,
       controlesArea: d.controlesArea || null,
       // Tab 4 FK: selected catalog control
-      controlesImplementarId: d.controlesImplementarId ?? null,
+      controlesImplementarId: d.controlesImplementarId && d.controlesImplementarId.length > 0 ? JSON.stringify(d.controlesImplementarId) : '',
     }))
 
     // ── Propagation: copy treatment fields from first-matched entry to all row siblings ──
@@ -400,7 +400,7 @@ async function submitValoracion() {
       vulnerabilidadRiesgoId: e.vulnerabilidadRiesgoId ? Number(e.vulnerabilidadRiesgoId) : null,
       metodoTratamiento: t.metodoTratamiento || null,
       tipoControl: t.tipoControl ? Number(t.tipoControl) : null,
-      controlesImplementar: t.controlesImplementar || null,
+      controlesImplementar: t.controlesImplementar.length > 0 ? JSON.stringify(t.controlesImplementar) : null,
       detallesRiesgo: detallesPayload,
     }
 
@@ -545,7 +545,7 @@ function resetForm() {
   tratamientoForm.value = {
     metodoTratamiento: '',
     tipoControl: '',
-    controlesImplementar: '',
+    controlesImplementar: [],
     nivelAmenazaControl: '',
     nivelVulnerabilidadControl: '',
   }

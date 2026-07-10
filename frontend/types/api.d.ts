@@ -94,8 +94,7 @@ export interface DetalleRiesgo {
     controlesImplementados?: string
     controlesArea?: string
     // Tab 4 FK: selected catalog control to implement
-    controlesImplementarId?: number | null
-    controlesImplementar?: ControlesImplementarItem | null
+    controlesImplementarId: string[]
 }
 
 export interface ApiError {

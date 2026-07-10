@@ -57,7 +57,7 @@ interface EvaluacionFormData {
 interface TratamientoFormData {
   metodoTratamiento: string
   tipoControl: string
-  controlesImplementar: string
+  controlesImplementar: string[]
   nivelAmenazaControl: string
   nivelVulnerabilidadControl: string
 }
@@ -190,7 +190,7 @@ export interface RiskRow {
   vulnerabilidadIds: string[]
   controlesImplementados: string
   controlesArea: string
-  controlesImplementarId?: number | null
+  controlesImplementarId: string[]
   tempId?: number
 }
 
@@ -203,7 +203,7 @@ function agregarFila() {
     vulnerabilidadIds: [],
     controlesImplementados: '',
     controlesArea: '',
-    controlesImplementarId: null,
+    controlesImplementarId: [],
     tempId: ++rowCounter,
   })
 }
@@ -218,6 +218,11 @@ function removeAmenaza(row: RiskRow, idToRemove: string) {
   syncRowsToDetalles()
 }
 
+function removeControlesImplementar(row: RiskRow, idToRemove: string) {
+  row.controlesImplementarId = row.controlesImplementarId.filter(id => id !== idToRemove)
+  syncRowsToDetalles()
+}
+
 function removeVulnerabilidad(row: RiskRow, idToRemove: string) {
   row.vulnerabilidadIds = row.vulnerabilidadIds.filter(id => id !== idToRemove)
   syncRowsToDetalles()
@@ -227,6 +232,13 @@ function toggleAmenazaInRow(row: RiskRow, amenazaId: string) {
   const idx = row.amenazaIds.indexOf(amenazaId)
   if (idx >= 0) row.amenazaIds.splice(idx, 1)
   else row.amenazaIds.push(amenazaId)
+  syncRowsToDetalles()
+}
+
+function toggleControlesImplementar(row: RiskRow, controlesImplementarId: string) {
+  const idx = row.controlesImplementarId.indexOf(controlesImplementarId);
+  if (idx >= 0) row.controlesImplementarId.splice(idx, 1);
+  else row.controlesImplementarId.push(controlesImplementarId);
   syncRowsToDetalles()
 }
 
@@ -244,6 +256,11 @@ function hasAtLeastOne(row: RiskRow): boolean {
 function getAmenazaLabel(id: string) {
   const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === Number(id))
   return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
+}
+
+function getControlesImplementarLabel(id: String) {
+  const a = props.catalogData.valControlesImplementar.find((item) => item.id === Number(id))
+  return a ? `${a.seccion} - ${a.descripcion}` : `C#${id}`;
 }
 
 function getVulnerabilidadLabel(id: string) {
@@ -642,7 +659,11 @@ const controlesImplementarGrupos = computed(() => {
     }
     map.get(c.categoriaId)!.items.push(c)
   })
-  return Array.from(map.values())
+
+  return Array.from(map.values()).map((cat) => {
+    cat.items = cat.items.sort((a, b) => Number(a.id) - Number(b.id))
+    return cat
+  })
 })
 </script>
 
@@ -805,6 +826,14 @@ const controlesImplementarGrupos = computed(() => {
           <!-- TAB 2: Análisis de Riesgos (row-based) -->
           <div v-show="currentStep === 1" class="val-tab-panel">
             <div class="val-card" style="border:none; padding:0; background:transparent;">
+              <div class="form-group">
+                <label>Nombre del activo</label>
+                <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
+              <div class="form-group">
+                <label>Macroproceso</label>
+                <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
                 <h3 class="val-card-title" style="margin:0; border:none; padding:0;">Análisis de Riesgos — Filas de
                   Riesgo</h3>
@@ -820,8 +849,6 @@ const controlesImplementarGrupos = computed(() => {
               <table v-else class="val-table">
                 <thead>
                 <tr>
-                  <th style="min-width:160px;">Nombre del Activo</th>
-                  <th style="min-width:180px;">Macroproceso</th>
                   <th style="min-width:220px;">Amenazas</th>
                   <th style="min-width:220px;">Vulnerabilidades</th>
                   <th>Controles Implementados</th>
@@ -830,18 +857,6 @@ const controlesImplementarGrupos = computed(() => {
                 </thead>
                 <tbody>
                 <tr v-for="(row, index) in riskRows" :key="row.tempId">
-                  <!-- Nombre del Activo (readonly, mismo valor en todas las filas) -->
-                  <td>
-                    <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;"
-                           type="text"/>
-                  </td>
-
-                  <!-- Macroproceso (readonly, resuelto por computed) -->
-                  <td>
-                    <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;"
-                           type="text"/>
-                  </td>
-
                   <!-- Amenaza cell -->
                   <td>
                     <!-- Category + select for adding threats -->
@@ -950,14 +965,20 @@ const controlesImplementarGrupos = computed(() => {
                        readonly
                        style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
               </div>
+              <div class="form-group">
+                <label>Nombre del activo</label>
+                <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
+              <div class="form-group">
+                <label>Macroproceso</label>
+                <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
               <div v-if="riskRows.length === 0" class="chip-empty">No hay amenazas ni vulnerabilidades seleccionadas en
                 la Pestaña 2.
               </div>
               <table v-else class="val-table" style="margin-top:1rem;">
                 <thead>
                 <tr>
-                  <th style="min-width:160px;">Nombre del Activo</th>
-                  <th style="min-width:180px;">Macroproceso</th>
                   <th>Amenaza</th>
                   <th>Vulnerabilidad</th>
                   <th>Nivel Amenaza</th>
@@ -969,16 +990,6 @@ const controlesImplementarGrupos = computed(() => {
                 </thead>
                 <tbody>
                 <tr v-for="row in riskRows" :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
-                  <!-- Nombre del Activo (readonly) -->
-                  <td>
-                    <input :value="analisisForm.nombreActivo" readonly type="text"
-                      style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
-                  </td>
-                  <!-- Macroproceso (readonly) -->
-                  <td>
-                    <input :value="macroProcesoName" readonly type="text"
-                      style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
-                  </td>
                   <td>
                     <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected"
                           style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
@@ -1057,14 +1068,20 @@ const controlesImplementarGrupos = computed(() => {
                        readonly
                        style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
               </div>
+              <div class="form-group">
+                <label>Nombre del activo</label>
+                <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
+              <div class="form-group">
+                <label>Macroproceso</label>
+                <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
               <div v-if="riskRows.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y
                 evalúe en la Pestaña 3.
               </div>
               <table v-else class="val-table">
                 <thead>
                 <tr>
-                  <th style="min-width:160px;">Nombre del Activo</th>
-                  <th style="min-width:180px;">Macroproceso</th>
                   <th>Amenaza</th>
                   <th>Vulnerabilidad</th>
                   <th>Nivel Amenaza</th>
@@ -1081,16 +1098,6 @@ const controlesImplementarGrupos = computed(() => {
                 <template v-for="row in riskRows"
                           :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
                   <tr v-if="row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0">
-                    <!-- Nombre del Activo (readonly) -->
-                    <td>
-                      <input :value="analisisForm.nombreActivo" readonly type="text"
-                        style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
-                    </td>
-                    <!-- Macroproceso (readonly) -->
-                    <td>
-                      <input :value="macroProcesoName" readonly type="text"
-                        style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;" />
-                    </td>
                     <td>
                       <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected"
                             style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
@@ -1162,16 +1169,33 @@ const controlesImplementarGrupos = computed(() => {
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <select v-model.number="findMatchedDetalle(row)!.controlesImplementarId"
-                                style="min-width:200px;">
-                          <option :value="null">— Ninguno —</option>
+                        <select
+                            style="min-width:200px;"
+                            @change="(e) => { const s = (e.target as HTMLSelectElement).value; if (s) { toggleControlesImplementar(row, s); (e.target as HTMLSelectElement).value = '' } }"
+                            aria-placeholder="Seleccionar..."
+                        >
+                          <option value="" selected>+ Agregar</option>
                           <optgroup v-for="grupo in controlesImplementarGrupos" :key="grupo.categoriaId"
                                     :label="grupo.categoriaNombre">
-                            <option v-for="ctrl in grupo.items" :key="ctrl.id" :value="ctrl.id">
+                            <option v-for="ctrl in grupo.items" :key="ctrl.id" :value="String(ctrl.id)">
                               {{ ctrl.seccion }} — {{ ctrl.descripcion }}
                             </option>
                           </optgroup>
                         </select>
+                        <!-- Selected amenaza chips -->
+                        <div class="chip-list" style="max-height:140px;">
+                        <span v-for="aId in row.controlesImplementarId" :key="aId" class="chip selected"
+                              style="display:flex; align-items:center; gap:0.3rem; cursor:default;">
+                          {{ getControlesImplementarLabel(aId) }}
+                          <button style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;" type="button"
+                                  @click="removeControlesImplementar(row, aId)">
+                            <svg fill="none" stroke="currentColor" stroke-width="3" style="width:10px; height:10px;"
+                                 viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12"
+                                                                                              stroke-linecap="round"
+                                                                                              stroke-linejoin="round"/></svg>
+                          </button>
+                        </span>
+                        </div>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
