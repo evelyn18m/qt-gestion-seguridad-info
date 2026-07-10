@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import type { PlanTratamiento, CatalogoItem, ControlesImplementarItem, PlazoImplementacion } from '~/types/api'
+import type {CatalogoItem, ControlesImplementarItem, PlanTratamiento, PlazoImplementacion} from '~/types/api'
 
-definePageMeta({ layout: 'default' })
+definePageMeta({layout: 'default'})
 
 const planes = ref<PlanTratamiento[]>([])
 const loading = ref(false)
@@ -13,13 +13,12 @@ const plazosImplementacion = ref<PlazoImplementacion[]>([])
 const controlesImplementar = ref<ControlesImplementarItem[]>([])
 
 async function fetchCatalogs() {
-  const { fetchCatalog } = useCatalog()
+  const {fetchCatalog} = useCatalog()
   const types = [
     'tipos-activo',
     'riesgos',
     'opciones-tratamiento',
     'estados-plan-tratamiento',
-    'funcionarios',
     'areas',
   ]
   const results = await Promise.all(types.map((t) => fetchCatalog(t).catch(() => [] as CatalogoItem[])))
@@ -29,7 +28,7 @@ async function fetchCatalogs() {
 
   // plazos-implementacion has special endpoint (read-only catalog)
   try {
-    const { apiFetch } = useApi()
+    const {apiFetch} = useApi()
     plazosImplementacion.value = await apiFetch<PlazoImplementacion[]>('/catalogos/plazos-implementacion')
   } catch {
     plazosImplementacion.value = []
@@ -37,7 +36,7 @@ async function fetchCatalogs() {
 
   // controles-implementar has special endpoint
   try {
-    const { apiFetch } = useApi()
+    const {apiFetch} = useApi()
     controlesImplementar.value = await apiFetch<ControlesImplementarItem[]>('/catalogos/controles-implementar')
   } catch {
     controlesImplementar.value = []
@@ -45,7 +44,7 @@ async function fetchCatalogs() {
 }
 
 async function fetchPlanes() {
-  const { apiFetch } = useApi()
+  const {apiFetch} = useApi()
   try {
     loading.value = true
     error.value = ''
@@ -57,25 +56,38 @@ async function fetchPlanes() {
   }
 }
 
-// ── Create / Edit Modal ─────────────────────────────────────────────────────
-
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
-const form = ref({
-  idRiesgo: '',
+const form = ref<{
+  id: number | undefined,
+  tipoActivoId: number | null,
+  nivelRiesgoId: number | null,
+  opcionTratamientoId: number | null,
+  controlesImplementarId: number[],
+  descripcionActividades: string,
+  responsableImplementacionId: number[],
+  areaFuncionalId: number | null,
+  plazoImplementacionId: number | null,
+  fechaInicioImplementacion: string,
+  fechaFinImplementacion: string,
+  horaDia: string,
+  montoUSD: string,
+  estadoId: number | null,
+  observaciones: string,
+}>({
+  id: undefined,
   tipoActivoId: null as number | null,
   nivelRiesgoId: null as number | null,
   opcionTratamientoId: null as number | null,
-  controlesImplementarId: null as number | null,
+  controlesImplementarId: [],
   descripcionActividades: '',
-  responsableImplementacionId: null as number | null,
+  responsableImplementacionId: [],
   areaFuncionalId: null as number | null,
   plazoImplementacionId: null as number | null,
   fechaInicioImplementacion: '',
   fechaFinImplementacion: '',
-  recursos: '',
   horaDia: '',
-  monto_USD: '',
+  montoUSD: '',
   estadoId: null as number | null,
   observaciones: '',
 })
@@ -85,20 +97,19 @@ const saving = ref(false)
 function openCreateModal() {
   editingId.value = null
   form.value = {
-    idRiesgo: '',
+    id: undefined,
     tipoActivoId: null,
     nivelRiesgoId: null,
     opcionTratamientoId: null,
-    controlesImplementarId: null,
+    controlesImplementarId: [],
     descripcionActividades: '',
-    responsableImplementacionId: null,
+    responsableImplementacionId: [],
     areaFuncionalId: null,
     plazoImplementacionId: null,
     fechaInicioImplementacion: '',
     fechaFinImplementacion: '',
-    recursos: '',
     horaDia: '',
-    monto_USD: '',
+    montoUSD: '',
     estadoId: null,
     observaciones: '',
   }
@@ -109,20 +120,19 @@ function openCreateModal() {
 function openEditModal(plan: PlanTratamiento) {
   editingId.value = plan.id
   form.value = {
-    idRiesgo: plan.idRiesgo,
+    id: plan.id,
     tipoActivoId: plan.tipoActivoId,
     nivelRiesgoId: plan.nivelRiesgoId,
     opcionTratamientoId: plan.opcionTratamientoId,
-    controlesImplementarId: plan.controlesImplementarId ?? null,
+    controlesImplementarId: JSON.parse(plan.controlesImplementarId) ?? [],
     descripcionActividades: plan.descripcionActividades,
-    responsableImplementacionId: plan.responsableImplementacionId ?? null,
+    responsableImplementacionId: JSON.parse(plan.responsableImplementacionId) ?? [],
     areaFuncionalId: plan.areaFuncionalId ?? null,
     plazoImplementacionId: plan.plazoImplementacionId ?? null,
     fechaInicioImplementacion: plan.fechaInicioImplementacion ? (String(plan.fechaInicioImplementacion).split('T')[0] || '') : '',
     fechaFinImplementacion: plan.fechaFinImplementacion ? (String(plan.fechaFinImplementacion).split('T')[0] || '') : '',
-    recursos: plan.recursos ?? '',
     horaDia: plan.horaDia ?? '',
-    monto_USD: plan.monto_USD ?? '',
+    montoUSD: plan.montoUSD ?? '',
     estadoId: plan.estadoId,
     observaciones: plan.observaciones ?? '',
   }
@@ -142,27 +152,27 @@ function formatPlazoLabel(item: PlazoImplementacion): string {
 const hasPlazo = computed(() => form.value.plazoImplementacionId !== null)
 
 const timeframeValidation = computed(() => {
-  if (!hasPlazo.value) return { valid: true, message: '' }
+  if (!hasPlazo.value) return {valid: true, message: ''}
   if (!form.value.fechaInicioImplementacion || !form.value.fechaFinImplementacion) {
-    return { valid: false, message: 'Debe indicar la fecha de inicio y la fecha de fin cuando selecciona un plazo.' }
+    return {valid: false, message: 'Debe indicar la fecha de inicio y la fecha de fin cuando selecciona un plazo.'}
   }
   const start = new Date(form.value.fechaInicioImplementacion)
   const end = new Date(form.value.fechaFinImplementacion)
   if (end.getTime() <= start.getTime()) {
-    return { valid: false, message: 'La fecha de fin debe ser posterior a la fecha de inicio.' }
+    return {valid: false, message: 'La fecha de fin debe ser posterior a la fecha de inicio.'}
   }
-  return { valid: true, message: '' }
+  return {valid: true, message: ''}
 })
 
 const formValid = computed(() => {
   return (
-    form.value.idRiesgo.trim() !== '' &&
-    form.value.tipoActivoId !== null &&
-    form.value.nivelRiesgoId !== null &&
-    form.value.opcionTratamientoId !== null &&
-    form.value.descripcionActividades.trim() !== '' &&
-    form.value.estadoId !== null &&
-    timeframeValidation.value.valid
+      form.value.controlesImplementarId.length > 0 &&
+      form.value.tipoActivoId !== null &&
+      form.value.nivelRiesgoId !== null &&
+      form.value.opcionTratamientoId !== null &&
+      form.value.descripcionActividades.trim() !== '' &&
+      form.value.estadoId !== null &&
+      timeframeValidation.value.valid
   )
 })
 
@@ -170,9 +180,9 @@ async function savePlan() {
   if (!formValid.value) return
   saving.value = true
   modalError.value = ''
-  const { apiFetch } = useApi()
+  const {apiFetch} = useApi()
   const body: Record<string, unknown> = {
-    idRiesgo: form.value.idRiesgo,
+    id: form.value.id,
     tipoActivoId: form.value.tipoActivoId,
     nivelRiesgoId: form.value.nivelRiesgoId,
     opcionTratamientoId: form.value.opcionTratamientoId,
@@ -180,16 +190,15 @@ async function savePlan() {
     estadoId: form.value.estadoId,
   }
   if (form.value.controlesImplementarId !== null)
-    body.controlesImplementarId = form.value.controlesImplementarId
+    body.controlesImplementarId = JSON.stringify(form.value.controlesImplementarId)
   if (form.value.responsableImplementacionId !== null)
-    body.responsableImplementacionId = form.value.responsableImplementacionId
+    body.responsableImplementacionId = JSON.stringify(form.value.responsableImplementacionId)
   if (form.value.areaFuncionalId !== null) body.areaFuncionalId = form.value.areaFuncionalId
   if (form.value.plazoImplementacionId !== null) body.plazoImplementacionId = form.value.plazoImplementacionId
   if (form.value.fechaInicioImplementacion) body.fechaInicioImplementacion = form.value.fechaInicioImplementacion
   if (form.value.fechaFinImplementacion) body.fechaFinImplementacion = form.value.fechaFinImplementacion
-  if (form.value.recursos) body.recursos = form.value.recursos
   if (form.value.horaDia) body.horaDia = form.value.horaDia
-  if (form.value.monto_USD) body.recursos = form.value.monto_USD
+  if (form.value.montoUSD) body.montoUSD = String(form.value.montoUSD)
   if (form.value.observaciones) body.observaciones = form.value.observaciones
 
   try {
@@ -228,13 +237,62 @@ function cancelDelete() {
   deleteConfirm.value = null
 }
 
+function getControlLabel(controlId: number) {
+  const control = controlesImplementar.value.find((item) => item.id === controlId)
+  if (!control) return 'C#' + controlId
+  return `${control.seccion} - ${control.descripcion}`
+}
+
+function removeControl(controlId: number) {
+  form.value.controlesImplementarId = form.value.controlesImplementarId.filter((id) => id !== controlId)
+}
+
+function toggleControlesImplementarId(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const controlId: number = parseInt(select.value)
+  if (controlId) {
+    if (form.value.controlesImplementarId.includes(controlId as never)) {
+      removeControl(controlId)
+    } else {
+      form.value.controlesImplementarId.push(controlId as never)
+    }
+  }
+
+  select.value = ''
+}
+
+function getResponsableLabel(responsableId: number) {
+  const responsable = catalogos.value['areas']?.find((item) => item.id === responsableId)
+
+  if (!responsable) return 'R#' + responsableId
+  return `${responsable.nombre}`
+}
+
+function removeResponsable(responsableId: number) {
+  form.value.responsableImplementacionId = form.value.responsableImplementacionId.filter((id) => id !== responsableId)
+}
+
+function toggleResponsableImplementacionId(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const responsableId: number = parseInt(select.value)
+  if (responsableId) {
+    if (form.value.responsableImplementacionId.includes(responsableId as never)) {
+      removeResponsable(responsableId)
+    } else {
+      form.value.responsableImplementacionId.push(responsableId as never)
+    }
+  }
+
+  select.value = ''
+}
+
 async function executeDelete() {
   if (!deleteConfirm.value) return
   deleting.value = true
   deleteError.value = ''
   try {
-    const { apiFetch } = useApi()
-    await apiFetch(`/plan-tratamiento/${deleteConfirm.value.id}`, { method: 'DELETE' })
+    const {apiFetch} = useApi()
+    await apiFetch(`/plan-tratamiento/${deleteConfirm.value.id}`, {method: 'DELETE'})
     deleteConfirm.value = null
     await fetchPlanes()
   } catch (e: unknown) {
@@ -242,6 +300,14 @@ async function executeDelete() {
   } finally {
     deleting.value = false
   }
+}
+
+function getResponsablesLabel(idsStr: string) {
+  const ids = JSON.parse(idsStr) as number[]
+
+  const responsables = catalogos.value['areas']?.filter((item) => ids.includes(item.id))
+
+  return responsables?.map((res) => res.nombre).join(',\n')
 }
 
 onMounted(() => {
@@ -268,22 +334,28 @@ onMounted(() => {
 
         <div v-else-if="error" class="reportes-error">
           <div class="error-icon">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" stroke-linecap="round"
+                    stroke-linejoin="round"/>
             </svg>
           </div>
           <p>Error al cargar</p>
           <p class="error-detail">{{ error }}</p>
           <button class="btn-retry" @click="fetchPlanes">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path
+                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"
+                  stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             Reintentar
           </button>
         </div>
 
         <template v-else>
-          <div class="usuarios-toolbar" style="margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 16px; background: var(--card-bg);">
+          <div class="usuarios-toolbar"
+               style="margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 16px; background: var(--card-bg);">
             <span class="usuarios-count">{{ planes.length }} plan(es)</span>
             <button class="btn-primary btn-sm" @click="openCreateModal">+ Nuevo</button>
           </div>
@@ -293,47 +365,55 @@ onMounted(() => {
           <div v-else class="table-wrapper">
             <table class="reportes-table">
               <thead>
-                <tr>
-                  <th>ID Riesgo</th>
-                  <th>Tipo Activo</th>
-                  <th>Nivel Riesgo</th>
-                  <th>Opción Tratamiento</th>
-                  <th>Plazo</th>
-                  <th>Estado</th>
-                  <th>Responsable</th>
-                  <th>Área</th>
-                  <th class="th-actions">Acciones</th>
-                </tr>
+              <tr>
+                <th class="th-actions">Acciones</th>
+                <th>ID Riesgo</th>
+                <th>Tipo Activo</th>
+                <th>Nivel Riesgo</th>
+                <th>Opción Tratamiento</th>
+                <th>Plazo</th>
+                <th>Estado</th>
+                <th>Responsables</th>
+                <th>Área</th>
+              </tr>
               </thead>
               <tbody>
-                <tr v-for="plan in planes" :key="plan.id">
-                  <td>{{ plan.idRiesgo }}</td>
-                  <td>{{ plan.tipoActivo?.nombre || '—' }}</td>
-                  <td>{{ plan.nivelRiesgo?.nivel || '—' }}</td>
-                  <td>{{ plan.opcionTratamiento?.nombre || '—' }}</td>
-                  <td>{{ plan.plazoImplementacion ? formatPlazoLabel(plan.plazoImplementacion) : '—' }}</td>
-                  <td>
+              <tr v-for="plan in planes" :key="plan.id">
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-icon btn-edit" title="Editar" @click="openEditModal(plan)">
+                      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                           xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                            stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                    <button class="btn-icon btn-delete" title="Eliminar" @click="confirmDelete(plan)">
+                      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                           xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                            stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+                <td>{{ plan.id }}</td>
+                <td>{{ plan.tipoActivo?.nombre || '—' }}</td>
+                <td>{{ plan.nivelRiesgo?.nivel || '—' }}</td>
+                <td>{{ plan.opcionTratamiento?.nombre || '—' }}</td>
+                <td>{{ plan.plazoImplementacion ? formatPlazoLabel(plan.plazoImplementacion) : '—' }}</td>
+                <td>
                     <span class="estado-badge" :class="'estado-' + (plan.estado?.nombre?.toLowerCase() || 'default')">
                       {{ plan.estado?.nombre || '—' }}
                     </span>
-                  </td>
-                  <td>{{ plan.responsable?.nombre || '—' }}</td>
-                  <td>{{ plan.area?.nombre || '—' }}</td>
-                  <td>
-                    <div class="row-actions">
-                      <button class="btn-icon btn-edit" title="Editar" @click="openEditModal(plan)">
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </button>
-                      <button class="btn-icon btn-delete" title="Eliminar" @click="confirmDelete(plan)">
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                </td>
+                <td>
+                  <div style="white-space: pre">{{ getResponsablesLabel(plan.responsableImplementacionId) || '—' }}</div>
+                </td>
+                <td>{{ plan.area?.nombre || '—' }}</td>
+              </tr>
               </tbody>
             </table>
           </div>
@@ -342,7 +422,7 @@ onMounted(() => {
     </div>
 
     <!-- ── Create / Edit Modal ─────────────────────────────────────────────── -->
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal" >
       <div class="modal-card modal-wide">
         <div class="modal-header">
           <h3>{{ editingId !== null ? 'Editar Plan' : 'Nuevo Plan de Tratamiento' }}</h3>
@@ -351,125 +431,212 @@ onMounted(() => {
         <div class="modal-body">
           <div class="form-grid">
             <div class="form-group">
-              <label for="pt-id-riesgo">ID Riesgo <span class="required">*</span></label>
-              <input id="pt-id-riesgo" v-model="form.idRiesgo" placeholder="Identificador del riesgo" />
-            </div>
-            <div class="form-group">
               <label for="pt-tipo-activo">Tipo de Activo <span class="required">*</span></label>
               <select id="pt-tipo-activo" v-model="form.tipoActivoId">
                 <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['tipos-activo']" :key="item.id" :value="item.id">{{ item.nombre }}</option>
+                <option v-for="item in catalogos['tipos-activo']" :key="item.id" :value="item.id">{{
+                    item.nombre
+                  }}
+                </option>
               </select>
             </div>
             <div class="form-group">
               <label for="pt-nivel-riesgo">Nivel de Riesgo <span class="required">*</span></label>
               <select id="pt-nivel-riesgo" v-model="form.nivelRiesgoId">
                 <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['riesgos']" :key="item.id" :value="item.id">{{ item.nivel }}</option>
+                <option v-for="item in catalogos['riesgos']?.filter((item) => item.tipo === 'Amenaza')" :key="item.id" :value="item.id">{{ item.nivel }}</option>
               </select>
             </div>
             <div class="form-group">
               <label for="pt-opcion">Opción de Tratamiento <span class="required">*</span></label>
               <select id="pt-opcion" v-model="form.opcionTratamientoId">
                 <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['opciones-tratamiento']" :key="item.id" :value="item.id">{{ item.nombre }}</option>
+                <option v-for="item in catalogos['opciones-tratamiento']" :key="item.id" :value="item.id">{{
+                    item.nombre
+                  }}
+                </option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="pt-controles">Controles a Implementar</label>
-              <select id="pt-controles" v-model="form.controlesImplementarId">
-                <option :value="null">Seleccionar...</option>
-                <option v-for="item in controlesImplementar" :key="item.id" :value="item.id">{{ item.seccion }} — {{ item.descripcion }}</option>
-              </select>
+          </div>
+          <div class="form-group">
+            <label for="pt-controles">Controles a Implementar</label>
+            <select
+                id="pt-controles"
+                @change="toggleControlesImplementarId"
+            >
+              <option value="">Agregar o quitar controles</option>
+              <option
+                  v-for="item in controlesImplementar"
+                  :key="item.id"
+                  :value="item.id"
+                  :disabled="form.controlesImplementarId.includes(item.id)"
+              >
+                {{ item.seccion }} — {{ item.descripcion }}
+              </option>
+            </select>
+            <div class="chip-list" style="max-height:140px;">
+              <span
+                  v-for="control in form.controlesImplementarId"
+                  :key="control"
+                  class="chip selected"
+                  style="display:flex; align-items:center; gap:0.3rem; cursor:default;"
+              >
+                {{ getControlLabel(control) }}
+                <button
+                    style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;"
+                    type="button"
+                    @click="removeControl(control)"
+                >
+                  <svg
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      style="width:10px; height:10px;"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </span>
             </div>
-            <div class="form-group">
-              <label for="pt-responsable">Responsable</label>
-              <select id="pt-responsable" v-model="form.responsableImplementacionId">
-                <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['funcionarios']" :key="item.id" :value="item.id">{{ item.nombre }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="pt-area">Área Funcional</label>
-              <select id="pt-area" v-model="form.areaFuncionalId">
-                <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['areas']" :key="item.id" :value="item.id">{{ item.nombre }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="pt-plazo">Plazo de Implementación</label>
-              <select id="pt-plazo" v-model="form.plazoImplementacionId">
-                <option :value="null">Seleccionar...</option>
-                <option v-for="item in plazosImplementacion" :key="item.id" :value="item.id">{{ formatPlazoLabel(item) }}</option>
-              </select>
-            </div>
-            </div>
+          </div>
+          <div class="form-group form-group-full">
+            <label for="pt-descripcion">Descripción de Actividades <span class="required">*</span></label>
+            <textarea id="pt-descripcion" v-model="form.descripcionActividades" rows="5"
+                      placeholder="Describa las actividades a realizar..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="pt-plazo">Plazo de Implementación</label>
+            <select id="pt-plazo" v-model="form.plazoImplementacionId">
+              <option :value="null">Seleccionar...</option>
+              <option v-for="item in plazosImplementacion" :key="item.id" :value="item.id">{{
+                  formatPlazoLabel(item)
+                }}
+              </option>
+            </select>
+          </div>
+          <div class="form-grid">
             <div class="form-group">
               <label for="pt-fecha-inicio">Fecha de inicio</label>
-              <input id="pt-fecha-inicio" v-model="form.fechaInicioImplementacion" type="date" />
+              <input id="pt-fecha-inicio" v-model="form.fechaInicioImplementacion" type="date"/>
             </div>
             <div class="form-group">
               <label for="pt-fecha-fin">Fecha de fin</label>
-              <input id="pt-fecha-fin" v-model="form.fechaFinImplementacion" type="date" />
+              <input id="pt-fecha-fin" v-model="form.fechaFinImplementacion" type="date"/>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label for="pt-responsable">Responsables</label>
+            <select
+                id="pt-responsable"
+                @change="toggleResponsableImplementacionId"
+            >
+              <option value="">Agregar o quitar área responsable</option>
+              <option
+                  v-for="item in catalogos['areas']"
+                  :key="item.id"
+                  :value="item.id"
+                  :disabled="form.responsableImplementacionId.includes(item.id)"
+              >
+                {{ item.nombre }}
+              </option>
+            </select>
+            <div class="chip-list" style="max-height:160px;">
+              <span
+                  v-for="responsable in form.responsableImplementacionId"
+                  :key="responsable"
+                  class="chip selected"
+                  style="display:flex; align-items:center; gap:0.3rem; cursor:default;"
+              >
+                {{ getResponsableLabel(responsable) }}
+                <button
+                    style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;"
+                    type="button"
+                    @click="removeResponsable(responsable)"
+                >
+                  <svg
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      style="width:10px; height:10px;"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="pt-area">Área Funcional</label>
+            <select id="pt-area" v-model="form.areaFuncionalId">
+              <option :value="null">Seleccionar área funcional</option>
+              <option v-for="item in catalogos['areas']" :key="item.id" :value="item.id">{{ item.nombre }}</option>
+            </select>
+          </div>
+
+          <div class="form-grid">
             <div class="form-group">
               <label for="pt-hora-dia">Hora x Dia</label>
-              <input id="pt-hora-dia" v-model="form.horaDia" />
+              <input id="pt-hora-dia" v-model="form.horaDia" type="number" step="1" />
             </div>
             <div class="form-group">
-              <label for="pt-monto-usd">Monto_USD</label>
-              <input id="pt-monto-usd" v-model="form.monto_USD" />
+              <label for="pt-monto-usd">Monto USD</label>
+              <input id="pt-monto-usd" v-model="form.montoUSD" type="number" step="0.01"/>
             </div>
             <div class="form-group">
               <label for="pt-estado">Estado <span class="required">*</span></label>
               <select id="pt-estado" v-model="form.estadoId">
                 <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['estados-plan-tratamiento']" :key="item.id" :value="item.id">{{ item.nombre }}</option>
+                <option v-for="item in catalogos['estados-plan-tratamiento']" :key="item.id" :value="item.id">
+                  {{ item.nombre }}
+                </option>
               </select>
             </div>
-            <div class="form-group form-group-full">
-              <label for="pt-descripcion">Descripción de Actividades <span class="required">*</span></label>
-              <textarea id="pt-descripcion" v-model="form.descripcionActividades" rows="3" placeholder="Describa las actividades a realizar..."></textarea>
-            </div>
-            <div class="form-group form-group-full">
-              <label for="pt-observaciones">Observaciones</label>
-              <textarea id="pt-observaciones" v-model="form.observaciones" rows="2" placeholder="Observaciones adicionales..."></textarea>
-            </div>
-            <div class="modal-footer">
+          </div>
+          <div class="form-group form-group-full">
+            <label for="pt-observaciones">Observaciones</label>
+            <textarea id="pt-observaciones" v-model="form.observaciones" rows="2"
+                      placeholder="Observaciones adicionales..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
           <button class="btn-cancel" @click="closeModal">Cancelar</button>
           <button :disabled="!formValid || saving" class="btn-primary" @click="savePlan">
             {{ saving ? 'Guardando...' : (editingId !== null ? 'Guardar' : 'Crear') }}
           </button>
         </div>
-          </div>
-          <div v-if="timeframeValidation.message" class="modal-error">{{ timeframeValidation.message }}</div>
-          <div v-if="modalError" class="modal-error">{{ modalError }}</div>
-        </div>
-        
+        <div v-if="timeframeValidation.message" class="modal-error">{{ timeframeValidation.message }}</div>
+        <div v-if="modalError" class="modal-error">{{ modalError }}</div>
       </div>
-    </div>
 
-    <!-- ── Delete Confirm Modal ────────────────────────────────────────────── -->
-    <div v-if="deleteConfirm" class="modal-overlay" @click.self="cancelDelete">
-      <div class="modal-card modal-confirm">
-        <div class="modal-header">
-          <h3>Confirmar eliminación</h3>
-        </div>
-        <div class="modal-body">
-          <p>¿Estás seguro de eliminar este plan de tratamiento?</p>
-          <p class="confirm-detail">
-            <strong>{{ deleteConfirm.idRiesgo }}</strong>
-          </p>
-          <div v-if="deleteError" class="modal-error">{{ deleteError }}</div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="cancelDelete">Cancelar</button>
-          <button :disabled="deleting" class="btn-danger" @click="executeDelete">
-            {{ deleting ? 'Eliminando...' : 'Eliminar' }}
-          </button>
-        </div>
+    </div>
+  </div>
+
+  <!-- ── Delete Confirm Modal ────────────────────────────────────────────── -->
+  <div v-if="deleteConfirm" class="modal-overlay" @click.self="cancelDelete">
+    <div class="modal-card modal-confirm">
+      <div class="modal-header">
+        <h3>Confirmar eliminación</h3>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro de eliminar este plan de tratamiento?</p>
+        <p class="confirm-detail">
+          <strong>{{ deleteConfirm.id }}</strong>
+        </p>
+        <div v-if="deleteError" class="modal-error">{{ deleteError }}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" @click="cancelDelete">Cancelar</button>
+        <button :disabled="deleting" class="btn-danger" @click="executeDelete">
+          {{ deleting ? 'Eliminando...' : 'Eliminar' }}
+        </button>
       </div>
     </div>
+  </div>
 </template>
 
 <style scoped>
@@ -533,7 +700,9 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Error ─────────────────────────────────────────────────────────────────── */
@@ -627,13 +796,31 @@ onMounted(() => {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
-  overflow: hidden;
   flex: 1;
   overflow-y: auto;
 }
 
+.table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  max-width: 100%;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
+}
+
 .reportes-table {
-  width: 100%;
   border-collapse: collapse;
 }
 
@@ -642,6 +829,7 @@ onMounted(() => {
   padding: 0.85rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  white-space: pre;
 }
 
 .reportes-table th {
@@ -676,28 +864,6 @@ onMounted(() => {
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
-}
-
-.estado-activo,
-.estado-implementado {
-  background: rgba(34, 197, 94, 0.15);
-  color: #86efac;
-}
-
-.estado-inactivo,
-.estado-pendiente {
-  background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
-}
-
-.estado-en-proceso {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fcd34d;
-}
-
-.estado-default {
-  background: rgba(148, 163, 184, 0.15);
-  color: #cbd5e1;
 }
 
 /* ── Button Styles ─────────────────────────────────────────────────────────── */
@@ -830,6 +996,9 @@ onMounted(() => {
   max-width: 500px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   animation: fadeIn 0.2s ease-out;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  max-height: 95vh;
 }
 
 .modal-wide {
@@ -841,15 +1010,22 @@ onMounted(() => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 1.5rem 0;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .modal-header h3 {
@@ -873,6 +1049,26 @@ onMounted(() => {
 
 .modal-body {
   padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-body::-webkit-scrollbar, .chip-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track, .chip-list::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb, .chip-list::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover, .chip-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
 }
 
 .modal-error {
@@ -885,7 +1081,8 @@ onMounted(() => {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
-  padding: 0 1.5rem 1.5rem;
+  padding: 1.5rem;
+  border-top: 1px solid var(--border);
 }
 
 .confirm-detail {
@@ -898,11 +1095,11 @@ onMounted(() => {
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  column-gap: 1rem;
 }
 
 .form-group {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .form-group label {
@@ -918,7 +1115,6 @@ onMounted(() => {
 }
 
 .form-group input,
-.form-group select,
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
@@ -932,7 +1128,6 @@ onMounted(() => {
 }
 
 .form-group input:focus,
-.form-group select:focus,
 .form-group textarea:focus {
   outline: none;
   border-color: var(--primary);

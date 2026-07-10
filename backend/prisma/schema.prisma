@@ -80,14 +80,13 @@ model Valoracion {
 }
 
 model Funcionario {
-  id                Int               @id @default(autoincrement())
-  areaId            Int?
-  nombre            String            @db.Text
-  area              Area?             @relation(fields: [areaId], references: [id])
-  correo            String?
-  planesTratamiento PlanTratamiento[]
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id        Int      @id @default(autoincrement())
+  areaId    Int?
+  nombre    String   @db.Text
+  area      Area?    @relation(fields: [areaId], references: [id])
+  correo    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Area {
@@ -244,12 +243,11 @@ model ConfiguracionRiesgo {
 }
 
 model ControlesImplementar {
-  id                Int                           @id @default(autoincrement())
-  seccion           String                        @unique
-  descripcion       String
-  categoriaId       Int
-  categoria         CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
-  planesTratamiento PlanTratamiento[]
+  id          Int                           @id @default(autoincrement())
+  seccion     String                        @unique
+  descripcion String
+  categoriaId Int
+  categoria   CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
 }
 
 model OpcionTratamiento {
@@ -277,29 +275,27 @@ model PlazoImplementacion {
 
 model PlanTratamiento {
   id                          Int       @id @default(autoincrement())
-  idRiesgo                    String    @db.Text
   tipoActivoId                Int
   nivelRiesgoId               Int
   opcionTratamientoId         Int
-  controlesImplementarId      Int?
+  controlesImplementarId      String    @db.Text // json array of controles
   descripcionActividades      String    @db.Text
-  responsableImplementacionId Int?
+  responsableImplementacionId String    @db.Text // json array de áreas responables
   areaFuncionalId             Int?
   plazoImplementacionId       Int?
   fechaInicioImplementacion   DateTime?
   fechaFinImplementacion      DateTime?
-  recursos                    String?   @db.Text
+  horaDia                     Int
+  montoUSD                    String
   estadoId                    Int
   observaciones               String?   @db.Text
 
-  tipoActivo           TipoActivo            @relation(fields: [tipoActivoId], references: [id], onDelete: Restrict)
-  nivelRiesgo          Riesgo                @relation(fields: [nivelRiesgoId], references: [id], onDelete: Restrict)
-  opcionTratamiento    OpcionTratamiento     @relation(fields: [opcionTratamientoId], references: [id], onDelete: Restrict)
-  controlesImplementar ControlesImplementar? @relation(fields: [controlesImplementarId], references: [id], onDelete: SetNull)
-  responsable          Funcionario?          @relation(fields: [responsableImplementacionId], references: [id], onDelete: SetNull)
-  area                 Area?                 @relation(fields: [areaFuncionalId], references: [id], onDelete: SetNull)
-  plazoImplementacion  PlazoImplementacion?  @relation(fields: [plazoImplementacionId], references: [id], onDelete: Restrict)
-  estado               EstadoPlanTratamiento @relation(fields: [estadoId], references: [id], onDelete: Restrict)
+  tipoActivo          TipoActivo            @relation(fields: [tipoActivoId], references: [id], onDelete: Restrict)
+  nivelRiesgo         Riesgo                @relation(fields: [nivelRiesgoId], references: [id], onDelete: Restrict)
+  opcionTratamiento   OpcionTratamiento     @relation(fields: [opcionTratamientoId], references: [id], onDelete: Restrict)
+  area                Area?                 @relation(fields: [areaFuncionalId], references: [id], onDelete: SetNull)
+  plazoImplementacion PlazoImplementacion?  @relation(fields: [plazoImplementacionId], references: [id], onDelete: Restrict)
+  estado              EstadoPlanTratamiento @relation(fields: [estadoId], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

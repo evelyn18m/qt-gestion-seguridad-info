@@ -11,8 +11,6 @@ const planInclude = {
   tipoActivo: true,
   nivelRiesgo: true,
   opcionTratamiento: true,
-  controlesImplementar: true,
-  responsable: true,
   area: true,
   plazoImplementacion: true,
   estado: true,
@@ -63,7 +61,6 @@ export class PlanTratamientoService {
 
   private toPrismaData(dto: Partial<CreatePlanTratamientoDto>) {
     const data: Record<string, unknown> = {};
-    if (dto.idRiesgo !== undefined) data['idRiesgo'] = dto.idRiesgo;
     if (dto.tipoActivoId !== undefined) data['tipoActivoId'] = dto.tipoActivoId;
     if (dto.nivelRiesgoId !== undefined)
       data['nivelRiesgoId'] = dto.nivelRiesgoId;
@@ -77,6 +74,8 @@ export class PlanTratamientoService {
       data['responsableImplementacionId'] = dto.responsableImplementacionId;
     if (dto.areaFuncionalId !== undefined)
       data['areaFuncionalId'] = dto.areaFuncionalId;
+    if (dto.horaDia !== undefined) data['horaDia'] = dto.horaDia;
+    if (dto.montoUSD !== undefined) data['montoUSD'] = dto.montoUSD;
 
     this.applyTimeframe(
       data,
@@ -85,7 +84,6 @@ export class PlanTratamientoService {
       dto.fechaFinImplementacion,
     );
 
-    if (dto.recursos !== undefined) data['recursos'] = dto.recursos;
     if (dto.estadoId !== undefined) data['estadoId'] = dto.estadoId;
     if (dto.observaciones !== undefined)
       data['observaciones'] = dto.observaciones;

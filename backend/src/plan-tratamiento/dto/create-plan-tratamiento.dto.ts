@@ -2,15 +2,12 @@ import {
   IsDateString,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
 
 export class CreatePlanTratamientoDto {
-  @IsString()
-  @IsNotEmpty()
-  idRiesgo: string;
-
   @IsInt()
   tipoActivoId: number;
 
@@ -20,37 +17,33 @@ export class CreatePlanTratamientoDto {
   @IsInt()
   opcionTratamientoId: number;
 
-  @IsOptional()
-  @IsInt()
-  controlesImplementarId?: number;
+  @IsString()
+  controlesImplementarId: string;
 
   @IsString()
   @IsNotEmpty()
   descripcionActividades: string;
 
-  @IsOptional()
-  @IsInt()
-  responsableImplementacionId?: number;
-
-  @IsOptional()
-  @IsInt()
-  areaFuncionalId?: number;
-
-  @IsOptional()
-  @IsInt()
-  plazoImplementacionId?: number;
-
-  @IsOptional()
-  @IsDateString()
-  fechaInicioImplementacion?: string;
-
-  @IsOptional()
-  @IsDateString()
-  fechaFinImplementacion?: string;
-
-  @IsOptional()
   @IsString()
-  recursos?: string;
+  responsableImplementacionId: string;
+
+  @IsInt()
+  areaFuncionalId: number;
+
+  @IsInt()
+  plazoImplementacionId: number;
+
+  @IsDateString()
+  fechaInicioImplementacion: string;
+
+  @IsDateString()
+  fechaFinImplementacion: string;
+
+  @IsNumber()
+  horaDia: number;
+
+  @IsString()
+  montoUSD: string;
 
   @IsInt()
   estadoId: number;

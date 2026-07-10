@@ -307,18 +307,19 @@ export interface PlazoImplementacion {
 
 export interface PlanTratamiento {
     id: number
-    idRiesgo: string
     tipoActivoId: number
     nivelRiesgoId: number
     opcionTratamientoId: number
-    controlesImplementarId?: number | null
+    controlesImplementarId: string
     descripcionActividades: string
-    responsableImplementacionId?: number | null
+    responsableImplementacionId: string
     areaFuncionalId?: number | null
     plazoImplementacionId?: number | null
     fechaInicioImplementacion?: string | null
     fechaFinImplementacion?: string | null
     recursos?: string | null
+    horaDia: string
+    montoUSD: string
     estadoId: number
     observaciones?: string | null
     createdAt?: string
