@@ -152,7 +152,6 @@ body {
 select {
     width: 100%;
     padding: 0.75rem;
-    background: rgba(15, 23, 42, 0.6);
     border: 1px solid var(--border);
     border-radius: 10px;
     color: white;
@@ -161,9 +160,7 @@ select {
     transition: all 0.3s ease;
     box-sizing: border-box;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
+    background: rgba(15, 23, 42, 0.6) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
     background-size: 1rem;
 }
 
@@ -176,4 +173,41 @@ select:focus {
 select option {
     background: #1e293b;
     color: white;
+}
+
+.chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.chip {
+    padding: 0.5rem 0.85rem;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.chip:hover {
+    border-color: var(--primary);
+    color: var(--text);
+}
+
+.chip.selected {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--primary);
+    color: white;
+}
+
+.chip-empty {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 1rem 0;
 }

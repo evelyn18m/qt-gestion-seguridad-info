@@ -1326,43 +1326,6 @@ const controlesImplementarGrupos = computed(() => {
   color: var(--primary);
 }
 
-.chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.chip {
-  padding: 0.5rem 0.85rem;
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.chip:hover {
-  border-color: var(--primary);
-  color: var(--text);
-}
-
-.chip.selected {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: var(--primary);
-  color: white;
-}
-
-.chip-empty {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  padding: 1rem 0;
-}
-
 .val-actions {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border);
