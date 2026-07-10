@@ -95,21 +95,6 @@ watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([ma
   analisisForm.value.nombreActivo = nombre
 }, {immediate: true})
 
-
-// Limpiar subprocess cuando cambia macroproceso
-watch(() => valForm.value.macroProceso, () => {
-  valForm.value.subProceso = ''
-})
-
-function getCatalogoLabel(tipo: string, catalogoId: number) {
-  if (tipo === 'amenaza') {
-    const a = valAmenazas.value.find((x: CatalogoItem) => x.id === catalogoId)
-    return a ? `${a.categoria} — ${a.nombre}` : `A#${catalogoId}`
-  }
-  const v = valVulnerabilidades.value.find((x: CatalogoItem) => x.id === catalogoId)
-  return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
-}
-
 function rebuildDetalles() {
   const existing = detallesRiesgo.value
   const nuevos: DetalleRiesgo[] = []
@@ -120,6 +105,7 @@ function rebuildDetalles() {
       nuevos.push(prev)
     } else {
       nuevos.push({
+        controlesImplementarId: [],
         tipo: 'amenaza',
         catalogoId,
         riesgoId: '',
@@ -132,7 +118,7 @@ function rebuildDetalles() {
         nivelRiesgoControl: '',
         amenazaIds: [String(catalogoId)],
         vulnerabilidadIds: [],
-        controlesImplementados: '',
+        controlesImplementados: ''
       })
     }
   })
@@ -144,6 +130,7 @@ function rebuildDetalles() {
     } else {
       nuevos.push({
         tipo: 'vulnerabilidad',
+        controlesImplementarId: [],
         catalogoId,
         riesgoId: '',
         evaluacionRiesgo: 0,
@@ -209,12 +196,6 @@ function calculateRowCiaAverage(v: ValoracionActivo) {
   const selected: number[] = [c, i, d].filter(val => val && val > 0).map(Number)
   if (selected.length === 0) return 0
   return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
-}
-
-function getCiaLevel(avg: number) {
-  if (avg >= 2.5) return 'Alto'
-  if (avg >= 1.5) return 'Medio'
-  return 'Bajo'
 }
 
 const valSaved = ref<ValoracionActivo[]>([])
@@ -324,7 +305,7 @@ async function submitValoracion() {
     // ── Phase 3: Fetch server-computed risk fields via calculate endpoint ──
     const {apiFetch} = useApi()
     for (let i = 0; i < detallesPayload.length; i++) {
-      const d = detallesPayload[i]
+      const d = detallesPayload[i] as unknown as DetalleRiesgo
       // Resolve per-row nivel values from valRiesgos catalog via d.riesgoId / d.vulnerabilidadRiesgoId
       const nivelAmenaza = (() => {
         if (!d.riesgoId) return 1
@@ -431,21 +412,21 @@ function editValoracion(item: ValoracionActivo) {
   valEditId.value = item.id
   valForm.value = {
     nombreActivo: item.nombreActivo,
-    tipoActivo: item.tipoActivoId,
-    formato: item.formatoId,
-    macroProceso: item.macroProcesoId,
-    subProceso: item.subProcesoId,
-    propietario: item.propietarioId,
-    custodio: item.custodioId,
+    tipoActivo: String(item.tipoActivoId),
+    formato: String(item.formatoId),
+    macroProceso: String(item.macroProcesoId),
+    subProceso: String(item.subProcesoId),
+    propietario: String(item.propietarioId),
+    custodio: String(item.custodioId),
     descripcion: item.descripcion,
     controlSeguridad: item.controlSeguridad,
     ubicacion: item.ubicacion,
     observaciones: item.observaciones || '',
     amenazas: [],
     vulnerabilidades: [],
-    confidencialidad: item.confidencialidadId,
-    integridad: item.integridadId,
-    disponibilidad: item.disponibilidadId,
+    confidencialidad: String(item.confidencialidadId),
+    integridad: String(item.integridadId),
+    disponibilidad: String(item.disponibilidadId),
     tieneDatosPersonales: item.tieneDatosPersonales || false,
   }
 
@@ -454,8 +435,8 @@ function editValoracion(item: ValoracionActivo) {
     analisisForm.value = {
       macroProceso: String(item.macroProcesoId || ''),
       nombreActivo: item.nombreActivo || '',
-      amenazas: safeJsonParse(item.amenazas),
-      vulnerabilidades: safeJsonParse(item.vulnerabilidades),
+      amenazas: safeJsonParse(item.amenazas as string),
+      vulnerabilidades: safeJsonParse(item.vulnerabilidades as string),
       controlesImplementacion: item.controlesImplementacion || '',
     }
     evaluacionForm.value = {
@@ -485,6 +466,7 @@ function editValoracion(item: ValoracionActivo) {
       vulnerabilidadIds: safeJsonParse((d.vulnerabilidadIds as unknown as string), []),
       controlesImplementados: d.controlesImplementados || '',
       controlesArea: d.controlesArea || '',
+      controlesImplementarId: safeJsonParse(d.controlesImplementarId as unknown as string, []),
     }))
   } else {
     detallesRiesgo.value = []
@@ -562,64 +544,6 @@ function safeJsonParse(str: string | null, fallback: any[] = []): any[] {
   } catch {
     return fallback
   }
-}
-
-function getTipoControlName(id: number | string) {
-  if (!id) return '—'
-  const found = valTiposControl.value.find((tc: CatalogoItem) => tc.id === Number(id))
-  return found ? found.nombre : `TC#${id}`
-}
-
-function getNivelStyle(nivel: string) {
-  const n = (nivel || '').toLowerCase()
-  if (n.includes('alto')) return {label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)'}
-  if (n.includes('medio')) return {label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)'}
-  return {label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)'}
-}
-
-function getMaxNivelIndex(nivel: string) {
-  const n = (nivel || '').toLowerCase()
-  if (n.includes('alto')) return 3
-  if (n.includes('medio')) return 2
-  return 1
-}
-
-function getNivelFromIndex(idx: number) {
-  if (idx >= 3) return 'Alto'
-  if (idx >= 2) return 'Medio'
-  return 'Bajo'
-}
-
-function resumenEvaluacionRiesgo(v: ValoracionActivo) {
-  const detalles = v.detallesRiesgo || []
-  if (detalles.length === 0) {
-    return {evaluacion: v.evaluacionRiesgo || 0, nivel: v.nivelRiesgo || ''}
-  }
-  const conEval = detalles.filter((d: Record<string, unknown>) => d.evaluacionRiesgo > 0)
-  const avg = conEval.length > 0
-      ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgo as number), 0) / conEval.length) * 100) / 100
-      : 0
-  const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgo as string)), 0)
-  return {evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : ''}
-}
-
-function resumenControl(v: ValoracionActivo) {
-  const detalles = v.detallesRiesgo || []
-  if (detalles.length === 0) {
-    return {
-      tipoControl: v.tipoControl?.nombre || (v.tipoControl ? getTipoControlName(v.tipoControl) : '—'),
-      evaluacion: v.evaluacionRiesgoControl || 0,
-      nivel: v.nivelRiesgoControl || '',
-    }
-  }
-  const conEval = detalles.filter((d: Record<string, unknown>) => d.evaluacionRiesgoControl > 0)
-  const avg = conEval.length > 0
-      ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgoControl as number), 0) / conEval.length) * 100) / 100
-      : 0
-  const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgoControl as string)), 0)
-  const tipos = new Set(detalles.filter((d: Record<string, unknown>) => d.tipoControlId).map((d: Record<string, unknown>) => getTipoControlName(d.tipoControlId as string)))
-  const tipoControl = tipos.size > 1 ? 'Múltiple' : (Array.from(tipos)[0] || '—')
-  return {tipoControl, evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : ''}
 }
 
 function handleLoginRedirect() {

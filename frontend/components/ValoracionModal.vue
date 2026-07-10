@@ -137,24 +137,9 @@ const macroProcesoName = computed(() => {
   return found ? found.nombre : `ID #${id}`
 })
 
-const detallesAmenazas = computed(() => props.detallesRiesgo.filter(d => d.tipo === 'amenaza'))
-const detallesVulnerabilidades = computed(() => props.detallesRiesgo.filter(d => d.tipo === 'vulnerabilidad'))
-
-// ── Tab 3 Preview ──────────────────────────────────────────────────────────
-const previewRiesgo = computed<PreviewRiesgo>(() => {
-  const amenazaNivel = getValorRiesgo(props.evaluacionForm.amenazaRiesgoId)
-  const vulnerabilidadNivel = getValorRiesgo(props.evaluacionForm.vulnerabilidadRiesgoId)
-  if (ciaAverage.value === 0 || !amenazaNivel || !vulnerabilidadNivel) {
-    return {evaluacionRiesgo: 0, nivelRiesgo: ''}
-  }
-  return localCalculateRiesgo(ciaAverage.value, amenazaNivel, vulnerabilidadNivel)
-})
-
 // ── Local State ──────────────────────────────────────────────────────────────
 const amenazaCategoria = ref('')
 const vulnerabilidadCategoria = ref('')
-const amenazaSeleccionada = ref('')
-const vulnerabilidadSeleccionada = ref('')
 const currentStep = ref(0)
 const TOTAL_STEPS = 4
 
@@ -173,15 +158,6 @@ const fieldErrors = reactive<Record<string, boolean>>({
   integridad: false,
   disponibilidad: false,
 })
-
-const REQUIRED_FIELDS_WITH_ASTERISK = new Set([
-  'formato',
-  'macroProceso',
-  'propietario',
-  'custodio',
-  'descripcion',
-  'ubicacion',
-])
 
 // ── Tab 2 Row State ─────────────────────────────────────────────────────────
 // Each row: { amenazaIds, vulnerabilidadIds, controlesImplementados, controlesArea, controlesImplementarId }
@@ -249,8 +225,12 @@ function toggleVulnerabilidadInRow(row: RiskRow, vulnerabilidadId: string) {
   syncRowsToDetalles()
 }
 
-function hasAtLeastOne(row: RiskRow): boolean {
-  return row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0
+function submitModal() {
+  if (canAdvanceFromStep4()) {
+    emit('submit');
+  } else {
+    alert('Complete el campo \'Tipo de Control\' en todas las filas antes de guardar.')
+  }
 }
 
 function getAmenazaLabel(id: string) {
@@ -420,8 +400,8 @@ function nextStep() {
   console.log(`[nextStep] Attempting from step ${currentStep.value}`)
   if (currentStep.value === 0) {
     if (!canAdvanceFromStep1()) {
-      const fields = Object.keys(fieldErrors)
-      const emptyFields = fields.filter((f) => !props.valForm[f])
+      const fields = Object.keys(fieldErrors) as (keyof ValFormData)[]
+      const emptyFields = fields.filter((f) => !(props.valForm[f]))
       console.warn('[nextStep] Step 0 blocked — empty fields:', emptyFields)
       fields.forEach((f) => { fieldErrors[f] = !props.valForm[f] })
       void nextTick().then(() => scrollToFirstError())
@@ -484,12 +464,6 @@ function getValorRiesgo(id: string | number) {
   return found ? (found.valor || 0) : 0
 }
 
-function getRiesgoNivel(id: string | number) {
-  if (!id) return ''
-  const found = props.catalogData.valRiesgos.find((r: CatalogoItem) => r.id === Number(id))
-  return found ? (found.nivel || '') : ''
-}
-
 function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilidadRiesgoId: string | number) {
   const impacto = ciaAverage.value
   const amenaza = getValorRiesgo(amenazaRiesgoId)
@@ -512,25 +486,6 @@ function getNivelStyle(nivel: string) {
   return {label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)'}
 }
 
-function getCatalogoLabel(tipo: string, catalogoId: number) {
-  if (tipo === 'amenaza') {
-    const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === catalogoId)
-    return a ? `${a.categoria} — ${a.nombre}` : `A#${catalogoId}`
-  }
-  const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === catalogoId)
-  return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
-}
-
-function getAmenazaLabelNum(id: number) {
-  const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === id)
-  return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
-}
-
-function getVulnerabilidadLabelNum(id: number) {
-  const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === id)
-  return v ? `${v.categoria}- — ${v.descripcion}` : `V#${id}`
-}
-
 // ── Pure risk calculation (mirrors backend calculo-riesgo.service.ts) ────────
 interface PreviewRiesgo {
   evaluacionRiesgo: number
@@ -541,6 +496,7 @@ function deriveNivelRiesgo(evaluacion: number): string {
   if (evaluacion <= 3) return 'BAJO'
   if (evaluacion <= 8) return 'MEDIO'
   if (evaluacion <= 27) return 'ALTO'
+  return '-'
 }
 
 function deriveMetodoTratamiento(evaluacion: number): string {
@@ -555,8 +511,8 @@ function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabili
 
 function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
   const va = ciaAverage.value
-  const nivelA = getValorRiesgo(d.riesgoId)
-  const nivelV = getValorRiesgo(d.vulnerabilidadRiesgoId)
+  const nivelA = getValorRiesgo(d.riesgoId as string)
+  const nivelV = getValorRiesgo(d.vulnerabilidadRiesgoId as number)
   if (va === 0 || !nivelA || !nivelV) {
     return {evaluacionRiesgo: 0, nivelRiesgo: ''}
   }
@@ -577,44 +533,6 @@ function getCiaLevel(avg: number) {
   return 'Bajo'
 }
 
-function getTipoControlName(id: number | string) {
-  if (!id) return '—'
-  const found = props.catalogData.valTiposControl.find((tc: CatalogoItem) => tc.id === Number(id))
-  return found ? found.nombre : `TC#${id}`
-}
-
-function agregarAmenaza() {
-  const id = Number(amenazaSeleccionada.value)
-  if (!id) return
-  if (!props.analisisForm.amenazas.includes(id)) {
-    props.analisisForm.amenazas.push(id)
-  }
-  amenazaSeleccionada.value = ''
-  emit('reset-form')
-}
-
-function quitarAmenaza(id: number) {
-  const idx = props.analisisForm.amenazas.indexOf(id)
-  if (idx >= 0) props.analisisForm.amenazas.splice(idx, 1)
-  emit('reset-form')
-}
-
-function agregarVulnerabilidad() {
-  const id = Number(vulnerabilidadSeleccionada.value)
-  if (!id) return
-  if (!props.analisisForm.vulnerabilidades.includes(id)) {
-    props.analisisForm.vulnerabilidades.push(id)
-  }
-  vulnerabilidadSeleccionada.value = ''
-  emit('reset-form')
-}
-
-function quitarVulnerabilidad(id: number) {
-  const idx = props.analisisForm.vulnerabilidades.indexOf(id)
-  if (idx >= 0) props.analisisForm.vulnerabilidades.splice(idx, 1)
-  emit('reset-form')
-}
-
 function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
   if (!_d) return
   const preview = getRowPreview(_d)
@@ -625,15 +543,10 @@ function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
     : ''
 }
 
-/** @deprecated Use updateControlDetalleRow instead — dead code, no template call-sites */
-function updateControlDetalle(_d: DetalleRiesgo) {
-  // no-op: removed global evaluacionForm.vulnerabilidadRiesgoId dependency
-}
-
 function updateControlDetalleRow(row: RiskRow) {
   const d = findMatchedDetalle(row)
   if (!d) return
-  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId, d.vulnerabilidadControlId)
+  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId as number, d.vulnerabilidadControlId as number)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
   d.riesgoResidual = (d.evaluacionRiesgoControl > 0 && d.evaluacionRiesgoControl <= 3) ? 'ACEPTABLE' : 'INACEPTABLE'
 }
@@ -650,7 +563,7 @@ const tabs = [
   {label: 'Tratamiento de Riesgo'},
 ]
 
-// ── Tab 4: Controles a Implementar grouped by category ───────────────────────
+// ── Tab 4: Controles an Implementar grouped by category ───────────────────────
 const controlesImplementarGrupos = computed(() => {
   const map = new Map<number, { categoriaId: number; categoriaNombre: string; items: ControlesImplementarItem[] }>()
   props.catalogData.valControlesImplementar.forEach(c => {
@@ -728,11 +641,16 @@ const controlesImplementarGrupos = computed(() => {
                   </select>
                   <span v-if="fieldErrors.macroProceso" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group" :class="{ 'has-error': fieldErrors.subProceso }">
+                <div class="form-group" v-if="subprocesosFiltrados" :class="{ 'has-error': fieldErrors.subProceso }">
                   <label>Sub Proceso</label>
                   <select v-model="valForm.subProceso" required @change="clearFieldError('subProceso')">
                     <option value="">Seleccionar...</option>
-                    <option v-for="s in subprocesosFiltrados" :key="s.id" :value="s.id">{{ s.nombre }}</option>
+                    <option
+                        v-for="s in subprocesosFiltrados"
+                        :key="s.id"
+                        :value="s.id"
+                        :selected="Number(valForm.subProceso) === s.id"
+                    >{{ s.nombre }} -- {{ valForm.subProceso }}</option>
                   </select>
                   <span v-if="fieldErrors.subProceso" class="field-error">Este campo es obligatorio</span>
                 </div>
@@ -1009,7 +927,7 @@ const controlesImplementarGrupos = computed(() => {
                       <select v-model="findMatchedDetalle(row)!.riesgoId"
                               style="min-width:130px;" @change="updateEvaluacionDetalle(findMatchedDetalle(row))">
                         <option value="">Seleccionar...</option>
-                        <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Amenaza')"
+                        <option v-for="r in catalogData.valRiesgos.filter(r => r.tipo === 'Amenaza')"
                                 :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})
                         </option>
                       </select>
@@ -1099,17 +1017,20 @@ const controlesImplementarGrupos = computed(() => {
                           :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
                   <tr v-if="row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0">
                     <td>
-                      <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected"
-                            style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
-                          getAmenazaLabel(aId)
-                        }}</span>
+                      <span
+                          v-for="aId in row.amenazaIds" :key="'a-' + aId"
+                          class="chip selected"
+                          style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;"
+                      >{{ getAmenazaLabel(aId) }}</span>
                       <span v-if="row.amenazaIds.length === 0" style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
-                      <span v-for="vId in row.vulnerabilidadIds" :key="'v-' + vId" class="chip selected"
-                            style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
-                          getVulnerabilidadLabel(vId)
-                        }}</span>
+                      <span
+                          v-for="vId in row.vulnerabilidadIds"
+                          :key="'v-' + vId"
+                          class="chip selected"
+                          style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;"
+                      >{{ getVulnerabilidadLabel(vId) }}</span>
                       <span v-if="row.vulnerabilidadIds.length === 0" style="color:var(--text-muted);">—</span>
                     </td>
                     <td style="text-align:center;">
@@ -1243,7 +1164,7 @@ const controlesImplementarGrupos = computed(() => {
         <button v-if="currentStep > 0" class="btn-secondary" type="button" @click="prevStep">Atrás</button>
         <button v-if="currentStep < TOTAL_STEPS - 1" class="btn-primary" type="button" @click="nextStep">Siguiente
         </button>
-        <button v-else :disabled="valSaving" class="btn-primary" type="button" @click="if (canAdvanceFromStep4()) emit('submit'); else alert('Complete el campo \'Tipo de Control\' en todas las filas antes de guardar.')">
+        <button v-else :disabled="valSaving" class="btn-primary" type="button" @click="submitModal">
           {{ valSaving ? 'Guardando...' : editId ? 'Actualizar' : 'Guardar' }}
         </button>
       </div>
@@ -1334,7 +1255,6 @@ const controlesImplementarGrupos = computed(() => {
 .row-select {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  background: rgba(15, 23, 42, 0.6);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: white;
@@ -1342,9 +1262,7 @@ const controlesImplementarGrupos = computed(() => {
   font-size: 0.8rem;
   box-sizing: border-box;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
+  background: rgba(15, 23, 42, 0.6) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat right 0.5rem center;
   background-size: 1rem;
   cursor: pointer;
 }
@@ -1405,16 +1323,6 @@ const controlesImplementarGrupos = computed(() => {
 .cia-average-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--primary);
-}
-
-.cia-average-level {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 0.25rem 0.6rem;
-  border-radius: 6px;
-  background: rgba(99, 102, 241, 0.15);
   color: var(--primary);
 }
 
