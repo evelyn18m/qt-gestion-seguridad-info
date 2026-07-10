@@ -494,8 +494,7 @@ function editValoracion(item: ValoracionActivo) {
 async function viewValoracion(item: ValoracionActivo) {
   try {
     const {apiFetch} = useApi()
-    const enriched = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
-    viewItem.value = enriched
+    viewItem.value = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
     showViewModal.value = true
   } catch (e) {
     if (e instanceof SessionExpiredError) {

@@ -94,6 +94,13 @@ const subprocesosFiltrados = computed(() => {
   return props.catalogData.valSubprocesos.filter((s: CatalogoItem) => s.macroProcesoId === Number(mpId))
 })
 
+const funcionariosFiltrados = computed(() => {
+  const propietario = props.valForm.propietario
+  if (!propietario) return []
+
+  return props.catalogData.valFuncionarios.filter((f: CatalogoItem) => f.areaId === Number(propietario))
+})
+
 const amenazaCategorias = computed(() => {
   const cats = new Set(props.catalogData.valAmenazas.map((a: CatalogoItem) => a.categoria))
   return Array.from(cats).sort()
@@ -720,7 +727,7 @@ const controlesImplementarGrupos = computed(() => {
                   <label>Custodio del Activo <span class="required-asterisk">*</span></label>
                   <select v-model="valForm.custodio" required @change="clearFieldError('custodio')">
                     <option value="">Seleccionar...</option>
-                    <option v-for="f in catalogData.valFuncionarios" :key="f.id" :value="f.id">{{ f.nombre }}</option>
+                    <option v-for="f in funcionariosFiltrados" :key="f.id" :value="f.id">{{ f.nombre }}</option>
                   </select>
                   <span v-if="fieldErrors.custodio" class="field-error">Este campo es obligatorio</span>
                 </div>
@@ -1298,35 +1305,6 @@ const controlesImplementarGrupos = computed(() => {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border);
   color: var(--primary);
-}
-
-.val-card select {
-  width: 100%;
-  padding: 0.75rem;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: white;
-  font-family: inherit;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1rem;
-}
-
-.val-card select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-}
-
-.val-card select option {
-  background: #1e293b;
-  color: white;
 }
 
 .row-select {
