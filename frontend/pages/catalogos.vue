@@ -48,7 +48,7 @@ const FIELD_MAP: Record<string, string[]> = {
   macroprocesos: ['nombre', 'codigo'],
   'tipos-activo': ['nombre', 'detalle'],
   valoraciones: ['nombre'],
-  funcionarios: ['nombre'],
+  funcionarios: ['nombre', 'correo', 'areaId'],
   areas: ['nombre'],
   'tipos-control': ['nombre'],
   riesgos: ['tipo', 'nivel', 'valor'],
@@ -65,6 +65,7 @@ const catalogoEditingItem = ref<CatalogoItem | null>(null)
 const catalogoSaving = ref(false)
 const catalogoConfirmDelete = ref<CatalogoItem | null>(null)
 const macroprocesos = ref<CatalogoItem[]>([])
+const areas = ref<CatalogoItem[]>([])
 const categoriasControlesImplementar = ref<CatalogoItem[]>([])
 
 function getFormFields() {
@@ -87,6 +88,10 @@ function openCreateForm() {
   if ((selectedCatalogo.value as any)?.tipo === 'subprocesos') {
     loadMacroprocesos()
   }
+  // Load macroprocesos for subprocess dropdown
+  if ((selectedCatalogo.value as any)?.tipo === 'funcionarios') {
+    loadAreas()
+  }
   // Load categorias for controles-implementar dropdown
   if ((selectedCatalogo.value as any)?.tipo === 'controles-implementar') {
     loadCategoriasControlesImplementar()
@@ -104,6 +109,10 @@ function openEditForm(item: CatalogoItem) {
   if ((selectedCatalogo.value as any)?.tipo === 'subprocesos') {
     loadMacroprocesos()
   }
+  // Load macroprocesos for subprocess dropdown
+  if ((selectedCatalogo.value as any)?.tipo === 'funcionarios') {
+    loadAreas()
+  }
   // Load categorias for controles-implementar dropdown
   if ((selectedCatalogo.value as any)?.tipo === 'controles-implementar') {
     loadCategoriasControlesImplementar()
@@ -111,12 +120,14 @@ function openEditForm(item: CatalogoItem) {
 }
 
 async function loadMacroprocesos() {
-  const {fetchCatalog} = useCatalog()
   macroprocesos.value = await fetchCatalog('macroprocesos')
 }
 
+async function loadAreas() {
+  areas.value = await fetchCatalog('areas')
+}
+
 async function loadCategoriasControlesImplementar() {
-  const {fetchCatalog} = useCatalog()
   categoriasControlesImplementar.value = await fetchCatalog('categorias-controles-implementar')
 }
 
@@ -270,7 +281,18 @@ function displayCellValue(col: string, item: CatalogoItem): string {
           <div v-for="field in getFormFields()" :key="field" class="form-group">
             <label :for="'f-' + field">{{ field }}</label>
             <select
-                v-if="field === 'macroProcesoId'"
+                v-if="field === 'areaId'"
+                :id="'f-' + field"
+                v-model="catalogoFormData[field]"
+                required
+            >
+              <option value="">Seleccionar área...</option>
+              <option v-for="area in areas" :key="area.id" :value="area.id">
+                {{ area.nombre }}
+              </option>
+            </select>
+            <select
+                v-else-if="field === 'macroProcesoId'"
                 :id="'f-' + field"
                 v-model="catalogoFormData[field]"
                 required

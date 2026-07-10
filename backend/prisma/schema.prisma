@@ -64,12 +64,12 @@ model MacroProceso {
 }
 
 model TipoActivo {
-  id              Int               @id @default(autoincrement())
-  nombre          String
-  detalle         String            @db.Text
+  id                Int               @id @default(autoincrement())
+  nombre            String
+  detalle           String            @db.Text
   planesTratamiento PlanTratamiento[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model Valoracion {
@@ -81,7 +81,10 @@ model Valoracion {
 
 model Funcionario {
   id                Int               @id @default(autoincrement())
+  areaId            Int?
   nombre            String            @db.Text
+  area              Area?             @relation(fields: [areaId], references: [id])
+  correo            String?
   planesTratamiento PlanTratamiento[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -93,6 +96,7 @@ model Area {
   planesTratamiento PlanTratamiento[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+  funcionarios      Funcionario[]
 }
 
 model ValoracionActivo {
@@ -144,23 +148,23 @@ model ValoracionActivo {
 
 model AuditLog {
   id          Int      @id @default(autoincrement())
-  accion      String   // login, CREAR, ACTUALIZAR, EXPORTAR, REQUEST, page-visit
-  modulo      String   // auth, valoraciones, reportes, api, frontend
-  entidad     String?  // pagina, activo, reporte
-  usuarioId   String?  // Keycloak sub (userId)
-  usuario     String?  // preferred_username
+  accion      String // login, CREAR, ACTUALIZAR, EXPORTAR, REQUEST, page-visit
+  modulo      String // auth, valoraciones, reportes, api, frontend
+  entidad     String? // pagina, activo, reporte
+  usuarioId   String? // Keycloak sub (userId)
+  usuario     String? // preferred_username
   detalle     String?  @db.Text // JSON string of details (diff, filters, etc.)
-  ip          String?  // client IP
-  dispositivo String?  // user-agent header
-  path        String?  // HTTP path or page path
-  metodo      String?  // HTTP method (GET, POST, PATCH, DELETE)
-  status      Int?     // HTTP status code
-  duracionMs  Int?     // request duration in ms
+  ip          String? // client IP
+  dispositivo String? // user-agent header
+  path        String? // HTTP path or page path
+  metodo      String? // HTTP method (GET, POST, PATCH, DELETE)
+  status      Int? // HTTP status code
+  duracionMs  Int? // request duration in ms
   createdAt   DateTime @default(now())
 }
 
 model DetalleRiesgo {
-  id                      Int      @id @default(autoincrement())
+  id                      Int                   @id @default(autoincrement())
   valoracionActivoId      Int
   tipo                    String // "amenaza" | "vulnerabilidad"
   catalogoId              Int // id de Amenaza o Vulnerabilidad
@@ -168,7 +172,7 @@ model DetalleRiesgo {
   vulnerabilidadRiesgoId  Int? // id del catálogo Riesgo para vulnerabilidad (per-row)
   evaluacionRiesgo        Float?
   nivelRiesgo             String?
-  metodoTratamiento       String?  @db.Text
+  metodoTratamiento       String?               @db.Text
   tipoControlId           Int
   riesgoControlId         Int? // id del catálogo Riesgo para control
   vulnerabilidadControlId Int? // id del catálogo Riesgo para vulnerabilidad en control
@@ -176,15 +180,15 @@ model DetalleRiesgo {
   nivelRiesgoControl      String?
   riesgoResidual          String?
   // Tab 2 new fields (row-based per-row model)
-  amenazaIds              String?  @db.Text // JSON array, e.g. "[3,7]"
-  vulnerabilidadIds       String?  @db.Text // JSON array, e.g. "[5]"
-  controlesImplementados  String?  @db.Text // per-row controls (Tab 2 free-text — keep for backward compat)
-  controlesArea           String?  @db.Text // per-row controls area (Tab 3 only)
+  amenazaIds              String?               @db.Text // JSON array, e.g. "[3,7]"
+  vulnerabilidadIds       String?               @db.Text // JSON array, e.g. "[5]"
+  controlesImplementados  String?               @db.Text // per-row controls (Tab 2 free-text — keep for backward compat)
+  controlesArea           String?               @db.Text // per-row controls area (Tab 3 only)
   // Tab 4 FK: selected catalog control to implement
   controlesImplementarId  Int?
   controlesImplementar    ControlesImplementar? @relation(fields: [controlesImplementarId], references: [id])
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
 }
 
 model TipoControl {
@@ -219,34 +223,34 @@ model CategoriaControlesImplementar {
 }
 
 model ConfiguracionRiesgo {
-  id                   Int      @id @default(autoincrement())
-  riesgoBajoMax        Int      @default(3)
-  riesgoBajoDesde      Int      @default(1)
-  riesgoMedioMax       Int      @default(9)
-  riesgoMedioDesde     Int      @default(3)
-  riesgoAltoMax        Int      @default(27)
-  riesgoAltoDesde      Int      @default(9)
-  controlBajoMax       Int      @default(3)
-  controlBajoDesde     Int      @default(1)
-  controlMedioMax      Int      @default(9)
-  controlMedioDesde    Int      @default(3)
-  controlAltoMax       Int      @default(27)
-  controlAltoDesde     Int      @default(9)
-  residualAceptableMax Int      @default(3)
-  residualAceptableDesde   Int @default(1)
-  residualInaceptableDesde Int @default(3)
-  residualInaceptableMax   Int @default(27)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                       Int      @id @default(autoincrement())
+  riesgoBajoMax            Int      @default(3)
+  riesgoBajoDesde          Int      @default(1)
+  riesgoMedioMax           Int      @default(9)
+  riesgoMedioDesde         Int      @default(3)
+  riesgoAltoMax            Int      @default(27)
+  riesgoAltoDesde          Int      @default(9)
+  controlBajoMax           Int      @default(3)
+  controlBajoDesde         Int      @default(1)
+  controlMedioMax          Int      @default(9)
+  controlMedioDesde        Int      @default(3)
+  controlAltoMax           Int      @default(27)
+  controlAltoDesde         Int      @default(9)
+  residualAceptableMax     Int      @default(3)
+  residualAceptableDesde   Int      @default(1)
+  residualInaceptableDesde Int      @default(3)
+  residualInaceptableMax   Int      @default(27)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 }
 
 model ControlesImplementar {
-  id             Int                           @id @default(autoincrement())
-  seccion        String                        @unique
-  descripcion    String
-  categoriaId    Int
-  categoria      CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
-  detallesRiesgo DetalleRiesgo[]
+  id                Int                           @id @default(autoincrement())
+  seccion           String                        @unique
+  descripcion       String
+  categoriaId       Int
+  categoria         CategoriaControlesImplementar @relation(fields: [categoriaId], references: [id])
+  detallesRiesgo    DetalleRiesgo[]
   planesTratamiento PlanTratamiento[]
 }
 
@@ -267,37 +271,37 @@ model EstadoPlanTratamiento {
 }
 
 model PlazoImplementacion {
-  id     Int     @id @default(autoincrement())
-  codigo String  @unique
-  nombre String  @db.Text
+  id     Int               @id @default(autoincrement())
+  codigo String            @unique
+  nombre String            @db.Text
   planes PlanTratamiento[]
 }
 
 model PlanTratamiento {
-  id                         Int      @id @default(autoincrement())
-  idRiesgo                   String   @db.Text
-  tipoActivoId               Int
-  nivelRiesgoId              Int
-  opcionTratamientoId        Int
-  controlesImplementarId     Int?
-  descripcionActividades     String   @db.Text
+  id                          Int       @id @default(autoincrement())
+  idRiesgo                    String    @db.Text
+  tipoActivoId                Int
+  nivelRiesgoId               Int
+  opcionTratamientoId         Int
+  controlesImplementarId      Int?
+  descripcionActividades      String    @db.Text
   responsableImplementacionId Int?
-  areaFuncionalId            Int?
-  plazoImplementacionId      Int?
-  fechaInicioImplementacion  DateTime?
-  fechaFinImplementacion     DateTime?
-  recursos                   String?  @db.Text
-  estadoId                   Int
-  observaciones              String?  @db.Text
+  areaFuncionalId             Int?
+  plazoImplementacionId       Int?
+  fechaInicioImplementacion   DateTime?
+  fechaFinImplementacion      DateTime?
+  recursos                    String?   @db.Text
+  estadoId                    Int
+  observaciones               String?   @db.Text
 
-  tipoActivo            TipoActivo            @relation(fields: [tipoActivoId], references: [id], onDelete: Restrict)
-  nivelRiesgo           Riesgo                @relation(fields: [nivelRiesgoId], references: [id], onDelete: Restrict)
-  opcionTratamiento     OpcionTratamiento     @relation(fields: [opcionTratamientoId], references: [id], onDelete: Restrict)
-  controlesImplementar  ControlesImplementar? @relation(fields: [controlesImplementarId], references: [id], onDelete: SetNull)
-  responsable           Funcionario?          @relation(fields: [responsableImplementacionId], references: [id], onDelete: SetNull)
-  area                  Area?                 @relation(fields: [areaFuncionalId], references: [id], onDelete: SetNull)
-  plazoImplementacion   PlazoImplementacion?  @relation(fields: [plazoImplementacionId], references: [id], onDelete: Restrict)
-  estado                EstadoPlanTratamiento @relation(fields: [estadoId], references: [id], onDelete: Restrict)
+  tipoActivo           TipoActivo            @relation(fields: [tipoActivoId], references: [id], onDelete: Restrict)
+  nivelRiesgo          Riesgo                @relation(fields: [nivelRiesgoId], references: [id], onDelete: Restrict)
+  opcionTratamiento    OpcionTratamiento     @relation(fields: [opcionTratamientoId], references: [id], onDelete: Restrict)
+  controlesImplementar ControlesImplementar? @relation(fields: [controlesImplementarId], references: [id], onDelete: SetNull)
+  responsable          Funcionario?          @relation(fields: [responsableImplementacionId], references: [id], onDelete: SetNull)
+  area                 Area?                 @relation(fields: [areaFuncionalId], references: [id], onDelete: SetNull)
+  plazoImplementacion  PlazoImplementacion?  @relation(fields: [plazoImplementacionId], references: [id], onDelete: Restrict)
+  estado               EstadoPlanTratamiento @relation(fields: [estadoId], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

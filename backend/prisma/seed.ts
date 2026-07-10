@@ -253,23 +253,37 @@ async function main() {
 
   // --- Funcionarios & Areas (from Excel) ---
   console.log('Seeding Funcionarios & Areas from Excel...');
-  const wb = XLSX.readFile(process.argv[2] || './documentos/funcionarios.xlsx');
-  const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets['Hoja1']);
+  const wb = XLSX.readFile(process.argv[2] || './documentos/Empleado.xlsx');
+  const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets['Sheet1'], {
+    raw: false,
+    header: ['nombre', 'correo', 'area'],
+    defval: '',
+  });
 
   const seenFunc = new Set();
   const seenArea = new Set();
 
   for (const row of rows) {
-    const func = (row['__EMPTY_1'] || '').trim();
-    const area = (row['__EMPTY_2'] || '').trim();
+    const func = row.nombre?.trim();
+    const area = row.area?.trim();
+    let areaDB;
 
-    if (func && func !== 'FUNCIONARIO' && !seenFunc.has(func)) {
-      await prisma.funcionario.create({ data: { nombre: func } });
-      seenFunc.add(func);
-    }
-    if (area && area !== 'ÁREA' && !seenArea.has(area)) {
-      await prisma.area.create({ data: { nombre: area } });
+    if (area && area !== 'Direccion' && !seenArea.has(area)) {
+      areaDB = await prisma.area.create({ data: { nombre: area } });
       seenArea.add(area);
+    } else {
+      areaDB = await prisma.area.findFirst({ where: { nombre: area } });
+    }
+
+    if (func && func !== 'Nombre del empleado' && !seenFunc.has(func)) {
+      await prisma.funcionario.create({
+        data: {
+          nombre: func,
+          correo: row.correo?.trim() || null,
+          areaId: areaDB?.id || null,
+        },
+      });
+      seenFunc.add(func);
     }
   }
 

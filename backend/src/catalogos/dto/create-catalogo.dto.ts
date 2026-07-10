@@ -52,4 +52,12 @@ export class CreateCatalogoDto {
   @IsOptional()
   @IsNumber()
   categoriaId?: number;
+
+  @IsOptional()
+  @IsString()
+  correo?: string;
+
+  @IsOptional()
+  @IsNumber()
+  areaId?: number;
 }

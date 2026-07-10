@@ -38,7 +38,7 @@ const FIELD_MAP: Record<string, readonly string[]> = {
   macroProceso: ['nombre', 'codigo'],
   tipoActivo: ['nombre', 'detalle'],
   valoracion: ['nombre'],
-  funcionario: ['nombre'],
+  funcionario: ['nombre', 'correo', 'areaId'],
   area: ['nombre'],
   tipoControl: ['nombre'],
   riesgo: ['tipo', 'nivel', 'valor'],

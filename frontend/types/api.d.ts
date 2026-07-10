@@ -230,6 +230,7 @@ export interface LoginResponse {
     id: string;
     username: string;
     email: string;
+    primerInicio?: boolean;
     roles: string[];
   };
 }
