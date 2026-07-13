@@ -769,7 +769,6 @@ const controlesImplementarGrupos = computed(() => {
                 <tr>
                   <th style="min-width:220px;">Amenazas</th>
                   <th style="min-width:220px;">Vulnerabilidades</th>
-                  <th>Controles Implementados</th>
                   <th style="width:48px;"></th>
                 </tr>
                 </thead>
@@ -849,17 +848,6 @@ const controlesImplementarGrupos = computed(() => {
                         </span>
                     </div>
                   </td>
-
-                  <!-- Controles Implementados cell -->
-                  <td>
-                      <textarea
-                          v-model="row.controlesImplementados"
-                          placeholder="Controles implementados para esta combinación..."
-                          rows="3"
-                          style="resize:vertical; min-width:180px;"
-                      ></textarea>
-                  </td>
-
                   <!-- Remove row -->
                   <td>
                     <button style="background:transparent; border:none; color:#dc2626; cursor:pointer; font-size:1.2rem; padding:0.25rem; line-height:1;" title="Eliminar fila"
