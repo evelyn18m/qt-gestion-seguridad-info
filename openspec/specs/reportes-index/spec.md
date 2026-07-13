@@ -1,8 +1,8 @@
 # Reportes Index — Specification
 
-> **Change**: arch-sync/heatmap-iso27005
+> **Change**: arch-sync/heatmap-iso27005; reportes-plan-tratamiento
 > **Domain**: reportes-index
-> **Last updated**: 2026-06-15
+> **Last updated**: 2026-07-13
 
 ## Purpose
 
@@ -29,6 +29,15 @@ The system MUST expose `GET /reportes` returning `IndiceReporteDto` with an `end
 | `GET /reportes/tratamiento-riesgo` | Reporte de tratamiento de riesgo con 13 columnas y filtros |
 | `GET /reportes/tratamiento-riesgo/export` | Exportación Excel del reporte de tratamiento de riesgo |
 | `GET /reportes/heatmap` | Mapa de calor 3x3 de riesgos (Probabilidad × Impacto) |
+| `GET /reportes/plan-tratamiento` | Reporte de plan de tratamiento con filtros |
+| `GET /reportes/plan-tratamiento/export` | Exportación Excel del reporte de plan de tratamiento |
+
+#### Scenario: Index includes plan-tratamiento routes
+
+- GIVEN the backend is running
+- WHEN `GET /reportes` is called
+- THEN the `endpoints` array includes `{ ruta: "GET /reportes/plan-tratamiento", descripcion: "Reporte de plan de tratamiento con filtros" }`
+- AND includes `{ ruta: "GET /reportes/plan-tratamiento/export", descripcion: "Exportación Excel del reporte de plan de tratamiento" }`
 
 #### Scenario: Index includes new heatmap route
 

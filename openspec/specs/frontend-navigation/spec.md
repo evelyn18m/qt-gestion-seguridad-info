@@ -1,4 +1,7 @@
-# Spec: corregir-navegacion-de-frontend
+# Spec: corregir-navegacion-de-frontend; reportes-plan-tratamiento
+
+> **Domain**: frontend-navigation
+> **Last updated**: 2026-07-13
 
 ## 1. Overview
 
@@ -87,23 +90,25 @@ The application MUST NOT reference components that are not registered or importe
 > **Added by change**: `reporte-evaluacion-riesgo` (2026-06-12)
 > **Modified by change**: `reporte-tratamiento-riesgo` (2026-06-12)
 > **Modified by change**: `heatmap-frontend` (2026-06-15)
+> **Modified by change**: `reportes-plan-tratamiento` (2026-07-13)
 > (Previously: Component had four tabs: Valoración → Análisis → Evaluación → Tratamiento)
 
-The `ReportesTabs.vue` component MUST include five tabs. The tab order SHALL be: Valoración de Activos → Análisis de Riesgo → Evaluación de Riesgo → Tratamiento de Riesgo → Mapa de Calor.
+The `ReportesTabs.vue` component MUST include six tabs. The tab order SHALL be: Valoración de Activos → Análisis de Riesgo → Evaluación de Riesgo → Tratamiento de Riesgo → Plan de Tratamiento → Mapa de Calor.
 
-#### Scenario: Five tab links render
+#### Scenario: Six tab links render
 
 - GIVEN the user is on any `/reportes/*` page
 - WHEN `ReportesTabs.vue` renders
-- THEN five `<NuxtLink>` elements are present
-- AND the fifth link has `to="/reportes/mapa-calor"` with text "Mapa de Calor"
+- THEN six `<NuxtLink>` elements are present
+- AND the fifth link has `to="/reportes/plan-tratamiento"` with text "Plan de Tratamiento"
+- AND the sixth link has `to="/reportes/mapa-calor"` with text "Mapa de Calor"
 
 #### Scenario: Active tab highlights correctly
 
 - GIVEN the user is on `/reportes/evaluacion-riesgo`
 - WHEN `ReportesTabs` renders
 - THEN only the "Evaluación de Riesgo" tab has the `active` class
-- AND the other four tabs do NOT have the `active` class
+- AND the other five tabs do NOT have the `active` class
 
 #### Scenario: Fourth tab active highlights correctly
 
@@ -112,6 +117,12 @@ The `ReportesTabs.vue` component MUST include five tabs. The tab order SHALL be:
 - THEN only the "Tratamiento de Riesgo" tab has the `active` class
 
 #### Scenario: Fifth tab active highlights correctly
+
+- GIVEN the user is on `/reportes/plan-tratamiento`
+- WHEN `ReportesTabs` renders
+- THEN only the "Plan de Tratamiento" tab has the `active` class
+
+#### Scenario: Sixth tab active highlights correctly
 
 - GIVEN the user is on `/reportes/mapa-calor`
 - WHEN `ReportesTabs` renders
