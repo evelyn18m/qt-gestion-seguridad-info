@@ -548,12 +548,12 @@ function updateControlDetalleRow(row: RiskRow) {
   if (!d) return
   d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId as number, d.vulnerabilidadControlId as number)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
-  d.riesgoResidual = (d.evaluacionRiesgoControl > 0 && d.evaluacionRiesgoControl <= 3) ? 'ACEPTABLE' : 'INACEPTABLE'
+  d.riesgoResidual = (d.evaluacionRiesgoControl > 0 && d.evaluacionRiesgoControl < 3) ? 'ACEPTABLE' : 'INACEPTABLE'
 }
 
 function calcularRiesgoResidual(evaluacion: number | undefined | null): 'ACEPTABLE' | 'INACEPTABLE' | null {
   if (evaluacion === undefined || evaluacion === null || evaluacion <= 0) return null
-  return evaluacion <= 3 ? 'ACEPTABLE' : 'INACEPTABLE'
+  return evaluacion < 3 ? 'ACEPTABLE' : 'INACEPTABLE'
 }
 
 const tabs = [
