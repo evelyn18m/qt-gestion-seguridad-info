@@ -860,6 +860,7 @@ export class ReportesService {
         vulnerabilidades,
         macroProcesos,
         tipoControles,
+        controlesImplementar,
       ] = await Promise.all([
         this.prisma.valoracionActivo.findMany({
           where: vaIds ? { id: { in: vaIds } } : {},
@@ -869,6 +870,7 @@ export class ReportesService {
         this.prisma.vulnerabilidad.findMany(),
         this.prisma.macroProceso.findMany(),
         this.prisma.tipoControl.findMany(),
+        this.prisma.controlesImplementar.findMany(),
       ]);
 
       const vaMap = new Map(valoracionActivos.map((va) => [va.id, va]));
@@ -881,6 +883,9 @@ export class ReportesService {
       const tipoControlMap = new Map(
         tipoControles.map((t) => [t.id, t.nombre]),
       );
+      const controlesImplementarMap = new Map(
+        controlesImplementar.map((c) => [c.id, c.descripcion]),
+      );
 
       // Stage 4: enrich + filter in-memory
       const enriched = detalles
@@ -890,6 +895,7 @@ export class ReportesService {
 
           const amenazaIds = this.safeParseJsonArray(dr.amenazaIds);
           const vulnIds = this.safeParseJsonArray(dr.vulnerabilidadIds);
+          const controlIds = this.safeParseJsonArray(dr.controlesImplementarId);
 
           return {
             id: dr.id,
@@ -916,7 +922,10 @@ export class ReportesService {
                 ? (tipoControlMap.get(dr.tipoControlId) ?? null)
                 : null,
             riesgoResidual: dr.riesgoResidual ?? null,
-            // controlesImplementar: dr.controlesImplementar?.descripcion ?? null,
+            controlesImplementar: controlIds
+              .map((id) => controlesImplementarMap.get(Number(id)))
+              .filter(Boolean)
+              .join(', '),
             // Internal fields for filtering
             _amenazaIds: amenazaIds,
             _vulnIds: vulnIds,

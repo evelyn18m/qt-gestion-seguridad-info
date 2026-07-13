@@ -66,12 +66,11 @@ export class PlanTratamientoService {
       data['nivelRiesgoId'] = dto.nivelRiesgoId;
     if (dto.opcionTratamientoId !== undefined)
       data['opcionTratamientoId'] = dto.opcionTratamientoId;
-    if (dto.controlesImplementarId !== undefined)
-      data['controlesImplementarId'] = dto.controlesImplementarId;
+    data['controlesImplementarId'] = dto.controlesImplementarId ?? '[]';
     if (dto.descripcionActividades !== undefined)
       data['descripcionActividades'] = dto.descripcionActividades;
-    if (dto.responsableImplementacionId !== undefined)
-      data['responsableImplementacionId'] = dto.responsableImplementacionId;
+    data['responsableImplementacionId'] =
+      dto.responsableImplementacionId ?? '[]';
     if (dto.areaFuncionalId !== undefined)
       data['areaFuncionalId'] = dto.areaFuncionalId;
     if (dto.horaDia !== undefined) data['horaDia'] = dto.horaDia;

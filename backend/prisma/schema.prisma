@@ -285,8 +285,8 @@ model PlanTratamiento {
   plazoImplementacionId       Int?
   fechaInicioImplementacion   DateTime?
   fechaFinImplementacion      DateTime?
-  horaDia                     Int
-  montoUSD                    String
+  horaDia                     Int?
+  montoUSD                    String?
   estadoId                    Int
   observaciones               String?   @db.Text
 

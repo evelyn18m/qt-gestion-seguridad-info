@@ -1715,19 +1715,21 @@ describe('ReportesService', () => {
             vulnerabilidadRiesgoId: 2,
             amenazaIds: '[1]',
             vulnerabilidadIds: '[2]',
+            controlesImplementarId: '[5]',
             metodoTratamiento: 'MITIGAR',
             evaluacionRiesgoControl: 3.0,
             nivelRiesgoControl: 'Bajo',
             tipoControlId: 1,
             riesgoResidual: 'ACEPTABLE',
           }),
-          controlesImplementar: {
-            id: 5,
-            seccion: 'A.1',
-            descripcion: 'Control de acceso',
-            categoriaId: 1,
-            categoria: { id: 1, nombre: 'Técnicos' },
-          },
+        },
+      ]);
+      prisma.controlesImplementar.findMany.mockResolvedValue([
+        {
+          id: 5,
+          seccion: 'A.1',
+          descripcion: 'Control de acceso',
+          categoriaId: 1,
         },
       ]);
       prisma.riesgo.findMany.mockResolvedValue([

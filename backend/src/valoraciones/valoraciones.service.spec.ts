@@ -1103,9 +1103,9 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
     service = module.get<ValoracionesService>(ValoracionesService);
   });
 
-  it('RED→GREEN: should pass include.controlesImplementar to detalleRiesgo.findMany', async () => {
-    // enrich() doesn't have the include yet → RED
-    // After Task 3.3 implementation → GREEN
+  it('should fetch detalleRiesgo without non-existent controlesImplementar relation', async () => {
+    // Schema stores controlesImplementarId as a JSON string; there is no
+    // Prisma relation to include on DetalleRiesgo.
     const item = {
       id: 1,
       nombreActivo: 'Test',
@@ -1149,15 +1149,10 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
 
     await service.findOne(1);
 
-    expect(mockPrisma.detalleRiesgo.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        include: expect.objectContaining({
-          controlesImplementar: expect.objectContaining({
-            include: { categoria: true },
-          }),
-        }),
-      }),
-    );
+    expect(mockPrisma.detalleRiesgo.findMany).toHaveBeenCalledWith({
+      where: { valoracionActivoId: 1 },
+      orderBy: { id: 'asc' },
+    });
   });
 
   it('TRIANGULATE: response should include controlesImplementar field when set', async () => {
