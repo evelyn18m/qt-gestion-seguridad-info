@@ -100,6 +100,12 @@ describe('ReportesService', () => {
     riesgo: { findMany: jest.Mock };
     tipoControl: { findMany: jest.Mock };
     probabilidad: { findMany: jest.Mock };
+    planTratamiento: { findMany: jest.Mock };
+    opcionTratamiento: { findMany: jest.Mock };
+    estadoPlanTratamiento: { findMany: jest.Mock };
+    plazoImplementacion: { findMany: jest.Mock };
+    area: { findMany: jest.Mock };
+    controlesImplementar: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -122,6 +128,12 @@ describe('ReportesService', () => {
       riesgo: { findMany: jest.fn().mockResolvedValue([]) },
       tipoControl: { findMany: jest.fn().mockResolvedValue([]) },
       probabilidad: { findMany: jest.fn().mockResolvedValue([]) },
+      planTratamiento: { findMany: jest.fn().mockResolvedValue([]) },
+      opcionTratamiento: { findMany: jest.fn().mockResolvedValue([]) },
+      estadoPlanTratamiento: { findMany: jest.fn().mockResolvedValue([]) },
+      plazoImplementacion: { findMany: jest.fn().mockResolvedValue([]) },
+      area: { findMany: jest.fn().mockResolvedValue([]) },
+      controlesImplementar: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -645,6 +657,27 @@ describe('ReportesService', () => {
     valor: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
+  });
+
+  const makePlanTratamiento = (overrides: Record<string, unknown> = {}) => ({
+    id: 1,
+    tipoActivoId: 1,
+    nivelRiesgoId: 1,
+    opcionTratamientoId: 1,
+    controlesImplementarId: '[1]',
+    descripcionActividades: 'Migrar servidores',
+    responsableImplementacionId: '[1]',
+    areaFuncionalId: 1,
+    plazoImplementacionId: 1,
+    fechaInicioImplementacion: new Date('2026-01-01T00:00:00.000Z'),
+    fechaFinImplementacion: new Date('2026-06-01T00:00:00.000Z'),
+    horaDia: 8,
+    montoUSD: '5000.00',
+    estadoId: 1,
+    observaciones: 'Observación de prueba',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
   });
 
   describe('getEvaluacionRiesgo', () => {
@@ -2145,6 +2178,207 @@ describe('ReportesService', () => {
       expect(result[0].nivelRiesgoControl).toBe('ALTO');
       expect(result[0].riesgoResidual).toBe('ACEPTABLE');
       expect(result[0].tipoControl).toBe('Preventivo');
+    });
+  });
+
+  describe('getPlanTratamiento', () => {
+    it('debe retornar todos los planes enriquecidos por defecto', async () => {
+      prisma.planTratamiento.findMany.mockResolvedValue([
+        makePlanTratamiento({ id: 1, descripcionActividades: 'Actividad A' }),
+        makePlanTratamiento({
+          id: 2,
+          descripcionActividades: 'Actividad B',
+          tipoActivoId: 2,
+          opcionTratamientoId: 2,
+          estadoId: 2,
+          areaFuncionalId: null,
+          plazoImplementacionId: null,
+        }),
+      ]);
+      prisma.tipoActivo.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Hardware' },
+        { id: 2, nombre: 'Software' },
+      ]);
+      prisma.opcionTratamiento.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Mitigar' },
+        { id: 2, nombre: 'Transferir' },
+      ]);
+      prisma.controlesImplementar.findMany.mockResolvedValue([
+        { id: 1, seccion: 'A.1', descripcion: 'Control acceso' },
+      ]);
+      prisma.area.findMany.mockResolvedValue([{ id: 1, nombre: 'TI' }]);
+      prisma.plazoImplementacion.findMany.mockResolvedValue([
+        { id: 1, codigo: 'P1', nombre: 'Corto' },
+      ]);
+      prisma.estadoPlanTratamiento.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Pendiente' },
+        { id: 2, nombre: 'Completado' },
+      ]);
+
+      const result = await service.getPlanTratamiento({});
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe(1);
+      expect(result[0].tipoActivo).toBe('Hardware');
+      expect(result[0].opcionTratamiento).toBe('Mitigar');
+      expect(result[0].controlesImplementar).toBe('A.1 - Control acceso');
+      expect(result[0].responsablesImplementacion).toBe('TI');
+      expect(result[0].areaFuncional).toBe('TI');
+      expect(result[0].plazoImplementacion).toBe('Corto');
+      expect(result[0].estado).toBe('Pendiente');
+      expect(result[0].horaDia).toBe(8);
+      expect(result[0].montoUSD).toBe('5000.00');
+      expect(result[0].observaciones).toBe('Observación de prueba');
+    });
+
+    it('debe aplicar filtros combinados en la query de Prisma', async () => {
+      prisma.planTratamiento.findMany.mockResolvedValue([
+        makePlanTratamiento({
+          id: 1,
+          tipoActivoId: 1,
+          estadoId: 2,
+          descripcionActividades: 'migración de servidores',
+        }),
+      ]);
+      prisma.tipoActivo.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Hardware' },
+      ]);
+      prisma.opcionTratamiento.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Mitigar' },
+      ]);
+      prisma.controlesImplementar.findMany.mockResolvedValue([]);
+      prisma.area.findMany.mockResolvedValue([]);
+      prisma.plazoImplementacion.findMany.mockResolvedValue([]);
+      prisma.estadoPlanTratamiento.findMany.mockResolvedValue([
+        { id: 2, nombre: 'En progreso' },
+      ]);
+
+      const result = await service.getPlanTratamiento({
+        tipoActivoId: '1',
+        estadoId: '2',
+        q: 'migración',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].tipoActivo).toBe('Hardware');
+      expect(result[0].estado).toBe('En progreso');
+      expect(prisma.planTratamiento.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({ tipoActivoId: 1 }),
+              expect.objectContaining({ estadoId: 2 }),
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  expect.objectContaining({
+                    descripcionActividades: { contains: 'migración' },
+                  }),
+                ]),
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+
+    it('debe manejar JSON malformado devolviendo string vacío para controles y responsables', async () => {
+      prisma.planTratamiento.findMany.mockResolvedValue([
+        makePlanTratamiento({
+          id: 1,
+          controlesImplementarId: '{bad',
+          responsableImplementacionId: 'invalid',
+        }),
+      ]);
+      prisma.tipoActivo.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Hardware' },
+      ]);
+      prisma.opcionTratamiento.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Mitigar' },
+      ]);
+      prisma.controlesImplementar.findMany.mockResolvedValue([
+        { id: 1, seccion: 'A.1', descripcion: 'Ctrl' },
+      ]);
+      prisma.area.findMany.mockResolvedValue([{ id: 1, nombre: 'TI' }]);
+      prisma.plazoImplementacion.findMany.mockResolvedValue([
+        { id: 1, codigo: 'P1', nombre: 'Corto' },
+      ]);
+      prisma.estadoPlanTratamiento.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Pendiente' },
+      ]);
+
+      const result = await service.getPlanTratamiento({});
+
+      expect(result).toHaveLength(1);
+      expect(result[0].controlesImplementar).toBe('');
+      expect(result[0].responsablesImplementacion).toBe('');
+    });
+
+    it('debe retornar array vacío cuando no hay planes', async () => {
+      prisma.planTratamiento.findMany.mockResolvedValue([]);
+      const result = await service.getPlanTratamiento({});
+      expect(result).toEqual([]);
+    });
+
+    it('debe lanzar HttpException 500 si Prisma falla', async () => {
+      prisma.planTratamiento.findMany.mockRejectedValue(
+        new Error('Connection lost'),
+      );
+      await expect(service.getPlanTratamiento({})).rejects.toThrow(
+        HttpException,
+      );
+      await expect(service.getPlanTratamiento({})).rejects.toMatchObject({
+        status: 500,
+      });
+    });
+  });
+
+  describe('exportPlanTratamiento', () => {
+    it('debe retornar un buffer y registrar auditoría cuando hay usuario', async () => {
+      prisma.planTratamiento.findMany.mockResolvedValue([
+        makePlanTratamiento({ id: 1 }),
+      ]);
+      prisma.tipoActivo.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Hardware' },
+      ]);
+      prisma.opcionTratamiento.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Mitigar' },
+      ]);
+      prisma.controlesImplementar.findMany.mockResolvedValue([
+        { id: 1, seccion: 'A.1', descripcion: 'Ctrl' },
+      ]);
+      prisma.area.findMany.mockResolvedValue([{ id: 1, nombre: 'TI' }]);
+      prisma.plazoImplementacion.findMany.mockResolvedValue([
+        { id: 1, codigo: 'P1', nombre: 'Corto' },
+      ]);
+      prisma.estadoPlanTratamiento.findMany.mockResolvedValue([
+        { id: 1, nombre: 'Pendiente' },
+      ]);
+
+      const auditService = (service as any).auditService;
+      const result = await service.exportPlanTratamiento(
+        {},
+        { userId: 'u1', username: 'admin' },
+        { ip: '127.0.0.1', headers: { 'user-agent': 'jest' } },
+      );
+
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.length).toBeGreaterThan(0);
+      expect(auditService.log).toHaveBeenCalled();
+    });
+
+    it('debe pasar los filtros al servicio subyacente', async () => {
+      prisma.planTratamiento.findMany.mockResolvedValue([]);
+      const filters = { estadoId: '1', q: 'mantenimiento' };
+      await service.exportPlanTratamiento(filters);
+      expect(prisma.planTratamiento.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({ estadoId: 1 }),
+            ]),
+          }),
+        }),
+      );
     });
   });
 

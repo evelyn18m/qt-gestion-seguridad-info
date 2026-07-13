@@ -121,3 +121,20 @@ export class TratamientoRiesgoReporteDto {
   riesgoResidual: string | null;
   controlesImplementar: string | null;
 }
+
+export class PlanTratamientoReporteDto {
+  id: number;
+  tipoActivo: string;
+  opcionTratamiento: string;
+  controlesImplementar: string;
+  descripcionActividades: string;
+  responsablesImplementacion: string;
+  areaFuncional: string;
+  plazoImplementacion: string;
+  fechaInicioImplementacion: Date | null;
+  fechaFinImplementacion: Date | null;
+  horaDia: number;
+  montoUSD: string;
+  estado: string;
+  observaciones: string | null;
+}

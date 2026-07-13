@@ -21,6 +21,7 @@ import {
   AnalisisRiesgoActivoDto,
   EvaluacionRiesgoReporteDto,
   TratamientoRiesgoReporteDto,
+  PlanTratamientoReporteDto,
   HeatmapReporteDto,
   HeatmapCellDetailDto,
 } from './dto/reporte-response.dto';
@@ -77,6 +78,14 @@ export class ReportesController {
         {
           ruta: 'GET /reportes/tratamiento-riesgo/export',
           descripcion: 'Exportación Excel del reporte de tratamiento de riesgo',
+        },
+        {
+          ruta: 'GET /reportes/plan-tratamiento',
+          descripcion: 'Reporte de plan de tratamiento con filtros',
+        },
+        {
+          ruta: 'GET /reportes/plan-tratamiento/export',
+          descripcion: 'Exportación Excel del reporte de plan de tratamiento',
         },
         {
           ruta: 'GET /reportes/heatmap',
@@ -262,6 +271,38 @@ export class ReportesController {
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="tratamiento-riesgo-${new Date().toISOString().split('T')[0]}.xlsx"`,
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.write(buffer);
+    res.end();
+  }
+
+  @Get('plan-tratamiento')
+  getPlanTratamiento(
+    @Query() query: Record<string, string | undefined>,
+  ): Promise<PlanTratamientoReporteDto[]> {
+    return this.reportesService.getPlanTratamiento(query);
+  }
+
+  @Get('plan-tratamiento/export')
+  async exportPlanTratamiento(
+    @Query() query: Record<string, string | undefined>,
+    @Res() res: Response,
+    @CurrentUser() user: { userId: string; username: string } | null,
+    @Req() req: Request,
+  ): Promise<void> {
+    const buffer = await this.reportesService.exportPlanTratamiento(
+      query,
+      user,
+      req as any,
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="plan-tratamiento-${new Date().toISOString().split('T')[0]}.xlsx"`,
     );
     res.setHeader('Content-Length', buffer.length);
     res.write(buffer);

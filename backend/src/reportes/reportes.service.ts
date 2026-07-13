@@ -14,6 +14,7 @@ import {
   AnalisisRiesgoActivoDto,
   EvaluacionRiesgoReporteDto,
   TratamientoRiesgoReporteDto,
+  PlanTratamientoReporteDto,
   HeatmapSerieDto,
   HeatmapCellDto,
   HeatmapCellDetailDto,
@@ -1392,6 +1393,242 @@ export class ReportesService {
     } catch (error) {
       throw new HttpException(
         `Error al exportar análisis de riesgo de activos: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getPlanTratamiento(
+    filters: Record<string, string | undefined>,
+  ): Promise<PlanTratamientoReporteDto[]> {
+    try {
+      const {
+        q,
+        tipoActivoId,
+        opcionTratamientoId,
+        estadoId,
+        plazoImplementacionId,
+        areaFuncionalId,
+      } = filters;
+
+      const andConditions: Prisma.PlanTratamientoWhereInput[] = [];
+
+      if (tipoActivoId) {
+        andConditions.push({ tipoActivoId: Number(tipoActivoId) });
+      }
+      if (opcionTratamientoId) {
+        andConditions.push({
+          opcionTratamientoId: Number(opcionTratamientoId),
+        });
+      }
+      if (estadoId) {
+        andConditions.push({ estadoId: Number(estadoId) });
+      }
+      if (plazoImplementacionId) {
+        andConditions.push({
+          plazoImplementacionId: Number(plazoImplementacionId),
+        });
+      }
+      if (areaFuncionalId) {
+        andConditions.push({ areaFuncionalId: Number(areaFuncionalId) });
+      }
+
+      if (q) {
+        const escapedQ = q.replace(/%/g, '\\%').replace(/_/g, '\\_');
+        andConditions.push({
+          OR: [
+            { descripcionActividades: { contains: escapedQ } },
+            { observaciones: { contains: escapedQ } },
+          ],
+        });
+      }
+
+      const where: Prisma.PlanTratamientoWhereInput =
+        andConditions.length > 0 ? { AND: andConditions } : {};
+
+      const planes = await this.prisma.planTratamiento.findMany({
+        where,
+        orderBy: { descripcionActividades: 'asc' },
+      });
+
+      if (planes.length === 0) {
+        return [];
+      }
+
+      const [
+        tipoActivos,
+        opcionTratamientos,
+        controlesImplementar,
+        areas,
+        plazos,
+        estados,
+      ] = await Promise.all([
+        this.prisma.tipoActivo.findMany(),
+        this.prisma.opcionTratamiento.findMany(),
+        this.prisma.controlesImplementar.findMany(),
+        this.prisma.area.findMany(),
+        this.prisma.plazoImplementacion.findMany(),
+        this.prisma.estadoPlanTratamiento.findMany(),
+      ]);
+
+      const tipoActivoMap = new Map(tipoActivos.map((t) => [t.id, t.nombre]));
+      const opcionMap = new Map(
+        opcionTratamientos.map((o) => [o.id, o.nombre]),
+      );
+      const controlesMap = new Map(
+        controlesImplementar.map((c) => [
+          c.id,
+          `${c.seccion} - ${c.descripcion}`,
+        ]),
+      );
+      const areaMap = new Map(areas.map((a) => [a.id, a.nombre]));
+      const plazoMap = new Map(plazos.map((p) => [p.id, p.nombre]));
+      const estadoMap = new Map(estados.map((e) => [e.id, e.nombre]));
+
+      return planes.map((plan) => {
+        const controlIds = this.safeParseJsonArray(plan.controlesImplementarId);
+        const responsableIds = this.safeParseJsonArray(
+          plan.responsableImplementacionId,
+        );
+
+        return {
+          id: plan.id,
+          tipoActivo: tipoActivoMap.get(plan.tipoActivoId) ?? 'Desconocido',
+          opcionTratamiento:
+            opcionMap.get(plan.opcionTratamientoId) ?? 'Desconocido',
+          controlesImplementar: controlIds
+            .map((id) => controlesMap.get(id))
+            .filter(Boolean)
+            .join(', '),
+          descripcionActividades: plan.descripcionActividades,
+          responsablesImplementacion: responsableIds
+            .map((id) => areaMap.get(id))
+            .filter(Boolean)
+            .join(', '),
+          areaFuncional:
+            areaMap.get(plan.areaFuncionalId ?? -1) ?? 'Desconocido',
+          plazoImplementacion:
+            plazoMap.get(plan.plazoImplementacionId ?? -1) ?? 'Desconocido',
+          fechaInicioImplementacion: plan.fechaInicioImplementacion ?? null,
+          fechaFinImplementacion: plan.fechaFinImplementacion ?? null,
+          horaDia: plan.horaDia,
+          montoUSD: plan.montoUSD,
+          estado: estadoMap.get(plan.estadoId) ?? 'Desconocido',
+          observaciones: plan.observaciones ?? null,
+        };
+      });
+    } catch (error) {
+      throw new HttpException(
+        `Error al obtener plan de tratamiento: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async exportPlanTratamiento(
+    filters: Record<string, string | undefined>,
+    user?: { userId: string; username: string } | null,
+    req?: { headers?: Record<string, string>; ip?: string },
+  ): Promise<Buffer> {
+    try {
+      const data = await this.getPlanTratamiento(filters);
+
+      const headers = [
+        'Tipo de Activo',
+        'Opción de Tratamiento',
+        'Controles a Implementar',
+        'Descripción de Actividades',
+        'Responsables de Implementación',
+        'Área Funcional',
+        'Plazo de Implementación',
+        'Fecha Inicio',
+        'Fecha Fin',
+        'Horas/Día',
+        'Monto USD',
+        'Estado',
+        'Observaciones',
+      ];
+
+      const rows = data.map((pt) => [
+        pt.tipoActivo,
+        pt.opcionTratamiento,
+        pt.controlesImplementar,
+        pt.descripcionActividades,
+        pt.responsablesImplementacion,
+        pt.areaFuncional,
+        pt.plazoImplementacion,
+        pt.fechaInicioImplementacion
+          ? pt.fechaInicioImplementacion.toISOString().split('T')[0]
+          : '',
+        pt.fechaFinImplementacion
+          ? pt.fechaFinImplementacion.toISOString().split('T')[0]
+          : '',
+        pt.horaDia,
+        pt.montoUSD,
+        pt.estado,
+        pt.observaciones ?? '',
+      ]);
+
+      const ws = XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX_STYLE.utils.book_new();
+      XLSX_STYLE.utils.book_append_sheet(wb, ws, 'Plan de Tratamiento');
+
+      // Header styles
+      const headerStyle = {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '4F46E5' }, patternType: 'solid' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      };
+
+      const range = XLSX_STYLE.utils.decode_range(ws['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: col });
+        if (ws[cellRef]) {
+          ws[cellRef].s = headerStyle;
+        }
+      }
+
+      // Auto-filter
+      const lastRow = data.length;
+      const lastCol = headers.length - 1;
+      const startRef = XLSX_STYLE.utils.encode_cell({ r: 0, c: 0 });
+      const endRef = XLSX_STYLE.utils.encode_cell({ r: lastRow, c: lastCol });
+      ws['!autofilter'] = { ref: `${startRef}:${endRef}` };
+
+      // Auto-width columns
+      const colWidths = headers.map((h, idx) => {
+        const maxDataLen = Math.max(
+          h.length,
+          ...rows.map((r) => String(r[idx] ?? '').length),
+        );
+        return { wch: Math.min(Math.max(maxDataLen + 2, 10), 40) };
+      });
+      ws['!cols'] = colWidths;
+
+      const array = XLSX_STYLE.write(wb, { type: 'array', bookType: 'xlsx' });
+
+      // Audit log after buffer generation (fire-and-forget)
+      if (user) {
+        void this.auditService.log({
+          accion: 'EXPORTAR',
+          modulo: 'reportes',
+          entidad: 'reporte',
+          usuarioId: user.userId,
+          usuario: user.username,
+          ip: req ? extractIp(req) : undefined,
+          dispositivo: req?.headers?.['user-agent'],
+          metodo: 'GET',
+          detalle: JSON.stringify({
+            tipo: 'plan-tratamiento',
+            filtros: filters,
+          }),
+        });
+      }
+
+      return Buffer.from(array);
+    } catch (error) {
+      throw new HttpException(
+        `Error al exportar plan de tratamiento: ${(error as Error).message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

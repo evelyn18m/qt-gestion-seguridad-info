@@ -19,6 +19,8 @@ describe('ReportesController', () => {
     exportEvaluacionRiesgo: jest.Mock;
     getTratamientoRiesgo: jest.Mock;
     exportTratamientoRiesgo: jest.Mock;
+    getPlanTratamiento: jest.Mock;
+    exportPlanTratamiento: jest.Mock;
     getHeatmap: jest.Mock;
     getHeatmapCell: jest.Mock;
   };
@@ -193,6 +195,8 @@ describe('ReportesController', () => {
       exportEvaluacionRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
       getTratamientoRiesgo: jest.fn().mockResolvedValue(mockTratamientoRiesgo),
       exportTratamientoRiesgo: jest.fn().mockResolvedValue(Buffer.from('test')),
+      getPlanTratamiento: jest.fn().mockResolvedValue([]),
+      exportPlanTratamiento: jest.fn().mockResolvedValue(Buffer.from('test')),
       getHeatmap: jest.fn().mockResolvedValue(mockHeatmap),
       getHeatmapCell: jest.fn().mockResolvedValue(mockHeatmapCell),
     };
@@ -215,6 +219,13 @@ describe('ReportesController', () => {
       expect(result).toHaveProperty('endpoints');
       expect(result.endpoints).toBeInstanceOf(Array);
       expect(result.endpoints.length).toBeGreaterThan(0);
+    });
+
+    it('debe incluir las rutas de plan de tratamiento', () => {
+      const result = controller.getIndice();
+      const rutas = result.endpoints.map((e) => e.ruta);
+      expect(rutas).toContain('GET /reportes/plan-tratamiento');
+      expect(rutas).toContain('GET /reportes/plan-tratamiento/export');
     });
   });
 
@@ -529,6 +540,47 @@ describe('ReportesController', () => {
         null,
         undefined,
       );
+    });
+  });
+
+  describe('GET /reportes/plan-tratamiento', () => {
+    it('debe retornar 200 y delegar query params al servicio', async () => {
+      const query = { tipoActivoId: '1', estadoId: '2', q: 'migración' };
+      const result = await controller.getPlanTratamiento(query);
+      expect(service.getPlanTratamiento).toHaveBeenCalledWith(query);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('GET /reportes/plan-tratamiento/export', () => {
+    it('debe exportar Excel con Content-Type y Content-Disposition correctos', async () => {
+      const query = { estadoId: '1' };
+      const mockRes = {
+        setHeader: jest.fn(),
+        write: jest.fn(),
+        end: jest.fn(),
+      } as any;
+      await controller.exportPlanTratamiento(
+        query,
+        mockRes,
+        null,
+        undefined as any,
+      );
+      expect(service.exportPlanTratamiento).toHaveBeenCalledWith(
+        query,
+        null,
+        undefined,
+      );
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Content-Disposition',
+        expect.stringContaining('plan-tratamiento'),
+      );
+      expect(mockRes.write).toHaveBeenCalled();
+      expect(mockRes.end).toHaveBeenCalled();
     });
   });
 
