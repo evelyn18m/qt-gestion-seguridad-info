@@ -204,6 +204,23 @@ export interface TratamientoRiesgoReporte {
     controlesImplementar: string | null
 }
 
+export interface PlanTratamientoReporte {
+    id: number
+    tipoActivo: string
+    opcionTratamiento: string
+    controlesImplementar: string
+    descripcionActividades: string
+    responsablesImplementacion: string
+    areaFuncional: string
+    plazoImplementacion: string
+    fechaInicioImplementacion: string | null
+    fechaFinImplementacion: string | null
+    horaDia: number
+    montoUSD: string
+    estado: string
+    observaciones: string | null
+}
+
 // ── Usuarios module ───────────────────────────────────────────────────────────
 
 export interface Usuario {

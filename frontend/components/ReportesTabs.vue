@@ -15,10 +15,12 @@
     <NuxtLink to="/reportes/tratamiento-riesgo" class="tab-btn" active-class="active">
       Tratamiento de Riesgo
     </NuxtLink>
+    <NuxtLink to="/reportes/plan-tratamiento" class="tab-btn" active-class="active">
+      Plan de Tratamiento
+    </NuxtLink>
     <NuxtLink to="/reportes/mapa-calor" class="tab-btn" active-class="active">
       Mapa de Calor
     </NuxtLink>
-
   </div>
 </template>
 
