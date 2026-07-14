@@ -6,6 +6,7 @@ import ValoracionModal from '~/components/ValoracionModal.vue'
 import ValoracionViewModal from '~/components/ValoracionViewModal.vue'
 
 const valTipoActivo = ref<CatalogoItem[]>([])
+const valTipoDatosPersonales = ref<CatalogoItem[]>([])
 const valFormatos = ref<CatalogoItem[]>([])
 const valMacroprocesos = ref<CatalogoItem[]>([])
 const valSubprocesos = ref<CatalogoItem[]>([])
@@ -152,7 +153,7 @@ function rebuildDetalles() {
 
 const loadValoracionData = async () => {
   valLoading.value = true
-  const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
+  const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'tipos-datos-personales']
   try {
     const {apiFetch} = useApi()
     const [results, controlesItems] = await Promise.all([
@@ -171,6 +172,7 @@ const loadValoracionData = async () => {
     valRiesgos.value = results[9] as CatalogoItem[]
     valProbabilidades.value = results[10] as CatalogoItem[]
     valTiposControl.value = results[11] as CatalogoItem[]
+    valTipoDatosPersonales.value = results[12] as CatalogoItem[]
     valControlesImplementar.value = controlesItems
   } catch (e) {
     if (e instanceof SessionExpiredError) {
@@ -210,6 +212,7 @@ const activeTab = ref(0)
 // ── CatalogData bundle for ValoracionModal ────────────────────────────────────
 const catalogData = computed(() => ({
   valTipoActivo: valTipoActivo.value,
+  valTipoDatosPersonales: valTipoDatosPersonales.value,
   valFormatos: valFormatos.value,
   valMacroprocesos: valMacroprocesos.value,
   valSubprocesos: valSubprocesos.value,

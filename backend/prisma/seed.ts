@@ -331,6 +331,15 @@ async function main() {
     },
   });
   console.log(`Admin user seeded: ${admin.username} (id: ${admin.id})`);
+  // Seed tipos de datos personales
+  const tiposDatosPersonales = [
+    { nombre: 'Publica' },
+    { nombre: 'Uso interno' },
+    { nombre: 'Confidencial' },
+  ];
+  for (const tipoDatosPersonal of tiposDatosPersonales) {
+    await prisma.tipoDatosPersonales.create({ data: tipoDatosPersonal });
+  }
 
   console.log('Seeding completed!');
 }

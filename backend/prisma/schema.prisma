@@ -72,6 +72,13 @@ model TipoActivo {
   updatedAt         DateTime          @updatedAt
 }
 
+model TipoDatosPersonales {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Valoracion {
   id        Int      @id @default(autoincrement())
   nombre    String
@@ -115,6 +122,7 @@ model ValoracionActivo {
   integridadId         Int
   disponibilidadId     Int
   tieneDatosPersonales Boolean @default(false)
+  tiposDatosPersonales String? @db.Text // JSON array of types
 
   // Análisis de Riesgos (pestañas 2-4)
   amenazas                String? @db.Text // JSON array of ids
