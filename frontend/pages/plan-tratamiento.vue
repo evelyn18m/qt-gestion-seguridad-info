@@ -434,9 +434,8 @@ onMounted(() => {
               <label for="pt-tipo-activo">Tipo de Activo <span class="required">*</span></label>
               <select id="pt-tipo-activo" v-model="form.tipoActivoId">
                 <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['tipos-activo']" :key="item.id" :value="item.id">{{
-                    item.nombre
-                  }}
+                <option v-for="item in catalogos['tipos-activo']" :key="item.id" :value="item.id">
+                  {{ item.nombre }}
                 </option>
               </select>
             </div>
@@ -451,9 +450,8 @@ onMounted(() => {
               <label for="pt-opcion">Opción de Tratamiento <span class="required">*</span></label>
               <select id="pt-opcion" v-model="form.opcionTratamientoId">
                 <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['opciones-tratamiento']" :key="item.id" :value="item.id">{{
-                    item.nombre
-                  }}
+                <option v-for="item in catalogos['opciones-tratamiento']" :key="item.id" :value="item.id">
+                  {{ item.nombre }}
                 </option>
               </select>
             </div>
@@ -580,7 +578,7 @@ onMounted(() => {
 
           <div class="form-grid">
             <div class="form-group">
-              <label for="pt-hora-dia">Hora x Dia</label>
+              <label for="pt-hora-dia">Hora hombre por día</label>
               <input id="pt-hora-dia" v-model="form.horaDia" type="number" step="1" />
             </div>
             <div class="form-group">
