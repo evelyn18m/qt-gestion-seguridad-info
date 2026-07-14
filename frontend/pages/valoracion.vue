@@ -39,6 +39,7 @@ const valForm = ref({
   integridad: '',
   disponibilidad: '',
   tieneDatosPersonales: false,
+  tiposDatosPersonales: null as number[] | null,
 })
 const analisisForm = ref({
   macroProceso: '',
@@ -375,6 +376,7 @@ async function submitValoracion() {
       integridadId: Number(f.integridad),
       disponibilidadId: Number(f.disponibilidad),
       tieneDatosPersonales: Boolean(f.tieneDatosPersonales),
+      tiposDatosPersonales: (f.tiposDatosPersonales?.length ?? 0) > 0 ? JSON.stringify(f.tiposDatosPersonales) : null,
       amenazas: a.amenazas.length > 0 ? JSON.stringify(a.amenazas) : null,
       vulnerabilidades: a.vulnerabilidades.length > 0 ? JSON.stringify(a.vulnerabilidades) : null,
       controlesImplementacion: a.controlesImplementacion || null,
@@ -431,6 +433,7 @@ function editValoracion(item: ValoracionActivo) {
     integridad: String(item.integridadId),
     disponibilidad: String(item.disponibilidadId),
     tieneDatosPersonales: item.tieneDatosPersonales || false,
+    tiposDatosPersonales: item.tiposDatosPersonales ? safeJsonParse(item.tiposDatosPersonales, []) : [],
   }
 
   // Cargar datos de Análisis de Riesgo (pestañas 2-4) si existen
@@ -527,6 +530,7 @@ function resetForm() {
     integridad: '',
     disponibilidad: '',
     tieneDatosPersonales: false,
+    tiposDatosPersonales: null,
   }
   analisisForm.value = {
     macroProceso: '',

@@ -4,6 +4,7 @@ import type {CatalogoItem, ControlesImplementarItem, DetalleRiesgo} from '~/type
 // ── Catalog Data ──────────────────────────────────────────────────────────────
 interface CatalogData {
   valTipoActivo: CatalogoItem[]
+  valTipoDatosPersonales: CatalogoItem[]
   valFormatos: CatalogoItem[]
   valMacroprocesos: CatalogoItem[]
   valSubprocesos: CatalogoItem[]
@@ -37,6 +38,7 @@ interface ValFormData {
   integridad: string
   disponibilidad: string
   tieneDatosPersonales: boolean
+  tiposDatosPersonales: number[] | null
 }
 
 interface AnalisisFormData {
@@ -751,10 +753,21 @@ function handleChangeOnCustodio (event: Event) {
                 </div>
                 <div class="form-group">
                   <label>¿Tiene Datos Personales?</label>
-                  <select v-model="valForm.tieneDatosPersonales" required>
+                  <select
+                      v-model="valForm.tieneDatosPersonales"
+                      required
+                      @change="valForm.tieneDatosPersonales ? valForm.tiposDatosPersonales = [] : null"
+                  >
                     <option :value="false">NO</option>
                     <option :value="true">SÍ</option>
                   </select>
+                </div>
+                <div v-if="valForm.tieneDatosPersonales" class="form-group">
+                  <label>Tipos de Datos Personales</label>
+                  <label class="checkbox" v-for="tipo in catalogData.valTipoDatosPersonales">
+                    <input v-model="valForm.tiposDatosPersonales" type="checkbox" id="" :value="tipo.id">
+                    {{ tipo.nombre }}
+                  </label>
                 </div>
                 <div class="form-group">
                   <label>Observaciones</label>

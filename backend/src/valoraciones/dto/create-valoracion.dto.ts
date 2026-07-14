@@ -174,6 +174,10 @@ export class CreateValoracionDto {
   @IsOptional()
   tieneDatosPersonales?: boolean;
 
+  @IsOptional()
+  @IsString()
+  tiposDatosPersonales?: string;
+
   // Tab 2: Análisis de Riesgos
   @IsOptional()
   @IsString()

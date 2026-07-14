@@ -211,3 +211,20 @@ select option {
     color: var(--text-muted);
     padding: 1rem 0;
 }
+
+label.checkbox {
+    display: flex;
+    justify-content: start;
+    white-space: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+
+    input[type="checkbox"] {
+        accent-color: var(--primary);
+        width: auto;
+    }
+}
