@@ -691,7 +691,6 @@ export class ValoracionesService {
       macroProceso,
       subProceso,
       propietario,
-      custodio,
       confidencialidad,
       integridad,
       disponibilidad,
@@ -704,7 +703,6 @@ export class ValoracionesService {
       }),
       this.prisma.subproceso.findUnique({ where: { id: item.subProcesoId } }),
       this.prisma.area.findUnique({ where: { id: item.propietarioId } }),
-      this.prisma.funcionario.findUnique({ where: { id: item.custodioId } }),
       this.prisma.impacto.findUnique({
         where: { id: item.confidencialidadId },
       }),
@@ -727,7 +725,6 @@ export class ValoracionesService {
       macroProceso,
       subProceso,
       propietario,
-      custodio,
       confidencialidad,
       integridad,
       disponibilidad,

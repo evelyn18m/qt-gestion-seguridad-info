@@ -106,7 +106,7 @@ model ValoracionActivo {
   macroProcesoId       Int
   subProcesoId         Int
   propietarioId        Int
-  custodioId           Int
+  custodioId           String  @db.Text
   descripcion          String  @db.Text
   controlSeguridad     String  @db.Text
   ubicacion            String  @db.Text

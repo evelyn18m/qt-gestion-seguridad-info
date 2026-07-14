@@ -146,8 +146,8 @@ export class CreateValoracionDto {
   @IsNumber()
   propietarioId: number;
 
-  @IsNumber()
-  custodioId: number;
+  @IsString()
+  custodioId: string;
 
   @IsString()
   descripcion: string;

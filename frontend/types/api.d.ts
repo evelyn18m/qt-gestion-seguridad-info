@@ -38,7 +38,7 @@ export interface ValoracionActivo {
     macroProcesoId: number
     subProcesoId: number
     propietarioId: number
-    custodioId: number
+    custodioId: string
     descripcion: string
     controlSeguridad: string
     ubicacion: string

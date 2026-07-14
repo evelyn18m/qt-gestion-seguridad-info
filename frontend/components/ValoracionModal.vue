@@ -26,7 +26,7 @@ interface ValFormData {
   macroProceso: string
   subProceso: string
   propietario: string
-  custodio: string
+  custodio: number[]
   descripcion: string
   controlSeguridad: string
   ubicacion: string
@@ -95,10 +95,10 @@ const subprocesosFiltrados = computed(() => {
 })
 
 const funcionariosFiltrados = computed(() => {
-  const propietario = props.valForm.propietario
-  if (!propietario) return []
+  const area = custodioArea.value
+  if (!area) return []
 
-  return props.catalogData.valFuncionarios.filter((f: CatalogoItem) => f.areaId === Number(propietario))
+  return props.catalogData.valFuncionarios.filter((f: CatalogoItem) => f.areaId === Number(area))
 })
 
 const amenazaCategorias = computed(() => {
@@ -141,6 +141,7 @@ const macroProcesoName = computed(() => {
 const amenazaCategoria = ref('')
 const vulnerabilidadCategoria = ref('')
 const currentStep = ref(0)
+const custodioArea = ref(null)
 const TOTAL_STEPS = 4
 
 const fieldErrors = reactive<Record<string, boolean>>({
@@ -578,6 +579,27 @@ const controlesImplementarGrupos = computed(() => {
     return cat
   })
 })
+
+function getCustodioLabel(id: number) {
+  const matchedFuncionario = props.catalogData.valFuncionarios.find((a: CatalogoItem) => a.id === id)
+  return matchedFuncionario?.nombre ?? `Funcionario ${id}`
+}
+
+function removeCustodio(id: number) {
+  props.valForm.custodio = props.valForm.custodio.filter((c) => c !== id)
+}
+
+function handleChangeOnCustodio (event: Event) {
+  const target = event.target as HTMLInputElement
+  const id = Number(target.value)
+  const matchedFuncionario = props.catalogData.valFuncionarios.find((a: CatalogoItem) => a.id === id)
+
+  if (matchedFuncionario) {
+    props.valForm.custodio.push(matchedFuncionario.id)
+  }
+
+  target.value = ''
+}
 </script>
 
 <template>
@@ -650,7 +672,7 @@ const controlesImplementarGrupos = computed(() => {
                         :key="s.id"
                         :value="s.id"
                         :selected="Number(valForm.subProceso) === s.id"
-                    >{{ s.nombre }} -- {{ valForm.subProceso }}</option>
+                    >{{ s.nombre }}</option>
                   </select>
                   <span v-if="fieldErrors.subProceso" class="field-error">Este campo es obligatorio</span>
                 </div>
@@ -662,13 +684,52 @@ const controlesImplementarGrupos = computed(() => {
                   </select>
                   <span v-if="fieldErrors.propietario" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group" :class="{ 'has-error': fieldErrors.custodio }">
+                <div class="form-group">
                   <label>Custodio del Activo <span class="required-asterisk">*</span></label>
-                  <select v-model="valForm.custodio" required @change="clearFieldError('custodio')">
-                    <option value="">Seleccionar...</option>
-                    <option v-for="f in funcionariosFiltrados" :key="f.id" :value="f.id">{{ f.nombre }}</option>
-                  </select>
-                  <span v-if="fieldErrors.custodio" class="field-error">Este campo es obligatorio</span>
+                  <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="form-group" style="flex: 1" :class="{ 'has-error': fieldErrors.custodio }">
+                      <label for="">Área</label>
+                      <select v-model="custodioArea" required @change="clearFieldError('custodio')">
+                        <option :value="null">Seleccionar...</option>
+                        <option v-for="a in catalogData.valAreas" :key="a.id" :value="a.id">{{ a.nombre }}</option>
+                      </select>
+                      <span v-if="fieldErrors.propietario" class="field-error">Este campo es obligatorio</span>
+                    </div>
+                    <div class="form-group" style="flex: 1" :class="{ 'has-error': fieldErrors.custodio }">
+                      <label for="funcionario">Funcionario</label>
+                      <select id="funcionario" required @change="handleChangeOnCustodio">
+                        <option value="">Agregar custodio</option>
+                        <option v-for="f in funcionariosFiltrados" :key="f.id" :value="f.id">{{ f.nombre }}</option>
+                      </select>
+                      <span v-if="fieldErrors.custodio" class="field-error">Este campo es obligatorio</span>
+                    </div>
+                  </div>
+                  <div class="chip-list" style="max-height:160px;">
+              <span
+                  v-for="responsable in valForm.custodio"
+                  :key="responsable"
+                  class="chip selected"
+                  style="display:flex; align-items:center; gap:0.3rem; cursor:default;"
+              >
+                {{ getCustodioLabel(responsable) }}
+                <button
+                    style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;"
+                    type="button"
+                    @click="removeCustodio(responsable)"
+                >
+                  <svg
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      style="width:10px; height:10px;"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </span>
+                  </div>
                 </div>
                 <div class="form-group" :class="{ 'has-error': fieldErrors.descripcion }">
                   <label>Descripción del Activo <span class="required-asterisk">*</span></label>

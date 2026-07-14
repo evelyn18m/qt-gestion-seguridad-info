@@ -407,7 +407,7 @@ export class ReportesService {
     filters: Record<string, string | undefined>,
   ): Promise<ValoracionActivoReporteDto[]> {
     try {
-      const { q, macroProcesoId, formatoId, custodioId } = filters;
+      const { q, macroProcesoId, formatoId } = filters;
 
       const andConditions: Prisma.ValoracionActivoWhereInput[] = [];
 
@@ -417,9 +417,9 @@ export class ReportesService {
       if (formatoId) {
         andConditions.push({ formatoId: Number(formatoId) });
       }
-      if (custodioId) {
+      /*if (custodioId) {
         andConditions.push({ custodioId: Number(custodioId) });
-      }
+      }*/
 
       if (q) {
         const escapedQ = q.replace(/%/g, '\\%').replace(/_/g, '\\_');
@@ -467,7 +467,9 @@ export class ReportesService {
         tipoActivo: tipoActivoMap.get(va.tipoActivoId) ?? 'Desconocido',
         formato: formatoMap.get(va.formatoId) ?? 'Desconocido',
         macroProceso: macroProcesoMap.get(va.macroProcesoId) ?? 'Desconocido',
-        custodio: funcionarioMap.get(va.custodioId) ?? 'Desconocido',
+        custodio: this.safeParseJsonArray(va.custodioId)
+          .map((id) => funcionarioMap.get(id) ?? 'Desconocido')
+          .join(', '),
         confidencialidad:
           impactoMap.get(va.confidencialidadId) ?? 'Desconocido',
         integridad: impactoMap.get(va.integridadId) ?? 'Desconocido',
