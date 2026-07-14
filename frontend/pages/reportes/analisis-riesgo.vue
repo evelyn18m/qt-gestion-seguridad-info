@@ -264,7 +264,6 @@ onMounted(() => {
                 <th>Macroproceso</th>
                 <th>Amenaza</th>
                 <th>Vulnerabilidad</th>
-                <th>Controles Implementados</th>
               </tr>
             </thead>
             <tbody>
@@ -273,7 +272,6 @@ onMounted(() => {
                 <td>{{ ar.macroProceso || '—' }}</td>
                 <td>{{ ar.amenaza || '—' }}</td>
                 <td>{{ ar.vulnerabilidad || '—' }}</td>
-                <td>{{ ar.controlesImplementados || '—' }}</td>
               </tr>
             </tbody>
           </table>
