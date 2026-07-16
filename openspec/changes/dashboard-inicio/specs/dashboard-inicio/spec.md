@@ -22,21 +22,21 @@ The system SHALL fetch `GET /reportes/resumen` when the user lands on `/` and re
 - WHEN the user navigates to `/`
 - THEN all KPI cards display `0`
 
-### Requirement: Risk Distribution Donut Chart
+### Requirement: CIA Valuation Donut Charts
 
-The system SHALL render an ApexCharts donut chart for `distribucionRiesgos` when at least one level has a non-zero value.
+The system SHALL fetch `GET /reportes/cia` and render three ApexCharts donut charts for Confidencialidad, Integridad, and Disponibilidad when at least one dimension has a non-zero value.
 
-#### Scenario: Distribution data present
+#### Scenario: CIA data present
 
-- GIVEN `/reportes/resumen` returns `distribucionRiesgos: { Alto: 1, Medio: 2, Bajo: 1 }`
+- GIVEN `/reportes/cia` returns `{ confidencialidad: { Alto: 2, Medio: 1, Bajo: 0 }, integridad: { Alto: 1, Medio: 1, Bajo: 1 }, disponibilidad: { Alto: 0, Medio: 2, Bajo: 1 } }`
 - WHEN the dashboard renders
-- THEN a donut chart labeled "Distribución de Riesgos" appears with Alto, Medio, and Bajo segments
+- THEN three donut charts labeled "Confidencialidad", "Integridad", and "Disponibilidad" appear with Alto, Medio, and Bajo segments
 
-#### Scenario: Distribution data empty
+#### Scenario: CIA data empty
 
-- GIVEN `/reportes/resumen` returns `distribucionRiesgos: { Alto: 0, Medio: 0, Bajo: 0 }`
+- GIVEN `/reportes/cia` returns `{ confidencialidad: { Alto: 0, Medio: 0, Bajo: 0 }, integridad: { Alto: 0, Medio: 0, Bajo: 0 }, disponibilidad: { Alto: 0, Medio: 0, Bajo: 0 } }`
 - WHEN the dashboard renders
-- THEN the chart area shows the message "No hay datos de distribución de riesgos."
+- THEN the chart area shows the message "No hay datos de valoración CIA."
 
 ### Requirement: Risks by Macroprocess Bar Chart
 

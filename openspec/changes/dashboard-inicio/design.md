@@ -2,13 +2,13 @@
 
 ## Technical Approach
 
-Transform `frontend/pages/index.vue` from a static welcome page into a live dashboard that consumes the existing `/reportes/resumen` and `/reportes/riesgos-por-macroproceso` endpoints. No other modules, routes, or sidebar items are modified.
+Transform `frontend/pages/index.vue` from a static welcome page into a live dashboard that consumes the existing `/reportes/resumen`, `/reportes/cia`, and `/reportes/riesgos-por-macroproceso` endpoints. No other modules, routes, or sidebar items are modified.
 
 ## Architecture Decisions
 
 ### Decision: Reuse existing report endpoints
 
-**Choice**: Use `GET /reportes/resumen` for KPI cards and `GET /reportes/riesgos-por-macroproceso` for the bar chart.
+**Choice**: Use `GET /reportes/resumen` for KPI cards, `GET /reportes/cia` for the CIA valuation donuts, and `GET /reportes/riesgos-por-macroproceso` for the bar chart.
 **Alternatives considered**: Creating a dedicated `/dashboard` endpoint.
 **Rationale**: The existing endpoints already expose the required counts and distribution data. A new endpoint would add backend work without adding value.
 
@@ -39,7 +39,7 @@ Transform `frontend/pages/index.vue` from a static welcome page into a live dash
   │           ├── useApi().apiFetch('/reportes/resumen')
   │           └── useApi().apiFetch('/reportes/riesgos-por-macroproceso')
   ├── computed KPIs (totalActivos, conRiesgo, sinRiesgo)
-  ├── computed donut series (distribucionRiesgos)
+  ├── computed CIA donut series (confidencialidad, integridad, disponibilidad)
   └── computed bar series (riesgos por macroproceso)
 ```
 
@@ -53,7 +53,8 @@ Transform `frontend/pages/index.vue` from a static welcome page into a live dash
 
 No new interfaces. Reuses existing types from `frontend/types/api.d.ts`:
 
-- `ReporteResumen` — `{ totalActivos, conRiesgo, sinRiesgo, distribucionRiesgos: { Alto, Medio, Bajo } }`
+- `ReporteResumen` — `{ totalActivos, conRiesgo, sinRiesgo }`
+- `ReporteCIA` — `{ confidencialidad: { Alto, Medio, Bajo }, integridad: { Alto, Medio, Bajo }, disponibilidad: { Alto, Medio, Bajo } }`
 - `RiesgoPorMacroProceso` — `{ macroproceso, riesgosAlto, riesgosMedio, riesgosBajo }`
 
 ## Testing Strategy
