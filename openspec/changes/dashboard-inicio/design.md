@@ -8,7 +8,7 @@ Transform `frontend/pages/index.vue` from a static welcome page into a live dash
 
 ### Decision: Reuse existing report endpoints
 
-**Choice**: Use `GET /reportes/resumen` for KPI cards, `GET /reportes/cia` for the CIA valuation donuts, and `GET /reportes/analisis-riesgo-activos` for the threats/vulnerabilities-by-asset bar chart.
+**Choice**: Use `GET /reportes/resumen` for KPI cards and the risk-level donut, `GET /reportes/cia` for the CIA valuation donuts, and `GET /reportes/analisis-riesgo-activos` for the threats/vulnerabilities-by-asset bar chart.
 **Alternatives considered**: Creating a dedicated `/dashboard` endpoint.
 **Rationale**: The existing endpoints already expose the required counts and distribution data. A new endpoint would add backend work without adding value.
 
@@ -39,7 +39,8 @@ Transform `frontend/pages/index.vue` from a static welcome page into a live dash
   │           ├── useApi().apiFetch('/reportes/resumen')
   │           ├── useApi().apiFetch('/reportes/cia')
   │           └── useApi().apiFetch('/reportes/analisis-riesgo-activos')
-  ├── computed KPIs (totalActivos, conRiesgo, sinRiesgo)
+  ├── computed KPIs (totalActivos, conRiesgo)
+  ├── computed risk-level donut series (distribucionRiesgos)
   ├── computed CIA donut series (confidencialidad, integridad, disponibilidad)
   └── computed bar series (amenazas y vulnerabilidades por activo)
 ```
@@ -54,7 +55,7 @@ Transform `frontend/pages/index.vue` from a static welcome page into a live dash
 
 No new interfaces. Reuses existing types from `frontend/types/api.d.ts`:
 
-- `ReporteResumen` — `{ totalActivos, conRiesgo, sinRiesgo }`
+- `ReporteResumen` — `{ totalActivos, conRiesgo, sinRiesgo, distribucionRiesgos: { Alto, Medio, Bajo } }`
 - `ReporteCIA` — `{ confidencialidad: { Alto, Medio, Bajo }, integridad: { Alto, Medio, Bajo }, disponibilidad: { Alto, Medio, Bajo } }`
 - `AnalisisRiesgoActivoReporte` — `{ id, nombreActivo, macroProceso, amenaza, vulnerabilidad, controlesImplementados }`
 

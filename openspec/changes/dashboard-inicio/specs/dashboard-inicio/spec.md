@@ -6,21 +6,23 @@ Define the behavior of the SGSI home page as a live dashboard showing asset and 
 
 ## Requirements
 
-### Requirement: GET /reportes/resumen Feeds KPI Cards
+### Requirement: GET /reportes/resumen Feeds KPI Cards and Risk Distribution
 
-The system SHALL fetch `GET /reportes/resumen` when the user lands on `/` and render three KPI cards from the response.
+The system SHALL fetch `GET /reportes/resumen` when the user lands on `/` and render two KPI cards plus a risk-level donut chart from the response.
 
 #### Scenario: Summary data available
 
 - GIVEN the user is authenticated and `/reportes/resumen` returns `{ totalActivos: 10, conRiesgo: 4, sinRiesgo: 6, distribucionRiesgos: { Alto: 1, Medio: 2, Bajo: 1 } }`
 - WHEN the user navigates to `/`
-- THEN the dashboard displays "Total de Activos: 10", "Activos con Riesgo: 4", and "Activos sin Riesgo: 6"
+- THEN the dashboard displays "Total de Activos: 10" and "Activos con Riesgo: 4"
+- AND a donut chart labeled "Nivel de Riesgo" shows Alto: 1, Medio: 2, Bajo: 1
 
 #### Scenario: Summary data partially missing
 
 - GIVEN the user is authenticated and `/reportes/resumen` returns `{}`
 - WHEN the user navigates to `/`
-- THEN all KPI cards display `0`
+- THEN the KPI cards display `0`
+- AND the risk-level donut shows the empty state "Sin datos"
 
 ### Requirement: CIA Valuation Donut Charts
 
@@ -37,7 +39,6 @@ The system SHALL fetch `GET /reportes/cia` and render three ApexCharts donut cha
 - GIVEN `/reportes/cia` returns `{ confidencialidad: { Alto: 0, Medio: 0, Bajo: 0 }, integridad: { Alto: 0, Medio: 0, Bajo: 0 }, disponibilidad: { Alto: 0, Medio: 0, Bajo: 0 } }`
 - WHEN the dashboard renders
 - THEN the chart area shows the message "No hay datos de valoración CIA."
-
 
 ### Requirement: Threats and Vulnerabilities by Asset Bar Chart
 

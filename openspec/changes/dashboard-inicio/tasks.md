@@ -25,7 +25,8 @@ Chain strategy: size-exception
 ## Phase 1: Dashboard Implementation
 
 - [x] 1.1 Rewrite `frontend/pages/index.vue` to call `GET /reportes/resumen`, `GET /reportes/cia`, and `GET /reportes/analisis-riesgo-activos` in parallel via `useApi()` inside `onMounted`.
-- [x] 1.2 Render three KPI cards (total assets, with risk, without risk) from `ReporteResumen`, falling back to `0` for missing fields.
+- [x] 1.2 Render two KPI cards (total assets, with risk) from `ReporteResumen`, falling back to `0` for missing fields, and render a donut chart for risk-level distribution in the third card.
+
 - [x] 1.3 Add three ApexCharts donut charts for CIA valuation (Confidencialidad, Integridad, Disponibilidad) using `/reportes/cia` data, with an empty-state label when all dimensions are empty.
 - [x] 1.4 Add an ApexCharts horizontal grouped bar chart for threats and vulnerabilities by asset using `/reportes/analisis-riesgo-activos`, showing the top 10 assets by total count, with an empty-state label when no data exists.
 - [x] 1.5 Add a loading indicator while requests are in flight and a retryable error message if the critical request fails.
