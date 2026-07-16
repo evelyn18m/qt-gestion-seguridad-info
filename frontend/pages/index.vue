@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ReporteResumen, RiesgoPorMacroProceso, ReporteCIA, NivelCount } from '~/types/api'
+import type { ReporteResumen, AnalisisRiesgoActivoReporte, ReporteCIA, NivelCount } from '~/types/api'
 
 definePageMeta({ layout: 'default' })
 
@@ -7,7 +7,7 @@ const loading = ref(false)
 const errorMsg = ref('')
 
 const resumen = ref<ReporteResumen | null>(null)
-const macroprocesos = ref<RiesgoPorMacroProceso[]>([])
+const analisisRiesgo = ref<AnalisisRiesgoActivoReporte[]>([])
 const cia = ref<ReporteCIA | null>(null)
 
 const totalActivos = computed(() => resumen.value?.totalActivos ?? 0)
@@ -73,16 +73,36 @@ const ciaEmpty = computed(() =>
   isCiaEmpty(cia.value?.disponibilidad),
 )
 
-const macroprocesoCategories = computed(() => macroprocesos.value.map((m) => m.macroproceso))
-const macroprocesoSeries = computed(() => [
-  {
-    name: 'Riesgos',
-    data: macroprocesos.value.map((m) =>
-      (m.riesgosAlto ?? 0) + (m.riesgosMedio ?? 0) + (m.riesgosBajo ?? 0),
-    ),
-  },
+const amenazaVulnerabilidadPorActivo = computed(() => {
+  const map = new Map<string, { amenazas: Set<string>; vulnerabilidades: Set<string> }>()
+
+  for (const row of analisisRiesgo.value) {
+    const entry = map.get(row.nombreActivo) ?? {
+      amenazas: new Set<string>(),
+      vulnerabilidades: new Set<string>(),
+    }
+    if (row.amenaza) entry.amenazas.add(row.amenaza)
+    if (row.vulnerabilidad) entry.vulnerabilidades.add(row.vulnerabilidad)
+    map.set(row.nombreActivo, entry)
+  }
+
+  return Array.from(map.entries())
+    .map(([nombreActivo, counts]) => ({
+      nombreActivo,
+      amenazas: counts.amenazas.size,
+      vulnerabilidades: counts.vulnerabilidades.size,
+      total: counts.amenazas.size + counts.vulnerabilidades.size,
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+})
+
+const activoCategories = computed(() => amenazaVulnerabilidadPorActivo.value.map((a) => a.nombreActivo))
+const activoSeries = computed(() => [
+  { name: 'Amenazas', data: amenazaVulnerabilidadPorActivo.value.map((a) => a.amenazas) },
+  { name: 'Vulnerabilidades', data: amenazaVulnerabilidadPorActivo.value.map((a) => a.vulnerabilidades) },
 ])
-const macroprocesoEmpty = computed(() => macroprocesos.value.length === 0)
+const analisisEmpty = computed(() => amenazaVulnerabilidadPorActivo.value.length === 0)
 
 const barOptions = computed(() => ({
   chart: {
@@ -97,37 +117,39 @@ const barOptions = computed(() => ({
     },
   },
   xaxis: {
-    categories: macroprocesoCategories.value,
-    title: { text: 'Cantidad de riesgos' },
+    categories: activoCategories.value,
+    title: { text: 'Cantidad' },
   },
   yaxis: {
-    title: { text: 'Macroproceso' },
+    title: { text: 'Activo' },
   },
-  colors: ['#6366f1'],
+  colors: ['#E74C3C', '#3498DB'],
   theme: { mode: 'dark' as const },
   dataLabels: { enabled: true },
   grid: { borderColor: '#334155' },
+  legend: { position: 'bottom' as const, fontSize: '0.75rem' },
 }))
 
 async function fetchDashboard() {
+
   const { apiFetch } = useApi()
   loading.value = true
   errorMsg.value = ''
 
   try {
-    const [resumenData, macroprocesoData, ciaData] = await Promise.all([
+    const [resumenData, analisisData, ciaData] = await Promise.all([
       apiFetch<ReporteResumen>('/reportes/resumen').catch(() => null),
-      apiFetch<RiesgoPorMacroProceso[]>('/reportes/riesgos-por-macroproceso').catch(() => []),
+      apiFetch<AnalisisRiesgoActivoReporte[]>('/reportes/analisis-riesgo-activos').catch(() => []),
       apiFetch<ReporteCIA>('/reportes/cia').catch(() => null),
     ])
 
-    // Surface an error if any critical request failed. Macroprocess and CIA data are allowed to be empty.
+    // Surface an error if any critical request failed. Analysis and CIA data are allowed to be empty.
     if (!resumenData) {
       throw new Error('No se pudo cargar el resumen de activos.')
     }
 
     resumen.value = resumenData
-    macroprocesos.value = macroprocesoData ?? []
+    analisisRiesgo.value = analisisData ?? []
     cia.value = ciaData
   } catch (e: unknown) {
     errorMsg.value = e instanceof Error ? e.message : 'Error al cargar el dashboard'
@@ -248,15 +270,15 @@ onMounted(() => {
         </div>
 
         <div class="chart-card">
-          <h3>Riesgos por Macroproceso</h3>
-          <div v-if="macroprocesoEmpty" class="chart-empty">
-            No hay riesgos agrupados por macroproceso.
+          <h3>Amenazas y Vulnerabilidades por Activo</h3>
+          <div v-if="analisisEmpty" class="chart-empty">
+            No hay amenazas ni vulnerabilidades asociadas a activos.
           </div>
           <apexchart
             v-else
             type="bar"
             :options="barOptions"
-            :series="macroprocesoSeries"
+            :series="activoSeries"
             height="320"
           />
         </div>
