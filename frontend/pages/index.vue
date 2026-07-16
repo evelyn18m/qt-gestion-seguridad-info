@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ReporteResumen, RiesgoPorMacroProceso } from '~/types/api'
+import type { ReporteResumen, RiesgoPorMacroProceso, ReporteCIA, NivelCount } from '~/types/api'
 
 definePageMeta({ layout: 'default' })
 
@@ -8,48 +8,70 @@ const errorMsg = ref('')
 
 const resumen = ref<ReporteResumen | null>(null)
 const macroprocesos = ref<RiesgoPorMacroProceso[]>([])
+const cia = ref<ReporteCIA | null>(null)
 
 const totalActivos = computed(() => resumen.value?.totalActivos ?? 0)
 const conRiesgo = computed(() => resumen.value?.conRiesgo ?? 0)
 const sinRiesgo = computed(() => resumen.value?.sinRiesgo ?? 0)
 
-const riesgoDistribucionLabels = ['Alto', 'Medio', 'Bajo']
-const riesgoDistribucionSeries = computed(() => {
-  const dist = resumen.value?.distribucionRiesgos
-  if (!dist) return []
-  return [dist.Alto ?? 0, dist.Medio ?? 0, dist.Bajo ?? 0]
-})
-const riesgoDistribucionEmpty = computed(() =>
-  riesgoDistribucionSeries.value.length === 0 || riesgoDistribucionSeries.value.every((v) => v === 0),
-)
 
-const donutOptions = computed(() => ({
-  chart: {
-    type: 'donut' as const,
-    toolbar: { show: false },
-    background: 'transparent',
-  },
-  labels: riesgoDistribucionLabels,
-  colors: ['#E74C3C', '#F1C40F', '#2ECC71'],
-  plotOptions: {
-    pie: {
-      donut: {
-        size: '60%',
-        labels: {
-          show: true,
-          total: {
+const ciaLabels = ['Alto', 'Medio', 'Bajo']
+const ciaColors = ['#E74C3C', '#F1C40F', '#2ECC71']
+
+function buildCiaSeries(counts: NivelCount | undefined): number[] {
+  if (!counts) return []
+  return [counts.Alto ?? 0, counts.Medio ?? 0, counts.Bajo ?? 0]
+}
+
+function isCiaEmpty(counts: NivelCount | undefined): boolean {
+  const series = buildCiaSeries(counts)
+  return series.length === 0 || series.every((v) => v === 0)
+}
+
+function buildCiaDonutOptions(title: string) {
+  return {
+    chart: {
+      type: 'donut' as const,
+      toolbar: { show: false },
+      background: 'transparent',
+    },
+    labels: ciaLabels,
+    colors: ciaColors,
+    title: {
+      text: title,
+      align: 'center' as const,
+      style: { color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 },
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '55%',
+          labels: {
             show: true,
-            label: 'Activos',
-            color: '#94a3b8',
+            total: {
+              show: true,
+              label: 'Activos',
+              color: '#94a3b8',
+              fontSize: '0.75rem',
+            },
           },
         },
       },
     },
-  },
-  theme: { mode: 'dark' as const },
-  legend: { position: 'bottom' as const },
-  dataLabels: { enabled: false },
-}))
+    theme: { mode: 'dark' as const },
+    legend: { position: 'bottom' as const, fontSize: '0.75rem' },
+    dataLabels: { enabled: false },
+  }
+}
+
+const confidencialidadSeries = computed(() => buildCiaSeries(cia.value?.confidencialidad))
+const integridadSeries = computed(() => buildCiaSeries(cia.value?.integridad))
+const disponibilidadSeries = computed(() => buildCiaSeries(cia.value?.disponibilidad))
+const ciaEmpty = computed(() =>
+  isCiaEmpty(cia.value?.confidencialidad) &&
+  isCiaEmpty(cia.value?.integridad) &&
+  isCiaEmpty(cia.value?.disponibilidad),
+)
 
 const macroprocesoCategories = computed(() => macroprocesos.value.map((m) => m.macroproceso))
 const macroprocesoSeries = computed(() => [
@@ -93,18 +115,20 @@ async function fetchDashboard() {
   errorMsg.value = ''
 
   try {
-    const [resumenData, macroprocesoData] = await Promise.all([
+    const [resumenData, macroprocesoData, ciaData] = await Promise.all([
       apiFetch<ReporteResumen>('/reportes/resumen').catch(() => null),
       apiFetch<RiesgoPorMacroProceso[]>('/reportes/riesgos-por-macroproceso').catch(() => []),
+      apiFetch<ReporteCIA>('/reportes/cia').catch(() => null),
     ])
 
-    // Surface an error if any critical request failed. Macroprocess data is allowed to be empty.
+    // Surface an error if any critical request failed. Macroprocess and CIA data are allowed to be empty.
     if (!resumenData) {
       throw new Error('No se pudo cargar el resumen de activos.')
     }
 
     resumen.value = resumenData
     macroprocesos.value = macroprocesoData ?? []
+    cia.value = ciaData
   } catch (e: unknown) {
     errorMsg.value = e instanceof Error ? e.message : 'Error al cargar el dashboard'
   } finally {
@@ -187,18 +211,31 @@ onMounted(() => {
 
       <!-- Charts -->
       <div class="charts-grid">
-        <div class="chart-card">
-          <h3>Distribución de Riesgos</h3>
-          <div v-if="riesgoDistribucionEmpty" class="chart-empty">
-            No hay datos de distribución de riesgos.
+        <div class="chart-card cia-card">
+          <h3>Valoración CIA</h3>
+          <div v-if="ciaEmpty" class="chart-empty">
+            No hay datos de valoración CIA.
           </div>
-          <apexchart
-            v-else
-            type="donut"
-            :options="donutOptions"
-            :series="riesgoDistribucionSeries"
-            height="320"
-          />
+          <div v-else class="cia-charts">
+            <apexchart
+              type="donut"
+              :options="buildCiaDonutOptions('Confidencialidad')"
+              :series="confidencialidadSeries"
+              height="260"
+            />
+            <apexchart
+              type="donut"
+              :options="buildCiaDonutOptions('Integridad')"
+              :series="integridadSeries"
+              height="260"
+            />
+            <apexchart
+              type="donut"
+              :options="buildCiaDonutOptions('Disponibilidad')"
+              :series="disponibilidadSeries"
+              height="260"
+            />
+          </div>
         </div>
 
         <div class="chart-card">
@@ -335,6 +372,18 @@ onMounted(() => {
   height: 200px;
   color: var(--text-muted);
   font-size: 0.95rem;
+}
+
+.cia-charts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .cia-charts {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Loading */
