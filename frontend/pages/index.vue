@@ -279,7 +279,7 @@ onMounted(() => {
             type="donut"
             :options="buildNivelDonutOptions('Nivel de Riesgo')"
             :series="riesgoSeries"
-            height="220"
+            height="180"
           />
         </div>
       </div>
@@ -373,10 +373,10 @@ onMounted(() => {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   transition: transform 0.3s ease;
 }
 
@@ -385,9 +385,9 @@ onMounted(() => {
 }
 
 .kpi-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -395,8 +395,8 @@ onMounted(() => {
 }
 
 .kpi-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .kpi-icon.total {
@@ -423,7 +423,7 @@ onMounted(() => {
 }
 
 .kpi-value {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
   color: var(--text);
@@ -433,9 +433,9 @@ onMounted(() => {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  padding: 1rem;
-  gap: 0.5rem;
-  min-height: 280px;
+  padding: 0.75rem;
+  gap: 0.25rem;
+  min-height: 220px;
 }
 
 .kpi-chart-title {
