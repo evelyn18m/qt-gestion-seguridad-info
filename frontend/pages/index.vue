@@ -163,7 +163,7 @@ const activosCriticosPorAreaOptions = computed(() => {
     plotOptions: {
       pie: {
         donut: {
-          size: '72%',
+          size: '62%',
           labels: {
             show: true,
             total: {
@@ -171,7 +171,7 @@ const activosCriticosPorAreaOptions = computed(() => {
               label: 'Críticos',
               formatter: () => String(activosCriticosTotal.value),
               color: '#94a3b8',
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
             },
           },
         },
@@ -179,7 +179,7 @@ const activosCriticosPorAreaOptions = computed(() => {
     },
     theme: { mode: 'dark' as const },
     legend: {
-      position: 'right' as const,
+      position: 'bottom' as const,
       fontSize: '0.7rem',
       itemMargin: { horizontal: 4, vertical: 2 },
       offsetY: 2,
@@ -398,7 +398,7 @@ onMounted(() => {
             type="donut"
             :options="activosCriticosPorAreaOptions"
             :series="activosCriticosSeries"
-            height="360"
+            height="260"
           />
         </div>
 
@@ -554,13 +554,6 @@ onMounted(() => {
   font-size: 1rem;
   color: var(--text);
   margin: 0 0 1rem 0;
-}
-
-.ring-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
 }
 
 .chart-empty {
