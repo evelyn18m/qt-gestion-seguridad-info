@@ -40,26 +40,32 @@ function buildCiaDonutOptions(title: string) {
     title: {
       text: title,
       align: 'center' as const,
-      style: { color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 },
+      offsetY: -8,
+      style: { color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 },
     },
     plotOptions: {
       pie: {
         donut: {
-          size: '55%',
+          size: '65%',
           labels: {
             show: true,
             total: {
               show: true,
               label: 'Activos',
               color: '#94a3b8',
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
             },
           },
         },
       },
     },
     theme: { mode: 'dark' as const },
-    legend: { position: 'bottom' as const, fontSize: '0.75rem' },
+    legend: {
+      position: 'bottom' as const,
+      fontSize: '0.7rem',
+      itemMargin: { horizontal: 4, vertical: 2 },
+      offsetY: 4,
+    },
     dataLabels: { enabled: false },
   }
 }
@@ -221,19 +227,19 @@ onMounted(() => {
               type="donut"
               :options="buildCiaDonutOptions('Confidencialidad')"
               :series="confidencialidadSeries"
-              height="260"
+              height="300"
             />
             <apexchart
               type="donut"
               :options="buildCiaDonutOptions('Integridad')"
               :series="integridadSeries"
-              height="260"
+              height="300"
             />
             <apexchart
               type="donut"
               :options="buildCiaDonutOptions('Disponibilidad')"
               :series="disponibilidadSeries"
-              height="260"
+              height="300"
             />
           </div>
         </div>
@@ -376,8 +382,13 @@ onMounted(() => {
 
 .cia-charts {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.cia-charts > * {
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
