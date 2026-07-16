@@ -18,6 +18,7 @@ import {
   HeatmapSerieDto,
   HeatmapCellDto,
   HeatmapCellDetailDto,
+  ActivosCriticosPorAreaDto,
 } from './dto/reporte-response.dto';
 import * as XLSX_STYLE from 'xlsx-js-style';
 
@@ -292,6 +293,35 @@ export class ReportesService {
     } catch (error) {
       throw new HttpException(
         `Error al obtener reporte CIA: ${(error as Error).message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getActivosCriticosPorArea(): Promise<ActivosCriticosPorAreaDto[]> {
+    try {
+      const [vas, funcionarios] = await Promise.all([
+        this.prisma.valoracionActivo.findMany(),
+        this.prisma.funcionario.findMany({ include: { area: true } }),
+      ]);
+
+      const funcionarioMap = new Map(funcionarios.map((f) => [f.id, f]));
+      const counts = new Map<string, number>();
+
+      for (const va of vas) {
+        if (va.nivelRiesgo?.toLowerCase() !== 'alto') continue;
+
+        const propietario = funcionarioMap.get(va.propietarioId);
+        const area = propietario?.area?.nombre ?? 'Sin área';
+        counts.set(area, (counts.get(area) ?? 0) + 1);
+      }
+
+      return Array.from(counts.entries())
+        .map(([area, cantidad]) => ({ area, cantidad }))
+        .sort((a, b) => b.cantidad - a.cantidad);
+    } catch (error) {
+      throw new HttpException(
+        `Error al obtener activos críticos por área: ${(error as Error).message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

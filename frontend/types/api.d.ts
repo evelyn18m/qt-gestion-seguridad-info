@@ -164,6 +164,7 @@ export interface ValoracionActivoReporte {
     impacto: number | null
 }
 
+
 export interface AnalisisRiesgoActivoReporte {
     id: number
     nombreActivo: string
@@ -171,6 +172,11 @@ export interface AnalisisRiesgoActivoReporte {
     amenaza: string
     vulnerabilidad: string
     controlesImplementados: string | null
+}
+
+export interface ActivosCriticosPorArea {
+    area: string
+    cantidad: number
 }
 
 export interface EvaluacionRiesgoReporte {

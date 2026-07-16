@@ -138,3 +138,8 @@ export class PlanTratamientoReporteDto {
   estado: string;
   observaciones: string | null;
 }
+
+export class ActivosCriticosPorAreaDto {
+  area: string;
+  cantidad: number;
+}

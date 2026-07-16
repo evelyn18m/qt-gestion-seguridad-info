@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ReporteResumen, AnalisisRiesgoActivoReporte, ReporteCIA, NivelCount } from '~/types/api'
+import type { ReporteResumen, AnalisisRiesgoActivoReporte, ActivosCriticosPorArea, ReporteCIA, NivelCount } from '~/types/api'
 
 definePageMeta({ layout: 'default' })
 
@@ -9,6 +9,7 @@ const errorMsg = ref('')
 const resumen = ref<ReporteResumen | null>(null)
 const analisisRiesgo = ref<AnalisisRiesgoActivoReporte[]>([])
 const cia = ref<ReporteCIA | null>(null)
+const activosCriticosPorArea = ref<ActivosCriticosPorArea[]>([])
 
 const totalActivos = computed(() => resumen.value?.totalActivos ?? 0)
 const conRiesgo = computed(() => resumen.value?.conRiesgo ?? 0)
@@ -124,6 +125,69 @@ const ciaEmpty = computed(() =>
   isCiaEmpty(cia.value?.disponibilidad),
 )
 
+const activosCriticosEmpty = computed(() =>
+  activosCriticosPorArea.value.length === 0 ||
+  activosCriticosPorArea.value.every((a) => a.cantidad === 0),
+)
+
+const activosCriticosSeries = computed(() =>
+  activosCriticosPorArea.value.map((a) => a.cantidad),
+)
+const activosCriticosLabels = computed(() =>
+  activosCriticosPorArea.value.map((a) => a.area),
+)
+const activosCriticosTotal = computed(() =>
+  activosCriticosPorArea.value.reduce((sum, a) => sum + a.cantidad, 0),
+)
+const activosCriticosPorAreaOptions = computed(() => {
+  const palette = [
+    '#E74C3C',
+    '#C0392B',
+    '#A93226',
+    '#922B21',
+    '#7B241C',
+    '#641E16',
+    '#D35400',
+    '#A04000',
+    '#E67E22',
+    '#CA6F1E',
+  ]
+  return {
+    chart: {
+      type: 'donut' as const,
+      toolbar: { show: false },
+      background: 'transparent',
+    },
+    labels: activosCriticosLabels.value,
+    colors: palette,
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '72%',
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: 'Críticos',
+              formatter: () => String(activosCriticosTotal.value),
+              color: '#94a3b8',
+              fontSize: '0.75rem',
+            },
+          },
+        },
+      },
+    },
+    theme: { mode: 'dark' as const },
+    legend: {
+      position: 'right' as const,
+      fontSize: '0.7rem',
+      itemMargin: { horizontal: 4, vertical: 2 },
+      offsetY: 2,
+    },
+    dataLabels: { enabled: false },
+  }
+})
+
 const amenazaVulnerabilidadPorActivo = computed(() => {
   const map = new Map<string, { amenazas: Set<string>; vulnerabilidades: Set<string> }>()
 
@@ -188,10 +252,11 @@ async function fetchDashboard() {
   errorMsg.value = ''
 
   try {
-    const [resumenData, analisisData, ciaData] = await Promise.all([
+    const [resumenData, analisisData, ciaData, activosCriticosData] = await Promise.all([
       apiFetch<ReporteResumen>('/reportes/resumen').catch(() => null),
       apiFetch<AnalisisRiesgoActivoReporte[]>('/reportes/analisis-riesgo-activos').catch(() => []),
       apiFetch<ReporteCIA>('/reportes/cia').catch(() => null),
+      apiFetch<ActivosCriticosPorArea[]>('/reportes/activos-criticos-por-area').catch(() => []),
     ])
 
     // Surface an error if any critical request failed. Analysis and CIA data are allowed to be empty.
@@ -202,6 +267,7 @@ async function fetchDashboard() {
     resumen.value = resumenData
     analisisRiesgo.value = analisisData ?? []
     cia.value = ciaData
+    activosCriticosPorArea.value = activosCriticosData ?? []
   } catch (e: unknown) {
     errorMsg.value = e instanceof Error ? e.message : 'Error al cargar el dashboard'
   } finally {
@@ -320,6 +386,20 @@ onMounted(() => {
               />
             </div>
           </div>
+        </div>
+
+        <div class="chart-card ring-card">
+          <h3>Activos Críticos por Área</h3>
+          <div v-if="activosCriticosEmpty" class="chart-empty">
+            No hay activos críticos asociados a áreas.
+          </div>
+          <apexchart
+            v-else
+            type="donut"
+            :options="activosCriticosPorAreaOptions"
+            :series="activosCriticosSeries"
+            height="360"
+          />
         </div>
 
         <div class="chart-card">
@@ -474,6 +554,13 @@ onMounted(() => {
   font-size: 1rem;
   color: var(--text);
   margin: 0 0 1rem 0;
+}
+
+.ring-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .chart-empty {

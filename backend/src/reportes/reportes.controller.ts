@@ -24,6 +24,7 @@ import {
   PlanTratamientoReporteDto,
   HeatmapReporteDto,
   HeatmapCellDetailDto,
+  ActivosCriticosPorAreaDto,
 } from './dto/reporte-response.dto';
 
 @Controller('reportes')
@@ -54,6 +55,11 @@ export class ReportesController {
           ruta: 'GET /reportes/cia',
           descripcion:
             'Distribución de niveles CIA (Confidencialidad, Integridad, Disponibilidad)',
+        },
+        {
+          ruta: 'GET /reportes/activos-criticos-por-area',
+          descripcion:
+            'Activos críticos (riesgo Alto) agrupados por área funcional',
         },
         {
           ruta: 'GET /reportes/valoracion-activos',
@@ -124,6 +130,11 @@ export class ReportesController {
   @Get('cia')
   getCia(): Promise<CiaReporteDto> {
     return this.reportesService.getCia();
+  }
+
+  @Get('activos-criticos-por-area')
+  getActivosCriticosPorArea(): Promise<ActivosCriticosPorAreaDto[]> {
+    return this.reportesService.getActivosCriticosPorArea();
   }
 
   @Get('valoracion-activos')
