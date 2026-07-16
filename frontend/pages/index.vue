@@ -14,9 +14,60 @@ const totalActivos = computed(() => resumen.value?.totalActivos ?? 0)
 const conRiesgo = computed(() => resumen.value?.conRiesgo ?? 0)
 const sinRiesgo = computed(() => resumen.value?.sinRiesgo ?? 0)
 
-
+const nivelLabels = ['Alto', 'Medio', 'Bajo']
+const nivelColors = ['#E74C3C', '#F1C40F', '#2ECC71']
 const ciaLabels = ['Alto', 'Medio', 'Bajo']
 const ciaColors = ['#E74C3C', '#F1C40F', '#2ECC71']
+
+const riesgoSeries = computed(() => {
+  const dist = resumen.value?.distribucionRiesgos
+  if (!dist) return []
+  return [dist.Alto ?? 0, dist.Medio ?? 0, dist.Bajo ?? 0]
+})
+const riesgoEmpty = computed(() =>
+  riesgoSeries.value.length === 0 || riesgoSeries.value.every((v) => v === 0),
+)
+
+function buildNivelDonutOptions(title: string) {
+  return {
+    chart: {
+      type: 'donut' as const,
+      toolbar: { show: false },
+      background: 'transparent',
+    },
+    labels: nivelLabels,
+    colors: nivelColors,
+    title: {
+      text: title,
+      align: 'center' as const,
+      style: { color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 },
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '58%',
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: 'Activos',
+              color: '#94a3b8',
+              fontSize: '0.7rem',
+            },
+          },
+        },
+      },
+    },
+    theme: { mode: 'dark' as const },
+    legend: {
+      position: 'bottom' as const,
+      fontSize: '0.7rem',
+      itemMargin: { horizontal: 4, vertical: 2 },
+      offsetY: 2,
+    },
+    dataLabels: { enabled: false },
+  }
+}
 
 function buildCiaSeries(counts: NivelCount | undefined): number[] {
   if (!counts) return []
@@ -218,16 +269,18 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="kpi-card">
-          <div class="kpi-icon safe">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+        <div class="kpi-card kpi-chart-card">
+          <h3 class="kpi-chart-title">Nivel de Riesgo</h3>
+          <div v-if="riesgoEmpty" class="kpi-chart-empty">
+            Sin datos
           </div>
-          <div class="kpi-content">
-            <h3>Activos sin Riesgo</h3>
-            <p class="kpi-value">{{ sinRiesgo }}</p>
-          </div>
+          <apexchart
+            v-else
+            type="donut"
+            :options="buildNivelDonutOptions('Nivel de Riesgo')"
+            :series="riesgoSeries"
+            height="220"
+          />
         </div>
       </div>
 
@@ -374,6 +427,33 @@ onMounted(() => {
   font-weight: 700;
   margin: 0;
   color: var(--text);
+}
+
+.kpi-chart-card {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 1rem;
+  gap: 0.5rem;
+  min-height: 280px;
+}
+
+.kpi-chart-title {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpi-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 /* Charts */
