@@ -64,18 +64,18 @@ export class ReportesService {
 
       const distribucionRiesgos = this.nvlCero();
       for (const d of detalles) {
-        const nivel = d.nivelRiesgo;
-        if (nivel === 'Alto') distribucionRiesgos.Alto++;
-        else if (nivel === 'Medio') distribucionRiesgos.Medio++;
-        else if (nivel === 'Bajo') distribucionRiesgos.Bajo++;
+        const nivel = d.nivelRiesgo?.toLowerCase();
+        if (nivel === 'alto') distribucionRiesgos.Alto++;
+        else if (nivel === 'medio') distribucionRiesgos.Medio++;
+        else if (nivel === 'bajo') distribucionRiesgos.Bajo++;
       }
 
       const distribucionControles = this.nvlCero();
       for (const d of detalles) {
-        const nivel = d.nivelRiesgoControl;
-        if (nivel === 'Alto') distribucionControles.Alto++;
-        else if (nivel === 'Medio') distribucionControles.Medio++;
-        else if (nivel === 'Bajo') distribucionControles.Bajo++;
+        const nivel = d.nivelRiesgoControl?.toLowerCase();
+        if (nivel === 'alto') distribucionControles.Alto++;
+        else if (nivel === 'medio') distribucionControles.Medio++;
+        else if (nivel === 'bajo') distribucionControles.Bajo++;
       }
 
       return {
@@ -176,9 +176,10 @@ export class ReportesService {
         };
         g.totalActivos++;
 
-        if (va.nivelRiesgo === 'Bajo') g.riesgosBajo++;
-        else if (va.nivelRiesgo === 'Medio') g.riesgosMedio++;
-        else if (va.nivelRiesgo === 'Alto') g.riesgosAlto++;
+        const nivel = va.nivelRiesgo?.toLowerCase();
+        if (nivel === 'bajo') g.riesgosBajo++;
+        else if (nivel === 'medio') g.riesgosMedio++;
+        else if (nivel === 'alto') g.riesgosAlto++;
 
         if (va.evaluacionRiesgo != null) {
           g.sumaEvaluacion += va.evaluacionRiesgo;
