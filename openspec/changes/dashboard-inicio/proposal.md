@@ -8,7 +8,7 @@ The SGSI home page (`frontend/pages/index.vue`) is currently a static welcome ba
 
 ### In Scope
 - Populate `frontend/pages/index.vue` with KPI cards fed by `GET /reportes/resumen`.
-- Add ApexCharts sections for CIA valuation (Confidencialidad, Integridad, Disponibilidad) and risks by macroprocess.
+- Add ApexCharts sections for CIA valuation (Confidencialidad, Integridad, Disponibilidad) and threats/vulnerabilities by asset.
 - Preserve the existing sidebar and all other modules unchanged.
 
 ### Out of Scope
@@ -28,7 +28,7 @@ The SGSI home page (`frontend/pages/index.vue`) is currently a static welcome ba
 
 ## Approach
 
-Build the dashboard directly in `pages/index.vue` using `useApi()` to call `GET /reportes/resumen`, `GET /reportes/cia`, and `GET /reportes/riesgos-por-macroproceso`. Render KPI cards from the resumen payload, three CIA valuation donut charts from the CIA payload, and a bar chart for risks by macroprocess, all with the existing dark theme (`theme: { mode: 'dark' }`).
+Build the dashboard directly in `pages/index.vue` using `useApi()` to call `GET /reportes/resumen`, `GET /reportes/cia`, and `GET /reportes/analisis-riesgo-activos`. Render KPI cards from the resumen payload, three CIA valuation donut charts from the CIA payload, and a grouped horizontal bar chart for threats and vulnerabilities by asset, all with the existing dark theme (`theme: { mode: 'dark' }`).
 
 ## Affected Areas
 
@@ -36,12 +36,12 @@ Build the dashboard directly in `pages/index.vue` using `useApi()` to call `GET 
 |---|---|---|
 | `frontend/pages/index.vue` | Modified | Static welcome replaced by KPI cards and charts. |
 | `frontend/composables/useApi.ts` | Used | Existing authenticated fetch; no change. |
-| `frontend/types/api.d.ts` | Used | Existing `ReporteResumen` and `RiesgoPorMacroProceso` types. |
+| `frontend/types/api.d.ts` | Used | Existing `ReporteResumen`, `ReporteCIA`, and `AnalisisRiesgoActivoReporte` types. |
 
 ## Risks
 
 | Risk | Likelihood | Mitigation |
-|---|---|---|---|
+|---|---|---|
 | No frontend tests means regressions go unnoticed. | Med | Add manual smoke-test steps to the verify phase. |
 | Multiple report endpoints called on every home load. | Low | Acceptable at current scale; monitor response times. |
 
@@ -52,12 +52,12 @@ Build the dashboard directly in `pages/index.vue` using `useApi()` to call `GET 
 
 ## Dependencies
 
-- Backend endpoints `GET /reportes/resumen`, `GET /reportes/cia`, and `GET /reportes/riesgos-por-macroproceso` must remain available.
+- Backend endpoints `GET /reportes/resumen`, `GET /reportes/cia`, and `GET /reportes/analisis-riesgo-activos` must remain available.
 - `vue3-apexcharts` is already installed and used in `/reportes/mapa-calor`.
 - `useApi()` must continue to provide authenticated fetch behavior.
 
 ## Success Criteria
 
 - [ ] Dashboard loads `/reportes/resumen` and displays KPI cards for total assets, with risk, and without risk.
-- [ ] Dashboard displays at least two ApexCharts sections (CIA valuation donuts, risks by macroprocess bar chart).
+- [ ] Dashboard displays at least two ApexCharts sections (CIA valuation donuts, threats/vulnerabilities-by-asset bar chart).
 - [ ] Manual smoke test passes in local Docker Compose environment.

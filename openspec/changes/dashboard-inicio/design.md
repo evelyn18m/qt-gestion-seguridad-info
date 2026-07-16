@@ -2,13 +2,13 @@
 
 ## Technical Approach
 
-Transform `frontend/pages/index.vue` from a static welcome page into a live dashboard that consumes the existing `/reportes/resumen`, `/reportes/cia`, and `/reportes/riesgos-por-macroproceso` endpoints. No other modules, routes, or sidebar items are modified.
+Transform `frontend/pages/index.vue` from a static welcome page into a live dashboard that consumes the existing `/reportes/resumen`, `/reportes/cia`, and `/reportes/analisis-riesgo-activos` endpoints. No other modules, routes, or sidebar items are modified.
 
 ## Architecture Decisions
 
 ### Decision: Reuse existing report endpoints
 
-**Choice**: Use `GET /reportes/resumen` for KPI cards, `GET /reportes/cia` for the CIA valuation donuts, and `GET /reportes/riesgos-por-macroproceso` for the bar chart.
+**Choice**: Use `GET /reportes/resumen` for KPI cards, `GET /reportes/cia` for the CIA valuation donuts, and `GET /reportes/analisis-riesgo-activos` for the threats/vulnerabilities-by-asset bar chart.
 **Alternatives considered**: Creating a dedicated `/dashboard` endpoint.
 **Rationale**: The existing endpoints already expose the required counts and distribution data. A new endpoint would add backend work without adding value.
 
@@ -26,9 +26,9 @@ Transform `frontend/pages/index.vue` from a static welcome page into a live dash
 
 ### Decision: Parallel fetch with fallback values
 
-**Choice**: Fetch both endpoints in parallel via `Promise.all`; treat `/reportes/resumen` as critical and macroprocess data as optional.
+**Choice**: Fetch all endpoints in parallel via `Promise.all`; treat `/reportes/resumen` as critical and analysis/CIA data as optional.
 **Alternatives considered**: Sequential fetching or a single aggregated endpoint.
-**Rationale**: Parallel fetch minimizes perceived load time. The macroprocess endpoint can return an empty array gracefully, while a failed resumen triggers the error state.
+**Rationale**: Parallel fetch minimizes perceived load time. The analysis and CIA endpoints can return empty data gracefully, while a failed resumen triggers the error state.
 
 ## Data Flow
 
@@ -37,10 +37,11 @@ Transform `frontend/pages/index.vue` from a static welcome page into a live dash
   ├── onMounted()
   │     └── fetchDashboard()
   │           ├── useApi().apiFetch('/reportes/resumen')
-  │           └── useApi().apiFetch('/reportes/riesgos-por-macroproceso')
+  │           ├── useApi().apiFetch('/reportes/cia')
+  │           └── useApi().apiFetch('/reportes/analisis-riesgo-activos')
   ├── computed KPIs (totalActivos, conRiesgo, sinRiesgo)
   ├── computed CIA donut series (confidencialidad, integridad, disponibilidad)
-  └── computed bar series (riesgos por macroproceso)
+  └── computed bar series (amenazas y vulnerabilidades por activo)
 ```
 
 ## File Changes
@@ -55,7 +56,7 @@ No new interfaces. Reuses existing types from `frontend/types/api.d.ts`:
 
 - `ReporteResumen` — `{ totalActivos, conRiesgo, sinRiesgo }`
 - `ReporteCIA` — `{ confidencialidad: { Alto, Medio, Bajo }, integridad: { Alto, Medio, Bajo }, disponibilidad: { Alto, Medio, Bajo } }`
-- `RiesgoPorMacroProceso` — `{ macroproceso, riesgosAlto, riesgosMedio, riesgosBajo }`
+- `AnalisisRiesgoActivoReporte` — `{ id, nombreActivo, macroProceso, amenaza, vulnerabilidad, controlesImplementados }`
 
 ## Testing Strategy
 

@@ -38,21 +38,22 @@ The system SHALL fetch `GET /reportes/cia` and render three ApexCharts donut cha
 - WHEN the dashboard renders
 - THEN the chart area shows the message "No hay datos de valoración CIA."
 
-### Requirement: Risks by Macroprocess Bar Chart
 
-The system SHALL render an ApexCharts horizontal bar chart from `GET /reportes/riesgos-por-macroproceso`.
+### Requirement: Threats and Vulnerabilities by Asset Bar Chart
 
-#### Scenario: Macroprocess data present
+The system SHALL render an ApexCharts horizontal grouped bar chart from `GET /reportes/analisis-riesgo-activos` showing the top 10 assets by unique threats and vulnerabilities.
 
-- GIVEN `/reportes/riesgos-por-macroproceso` returns `[{ macroproceso: "Operaciones", riesgosAlto: 1, riesgosMedio: 1, riesgosBajo: 0 }]`
+#### Scenario: Analysis data present
+
+- GIVEN `/reportes/analisis-riesgo-activos` returns two rows for "Servidor Web" with different threats/vulnerabilities
 - WHEN the dashboard renders
-- THEN a horizontal bar chart labeled "Riesgos por Macroproceso" shows "Operaciones" with a total of 2
+- THEN a horizontal grouped bar chart labeled "Amenazas y Vulnerabilidades por Activo" shows "Servidor Web" with two series: Amenazas and Vulnerabilidades
 
-#### Scenario: Macroprocess data empty
+#### Scenario: Analysis data empty
 
-- GIVEN `/reportes/riesgos-por-macroproceso` returns `[]`
+- GIVEN `/reportes/analisis-riesgo-activos` returns `[]`
 - WHEN the dashboard renders
-- THEN the chart area shows the message "No hay riesgos agrupados por macroproceso."
+- THEN the chart area shows the message "No hay amenazas ni vulnerabilidades asociadas a activos."
 
 ### Requirement: Loading and Error States
 
