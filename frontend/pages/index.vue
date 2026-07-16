@@ -28,7 +28,7 @@ function isCiaEmpty(counts: NivelCount | undefined): boolean {
   return series.length === 0 || series.every((v) => v === 0)
 }
 
-function buildCiaDonutOptions(title: string) {
+function buildCiaDonutOptions() {
   return {
     chart: {
       type: 'donut' as const,
@@ -37,16 +37,10 @@ function buildCiaDonutOptions(title: string) {
     },
     labels: ciaLabels,
     colors: ciaColors,
-    title: {
-      text: title,
-      align: 'center' as const,
-      offsetY: -8,
-      style: { color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 },
-    },
     plotOptions: {
       pie: {
         donut: {
-          size: '65%',
+          size: '62%',
           labels: {
             show: true,
             total: {
@@ -64,7 +58,7 @@ function buildCiaDonutOptions(title: string) {
       position: 'bottom' as const,
       fontSize: '0.7rem',
       itemMargin: { horizontal: 4, vertical: 2 },
-      offsetY: 4,
+      offsetY: 2,
     },
     dataLabels: { enabled: false },
   }
@@ -223,24 +217,33 @@ onMounted(() => {
             No hay datos de valoración CIA.
           </div>
           <div v-else class="cia-charts">
-            <apexchart
-              type="donut"
-              :options="buildCiaDonutOptions('Confidencialidad')"
-              :series="confidencialidadSeries"
-              height="300"
-            />
-            <apexchart
-              type="donut"
-              :options="buildCiaDonutOptions('Integridad')"
-              :series="integridadSeries"
-              height="300"
-            />
-            <apexchart
-              type="donut"
-              :options="buildCiaDonutOptions('Disponibilidad')"
-              :series="disponibilidadSeries"
-              height="300"
-            />
+            <div class="cia-chart-wrapper">
+              <h4 class="cia-chart-title">Confidencialidad</h4>
+              <apexchart
+                type="donut"
+                :options="buildCiaDonutOptions()"
+                :series="confidencialidadSeries"
+                height="260"
+              />
+            </div>
+            <div class="cia-chart-wrapper">
+              <h4 class="cia-chart-title">Integridad</h4>
+              <apexchart
+                type="donut"
+                :options="buildCiaDonutOptions()"
+                :series="integridadSeries"
+                height="260"
+              />
+            </div>
+            <div class="cia-chart-wrapper">
+              <h4 class="cia-chart-title">Disponibilidad</h4>
+              <apexchart
+                type="donut"
+                :options="buildCiaDonutOptions()"
+                :series="disponibilidadSeries"
+                height="260"
+              />
+            </div>
           </div>
         </div>
 
@@ -387,8 +390,23 @@ onMounted(() => {
   min-width: 0;
 }
 
-.cia-charts > * {
+.cia-chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   min-width: 0;
+}
+
+.cia-chart-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 @media (max-width: 900px) {
