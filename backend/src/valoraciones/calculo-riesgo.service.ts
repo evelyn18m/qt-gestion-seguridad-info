@@ -8,12 +8,35 @@ export interface RiesgoCalculado {
   riesgoResidual?: 'ACEPTABLE' | 'INACEPTABLE';
 }
 
+export interface Thresholds {
+  riesgoBajoMax: number;
+  riesgoMedioMax: number;
+  riesgoAltoMax: number;
+  controlBajoMax: number;
+  controlMedioMax: number;
+  controlAltoMax: number;
+  residualAceptableMax: number;
+}
+
+export const DEFAULT_THRESHOLDS: Thresholds = {
+  riesgoBajoMax: 3,
+  riesgoMedioMax: 9,
+  riesgoAltoMax: 27,
+  controlBajoMax: 3,
+  controlMedioMax: 9,
+  controlAltoMax: 27,
+  residualAceptableMax: 3,
+};
+
 /**
  * Derives nivelRiesgo string from evaluacionRiesgo numeric value.
  */
-function deriveNivelRiesgo(evaluacion: number): RiesgoCalculado['nivelRiesgo'] {
-  if (evaluacion <= 3) return 'BAJO';
-  if (evaluacion <= 8) return 'MEDIO';
+function deriveNivelRiesgo(
+  evaluacion: number,
+  cfg: Thresholds,
+): RiesgoCalculado['nivelRiesgo'] {
+  if (evaluacion <= cfg.riesgoBajoMax) return 'BAJO';
+  if (evaluacion <= cfg.riesgoMedioMax) return 'MEDIO';
   return 'ALTO';
 }
 
@@ -22,8 +45,9 @@ function deriveNivelRiesgo(evaluacion: number): RiesgoCalculado['nivelRiesgo'] {
  */
 function deriveMetodoTratamiento(
   evaluacion: number,
+  cfg: Thresholds,
 ): RiesgoCalculado['metodoTratamiento'] {
-  return evaluacion <= 3
+  return evaluacion <= cfg.riesgoBajoMax
     ? 'RETENER / ACEPTAR'
     : 'MODIFICAR / PREVENIR / COMPARTIR';
 }
@@ -31,9 +55,12 @@ function deriveMetodoTratamiento(
 /**
  * Derives tipoControl string from evaluacionRiesgo.
  */
-function deriveTipoControl(evaluacion: number): RiesgoCalculado['tipoControl'] {
-  if (evaluacion <= 3) return 'Monitoreo';
-  if (evaluacion <= 8) return 'Preventivo';
+function deriveTipoControl(
+  evaluacion: number,
+  cfg: Thresholds,
+): RiesgoCalculado['tipoControl'] {
+  if (evaluacion <= cfg.controlBajoMax) return 'Monitoreo';
+  if (evaluacion <= cfg.controlMedioMax) return 'Preventivo';
   return 'Correctivo';
 }
 
@@ -45,6 +72,7 @@ function deriveTipoControl(evaluacion: number): RiesgoCalculado['tipoControl'] {
  * @param nivelVulnerabilidad     — Vulnerability level (1–3)
  * @param nivelAmenazaControl     — Optional: threat level with control (1–3)
  * @param nivelVulnerabilidadControl — Optional: vulnerability level with control (1–3)
+ * @param config                  — Optional: custom thresholds (defaults to 3/9/27)
  */
 export function calculateRiesgo(
   va: number,
@@ -52,11 +80,12 @@ export function calculateRiesgo(
   nivelVulnerabilidad: number,
   nivelAmenazaControl?: number,
   nivelVulnerabilidadControl?: number,
+  config: Thresholds = DEFAULT_THRESHOLDS,
 ): RiesgoCalculado {
   const evaluacionRiesgo = va * nivelAmenaza * nivelVulnerabilidad;
-  const nivelRiesgo = deriveNivelRiesgo(evaluacionRiesgo);
-  const metodoTratamiento = deriveMetodoTratamiento(evaluacionRiesgo);
-  const tipoControl = deriveTipoControl(evaluacionRiesgo);
+  const nivelRiesgo = deriveNivelRiesgo(evaluacionRiesgo, config);
+  const metodoTratamiento = deriveMetodoTratamiento(evaluacionRiesgo, config);
+  const tipoControl = deriveTipoControl(evaluacionRiesgo, config);
 
   const result: RiesgoCalculado = {
     evaluacionRiesgo,
@@ -75,9 +104,14 @@ export function calculateRiesgo(
   ) {
     const evaluacionRiesgoControl =
       va * nivelAmenazaControl * nivelVulnerabilidadControl;
-    const nivelRiesgoControl = deriveNivelRiesgo(evaluacionRiesgoControl);
+    const nivelRiesgoControl = deriveNivelRiesgo(
+      evaluacionRiesgoControl,
+      config,
+    );
     const riesgoResidual =
-      evaluacionRiesgoControl <= 3 ? 'ACEPTABLE' : 'INACEPTABLE';
+      evaluacionRiesgoControl <= config.residualAceptableMax
+        ? 'ACEPTABLE'
+        : 'INACEPTABLE';
 
     result.evaluacionRiesgoControl = evaluacionRiesgoControl;
     result.nivelRiesgoControl = nivelRiesgoControl;

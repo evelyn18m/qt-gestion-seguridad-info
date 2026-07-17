@@ -2,7 +2,20 @@
 const isSidebarOpen = ref(false)
 const catalogosOpen = ref(false)
 const route = useRoute()
-const {user, logout} = useAuth()
+const { usuario, logout, tieneRol } = useAuth()
+const { secondsRemaining, isWarning, isExpired, refreshSession } = useSession()
+
+// Parse roles from JSON string for display
+const displayName = computed(() => usuario.value?.username || 'Usuario')
+const displayRole = computed(() => {
+  if (!usuario.value?.roles) return 'Usuario'
+  try {
+    const roles = JSON.parse(usuario.value.roles)
+    return roles[0] || 'Usuario'
+  } catch {
+    return 'Usuario'
+  }
+})
 
 function closeSidebar() {
   isSidebarOpen.value = false
@@ -20,6 +33,7 @@ const catalogos = [
   {path: '/catalogos?tipo=subprocesos', label: 'Subprocesos'},
   {path: '/catalogos?tipo=macroprocesos', label: 'Macroprocesos'},
   {path: '/catalogos?tipo=tipos-activo', label: 'Tipos de Activo'},
+  {path: '/catalogos?tipo=tipos-datos-personales', label: 'Tipos de Datos Personales'},
   {path: '/catalogos?tipo=valoraciones', label: 'Valoraciones'},
   {path: '/catalogos?tipo=funcionarios', label: 'Funcionarios'},
   {path: '/catalogos?tipo=areas', label: 'Áreas'},
@@ -44,11 +58,11 @@ const catalogos = [
       <div class="header-right">
         <div class="user-info">
           <div class="user-details">
-            <span class="user-name">{{ user?.name || user?.preferred_username }}</span>
-            <span class="user-role">{{ user?.realm_access?.roles?.[0] || 'Usuario' }}</span>
+            <span class="user-name">{{ displayName }}</span>
+            <span class="user-role">{{ displayRole }}</span>
           </div>
           <div class="user-avatar">
-            {{ (user?.name || user?.preferred_username || 'U').charAt(0).toUpperCase() }}
+            {{ (displayName).charAt(0).toUpperCase() }}
           </div>
         </div>
         <button class="logout-mini-btn" title="Cerrar Sesión" @click="logout">
@@ -60,6 +74,13 @@ const catalogos = [
         </button>
       </div>
     </header>
+
+    <SessionWarning
+        :is-expired="isExpired"
+        :is-warning="isWarning"
+        :seconds-remaining="secondsRemaining"
+        @refresh="refreshSession"
+    />
 
     <div class="main-container">
       <!-- Sidebar -->
@@ -100,6 +121,54 @@ const catalogos = [
                     stroke-linejoin="round"/>
             </svg>
             <span>Valoración de Activos</span>
+          </NuxtLink>
+          <NuxtLink active-class="active" class="nav-item" to="/plan-tratamiento" @click="closeSidebar">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08A2.25 2.25 0 0110.5 6.108V8.25m0 .75v6.75m0-6.75h6.75m-6.75 0L9.75 15m5.25-6.75L15 15m-5.25 0h6.75m-6.75 0v6.75" stroke-linecap="round"
+                    stroke-linejoin="round"/>
+            </svg>
+            <span>Plan de Tratamiento</span>
+          </NuxtLink>
+          <template v-if="tieneRol('administrador')">
+            <NuxtLink active-class="active" class="nav-item" to="/parametrizacion" @click="closeSidebar">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 9h18M3 15h18M9 3v18" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Parametrización</span>
+            </NuxtLink>
+            <NuxtLink active-class="active" class="nav-item" to="/usuarios" @click="closeSidebar">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" stroke-linecap="round"
+                      stroke-linejoin="round"/>
+              </svg>
+              <span>Usuarios</span>
+            </NuxtLink>
+            <NuxtLink active-class="active" class="nav-item" to="/roles" @click="closeSidebar">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>Roles</span>
+            </NuxtLink>
+          </template>
+          <NuxtLink active-class="active" class="nav-item" to="/auditoria" @click="closeSidebar">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Auditoría</span>
+          </NuxtLink>
+          <NuxtLink active-class="active" class="nav-item" to="/reportes/valoracion-activos" @click="closeSidebar">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 7.5h3l3-3m0 0l3 3m-3-3v12" stroke-linecap="round"
+                    stroke-linejoin="round"/>
+            </svg>
+            <span>Reportes</span>
           </NuxtLink>
         </nav>
 

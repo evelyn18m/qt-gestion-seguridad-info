@@ -3,10 +3,12 @@ import {
   IsOptional,
   IsString,
   Validate,
+  ValidateNested,
   ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 // Tab 2: at least one of amenazaIds / vulnerabilidadIds must be non-empty
 @ValidatorConstraint()
@@ -79,9 +81,8 @@ export class DetalleRiesgoDto {
   @IsString()
   metodoTratamiento?: string;
 
-  @IsOptional()
   @IsNumber()
-  tipoControlId?: number;
+  tipoControlId: number;
 
   @IsOptional()
   @IsNumber()
@@ -121,8 +122,8 @@ export class DetalleRiesgoDto {
   controlesArea?: string;
 
   @IsOptional()
-  @IsNumber()
-  controlesImplementarId?: number;
+  @IsString()
+  controlesImplementarId?: string;
 }
 
 export class CreateValoracionDto {
@@ -145,8 +146,8 @@ export class CreateValoracionDto {
   @IsNumber()
   propietarioId: number;
 
-  @IsNumber()
-  custodioId: number;
+  @IsString()
+  custodioId: string;
 
   @IsString()
   descripcion: string;
@@ -172,6 +173,10 @@ export class CreateValoracionDto {
 
   @IsOptional()
   tieneDatosPersonales?: boolean;
+
+  @IsOptional()
+  @IsString()
+  tiposDatosPersonales?: string;
 
   // Tab 2: Análisis de Riesgos
   @IsOptional()
@@ -246,5 +251,7 @@ export class CreateValoracionDto {
 
   // Detalles individuales de riesgo
   @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => DetalleRiesgoDto)
   detallesRiesgo?: DetalleRiesgoDto[];
 }

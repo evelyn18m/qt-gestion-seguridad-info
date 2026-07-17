@@ -4,6 +4,7 @@ import type {CatalogoItem, ControlesImplementarItem, DetalleRiesgo} from '~/type
 // ── Catalog Data ──────────────────────────────────────────────────────────────
 interface CatalogData {
   valTipoActivo: CatalogoItem[]
+  valTipoDatosPersonales: CatalogoItem[]
   valFormatos: CatalogoItem[]
   valMacroprocesos: CatalogoItem[]
   valSubprocesos: CatalogoItem[]
@@ -26,7 +27,7 @@ interface ValFormData {
   macroProceso: string
   subProceso: string
   propietario: string
-  custodio: string
+  custodio: number[]
   descripcion: string
   controlSeguridad: string
   ubicacion: string
@@ -37,6 +38,7 @@ interface ValFormData {
   integridad: string
   disponibilidad: string
   tieneDatosPersonales: boolean
+  tiposDatosPersonales: number[] | null
 }
 
 interface AnalisisFormData {
@@ -57,7 +59,7 @@ interface EvaluacionFormData {
 interface TratamientoFormData {
   metodoTratamiento: string
   tipoControl: string
-  controlesImplementar: string
+  controlesImplementar: string[]
   nivelAmenazaControl: string
   nivelVulnerabilidadControl: string
 }
@@ -94,6 +96,13 @@ const subprocesosFiltrados = computed(() => {
   return props.catalogData.valSubprocesos.filter((s: CatalogoItem) => s.macroProcesoId === Number(mpId))
 })
 
+const funcionariosFiltrados = computed(() => {
+  const area = custodioArea.value
+  if (!area) return []
+
+  return props.catalogData.valFuncionarios.filter((f: CatalogoItem) => f.areaId === Number(area))
+})
+
 const amenazaCategorias = computed(() => {
   const cats = new Set(props.catalogData.valAmenazas.map((a: CatalogoItem) => a.categoria))
   return Array.from(cats).sort()
@@ -118,7 +127,7 @@ const ciaAverage = computed(() => {
   const c = getValorImpacto(props.valForm.confidencialidad)
   const i = getValorImpacto(props.valForm.integridad)
   const d = getValorImpacto(props.valForm.disponibilidad)
-  const selected = [c, i, d].filter(v => v > 0)
+  const selected: number[] = [c, i, d].filter((v): v is number => !!v && v > 0)
   if (selected.length === 0) return 0
   return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
 })
@@ -130,26 +139,45 @@ const macroProcesoName = computed(() => {
   return found ? found.nombre : `ID #${id}`
 })
 
-const detallesAmenazas = computed(() => props.detallesRiesgo.filter(d => d.tipo === 'amenaza'))
-const detallesVulnerabilidades = computed(() => props.detallesRiesgo.filter(d => d.tipo === 'vulnerabilidad'))
-
-// ── Tab 3 Preview ──────────────────────────────────────────────────────────
-const previewRiesgo = computed<PreviewRiesgo>(() => {
-  const amenazaNivel = getValorRiesgo(props.evaluacionForm.amenazaRiesgoId)
-  const vulnerabilidadNivel = getValorRiesgo(props.evaluacionForm.vulnerabilidadRiesgoId)
-  if (ciaAverage.value === 0 || !amenazaNivel || !vulnerabilidadNivel) {
-    return {evaluacionRiesgo: 0, nivelRiesgo: ''}
-  }
-  return localCalculateRiesgo(ciaAverage.value, amenazaNivel, vulnerabilidadNivel)
-})
-
 // ── Local State ──────────────────────────────────────────────────────────────
 const amenazaCategoria = ref('')
 const vulnerabilidadCategoria = ref('')
-const amenazaSeleccionada = ref('')
-const vulnerabilidadSeleccionada = ref('')
 const currentStep = ref(0)
+const custodioArea = ref(null)
 const TOTAL_STEPS = 4
+
+const custodioGroupByArea = computed(() => {
+  const groups: Record<number, CatalogoItem[]> = {};
+
+  props.valForm.custodio.forEach((id) => {
+    const funcionario = props.catalogData.valFuncionarios.find((m: CatalogoItem) => m.id === Number(id))
+    if (!funcionario) return
+
+    if (!(funcionario.areaId in groups)) {
+      groups[funcionario.areaId] = []
+    }
+
+    groups[funcionario.areaId]!.push(funcionario)
+  })
+
+  return groups
+});
+
+const fieldErrors = reactive<Record<string, boolean>>({
+  nombreActivo: false,
+  tipoActivo: false,
+  formato: false,
+  macroProceso: false,
+  subProceso: false,
+  propietario: false,
+  custodio: false,
+  descripcion: false,
+  controlSeguridad: false,
+  ubicacion: false,
+  confidencialidad: false,
+  integridad: false,
+  disponibilidad: false,
+})
 
 // ── Tab 2 Row State ─────────────────────────────────────────────────────────
 // Each row: { amenazaIds, vulnerabilidadIds, controlesImplementados, controlesArea, controlesImplementarId }
@@ -158,7 +186,7 @@ export interface RiskRow {
   vulnerabilidadIds: string[]
   controlesImplementados: string
   controlesArea: string
-  controlesImplementarId?: number | null
+  controlesImplementarId: string[]
   tempId?: number
 }
 
@@ -171,7 +199,7 @@ function agregarFila() {
     vulnerabilidadIds: [],
     controlesImplementados: '',
     controlesArea: '',
-    controlesImplementarId: null,
+    controlesImplementarId: [],
     tempId: ++rowCounter,
   })
 }
@@ -183,6 +211,11 @@ function eliminarFila(index: number) {
 
 function removeAmenaza(row: RiskRow, idToRemove: string) {
   row.amenazaIds = row.amenazaIds.filter(id => id !== idToRemove)
+  syncRowsToDetalles()
+}
+
+function removeControlesImplementar(row: RiskRow, idToRemove: string) {
+  row.controlesImplementarId = row.controlesImplementarId.filter(id => id !== idToRemove)
   syncRowsToDetalles()
 }
 
@@ -198,6 +231,13 @@ function toggleAmenazaInRow(row: RiskRow, amenazaId: string) {
   syncRowsToDetalles()
 }
 
+function toggleControlesImplementar(row: RiskRow, controlesImplementarId: string) {
+  const idx = row.controlesImplementarId.indexOf(controlesImplementarId);
+  if (idx >= 0) row.controlesImplementarId.splice(idx, 1);
+  else row.controlesImplementarId.push(controlesImplementarId);
+  syncRowsToDetalles()
+}
+
 function toggleVulnerabilidadInRow(row: RiskRow, vulnerabilidadId: string) {
   const idx = row.vulnerabilidadIds.indexOf(vulnerabilidadId)
   if (idx >= 0) row.vulnerabilidadIds.splice(idx, 1)
@@ -205,13 +245,22 @@ function toggleVulnerabilidadInRow(row: RiskRow, vulnerabilidadId: string) {
   syncRowsToDetalles()
 }
 
-function hasAtLeastOne(row: RiskRow): boolean {
-  return row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0
+function submitModal() {
+  if (canAdvanceFromStep4()) {
+    emit('submit');
+  } else {
+    alert('Complete el campo \'Tipo de Control\' en todas las filas antes de guardar.')
+  }
 }
 
 function getAmenazaLabel(id: string) {
   const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === Number(id))
   return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
+}
+
+function getControlesImplementarLabel(id: String) {
+  const a = props.catalogData.valControlesImplementar.find((item) => item.id === Number(id))
+  return a ? `${a.seccion} - ${a.descripcion}` : `C#${id}`;
 }
 
 function getVulnerabilidadLabel(id: string) {
@@ -230,14 +279,13 @@ function parseIds(jsonStr: string | null | undefined): string[] {
 }
 
 // Sync riskRows to detallesRiesgo (for Tabs 3/4 backward compat)
-// Creates ONE combined entry per RiskRow (not separate amenaza + vulnerabilidad entries)
-// This ensures grouping is preserved when loading existing data
+// Creates exactly ONE combined entry per RiskRow (not N+M separate entries)
 function syncRowsToDetalles() {
   // Build lookup from existing entries to preserve control field values
   const prevMap = new Map<string, DetalleRiesgo>()
   props.detallesRiesgo.forEach(e => {
     if (!e.amenazaIds?.length && !e.vulnerabilidadIds?.length) return
-    const key = `${e.tipo}:${e.catalogoId}:${JSON.stringify(e.amenazaIds)}:${JSON.stringify(e.vulnerabilidadIds)}`
+    const key = `${JSON.stringify(e.amenazaIds)}:${JSON.stringify(e.vulnerabilidadIds)}`
     prevMap.set(key, e)
   })
 
@@ -246,53 +294,28 @@ function syncRowsToDetalles() {
     // Only create entries if the row has at least one amenaza or vulnerabilidad
     if (row.amenazaIds.length === 0 && row.vulnerabilidadIds.length === 0) return
 
-    // Create one entry per amenaza in this row (with access to all row's arrays)
-    row.amenazaIds.forEach(aId => {
-      const key = `amenaza:${aId}:${JSON.stringify(row.amenazaIds)}:${JSON.stringify(row.vulnerabilidadIds)}`
-      const prev = prevMap.get(key)
-      entries.push({
-        tipo: 'amenaza' as const,
-        catalogoId: Number(aId),
-        riesgoId: prev?.riesgoId ?? '',
-        vulnerabilidadRiesgoId: prev?.vulnerabilidadRiesgoId ?? undefined,
-        evaluacionRiesgo: 0,
-        nivelRiesgo: '',
-        metodoTratamiento: '',
-        tipoControlId: prev?.tipoControlId ?? '',
-        riesgoControlId: prev?.riesgoControlId ?? '',
-        vulnerabilidadControlId: prev?.vulnerabilidadControlId ?? undefined,
-        evaluacionRiesgoControl: 0,
-        nivelRiesgoControl: '',
-        amenazaIds: [...row.amenazaIds],
-        vulnerabilidadIds: [...row.vulnerabilidadIds],
-        controlesImplementados: row.controlesImplementados,
-        controlesArea: row.controlesArea,
-        controlesImplementarId: row.controlesImplementarId ?? null,
-      })
-    })
-    // Create one entry per vulnerabilidad in this row (with access to all row's arrays)
-    row.vulnerabilidadIds.forEach(vId => {
-      const key = `vulnerabilidad:${vId}:${JSON.stringify(row.amenazaIds)}:${JSON.stringify(row.vulnerabilidadIds)}`
-      const prev = prevMap.get(key)
-      entries.push({
-        tipo: 'vulnerabilidad' as const,
-        catalogoId: Number(vId),
-        riesgoId: prev?.riesgoId ?? '',
-        vulnerabilidadRiesgoId: prev?.vulnerabilidadRiesgoId ?? undefined,
-        evaluacionRiesgo: 0,
-        nivelRiesgo: '',
-        metodoTratamiento: '',
-        tipoControlId: prev?.tipoControlId ?? '',
-        riesgoControlId: prev?.riesgoControlId ?? '',
-        vulnerabilidadControlId: prev?.vulnerabilidadControlId ?? undefined,
-        evaluacionRiesgoControl: 0,
-        nivelRiesgoControl: '',
-        amenazaIds: [...row.amenazaIds],
-        vulnerabilidadIds: [...row.vulnerabilidadIds],
-        controlesImplementados: row.controlesImplementados,
-        controlesArea: row.controlesArea,
-        controlesImplementarId: row.controlesImplementarId ?? null,
-      })
+    const key = `${JSON.stringify(row.amenazaIds)}:${JSON.stringify(row.vulnerabilidadIds)}`
+    const prev = prevMap.get(key)
+
+    // Create ONE combined entry per RiskRow
+    entries.push({
+      tipo: 'amenaza' as const,
+      catalogoId: row.amenazaIds.length > 0 ? Number(row.amenazaIds[0]) : (row.vulnerabilidadIds.length > 0 ? Number(row.vulnerabilidadIds[0]) : 0),
+      riesgoId: prev?.riesgoId ?? '',
+      vulnerabilidadRiesgoId: prev?.vulnerabilidadRiesgoId ?? undefined,
+      evaluacionRiesgo: prev?.evaluacionRiesgo ?? 0,
+      nivelRiesgo: prev?.nivelRiesgo ?? '',
+      metodoTratamiento: prev?.metodoTratamiento ?? '',
+      tipoControlId: prev?.tipoControlId ?? '',
+      riesgoControlId: prev?.riesgoControlId ?? '',
+      vulnerabilidadControlId: prev?.vulnerabilidadControlId ?? undefined,
+      evaluacionRiesgoControl: prev?.evaluacionRiesgoControl ?? 0,
+      nivelRiesgoControl: prev?.nivelRiesgoControl ?? '',
+      amenazaIds: [...row.amenazaIds],
+      vulnerabilidadIds: [...row.vulnerabilidadIds],
+      controlesImplementados: row.controlesImplementados,
+      controlesArea: row.controlesArea,
+      controlesImplementarId: row.controlesImplementarId ?? null,
     })
   })
   // Preserve entries with legacy fields only (from Tab 3/4 edits — no new row fields)
@@ -327,6 +350,12 @@ function loadExistingRows() {
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
     loadExistingRows()
+    nextTick(() => {
+      riskRows.value.forEach(row => {
+        const d = findMatchedDetalle(row)
+        if (d) updateEvaluacionDetalle(d)
+      })
+    })
   }
   if (!isOpen) {
     currentStep.value = 0
@@ -356,33 +385,86 @@ function canAdvanceFromStep2(): boolean {
   return riskRows.value.length > 0
 }
 
+const tipoControlErrors = ref(false)
+
+interface Step3RowIssue {
+  rowIndex: number
+  missingFields: string[]
+}
+
 function canAdvanceFromStep3(): boolean {
-  return riskRows.value.every(row =>
-      findMatchedDetalle(row)?.riesgoId &&
-      findMatchedDetalle(row)?.vulnerabilidadRiesgoId
-  )
+  const issues: Step3RowIssue[] = []
+  const allGood = riskRows.value.every((row, i) => {
+    const det = findMatchedDetalle(row)
+    const missing: string[] = []
+    if (!det?.riesgoId) missing.push('Nivel Amenaza')
+    if (!det?.vulnerabilidadRiesgoId) missing.push('Nivel Vulnerabilidad')
+    
+    if (missing.length > 0) issues.push({ rowIndex: i, missingFields: missing })
+    return missing.length === 0
+  })
+  if (!allGood) console.table(issues)
+  return allGood
+}
+
+function canAdvanceFromStep4(): boolean {
+  const allGood = riskRows.value.every(row => {
+    const det = findMatchedDetalle(row)
+    return !!det?.tipoControlId
+  })
+  tipoControlErrors.value = !allGood
+  return allGood
 }
 
 function nextStep() {
-  if (currentStep.value === 0 && !canAdvanceFromStep1()) {
-    alert('Complete todos los campos requeridos en Valoración de Activo')
-    return
+  console.log(`[nextStep] Attempting from step ${currentStep.value}`)
+  if (currentStep.value === 0) {
+    if (!canAdvanceFromStep1()) {
+      const fields = Object.keys(fieldErrors) as (keyof ValFormData)[]
+      const emptyFields = fields.filter((f) => !(props.valForm[f]))
+      console.warn('[nextStep] Step 0 blocked — empty fields:', emptyFields)
+      fields.forEach((f) => { fieldErrors[f] = !props.valForm[f] })
+      void nextTick().then(() => scrollToFirstError())
+      return
+    }
+    console.log('[nextStep] Step 0 passed, clearing errors')
+    Object.keys(fieldErrors).forEach((f) => { fieldErrors[f] = false })
   }
   if (currentStep.value === 1 && !canAdvanceFromStep2()) {
+    console.warn('[nextStep] Step 1 blocked — no risk rows')
     alert('Agregue al menos una fila de riesgo')
     return
   }
   if (currentStep.value === 2 && !canAdvanceFromStep3()) {
-    alert('Complete la evaluación de riesgo en todas las filas')
+    const failedRows = riskRows.value.filter(row => {
+      const det = findMatchedDetalle(row)
+      return !det?.riesgoId || !det?.vulnerabilidadRiesgoId || !det?.tipoControlId
+    })
+    console.warn(`[nextStep] Step 2 blocked — ${failedRows.length} rows incomplete`, failedRows)
+    void nextTick().then(() => scrollToFirstError())
     return
   }
   if (currentStep.value < TOTAL_STEPS - 1) {
+    if (currentStep.value === 2) tipoControlErrors.value = false
+    console.log(`[nextStep] Advancing: ${currentStep.value} → ${currentStep.value + 1}`)
     currentStep.value++
   }
 }
 
 function prevStep() {
-  if (currentStep.value > 0) currentStep.value--
+  if (currentStep.value > 0) {
+    if (currentStep.value === 2) tipoControlErrors.value = false
+    console.log(`[prevStep] Going back: ${currentStep.value} → ${currentStep.value - 1}`)
+    currentStep.value--
+  }
+}
+
+function scrollToFirstError() {
+  document.querySelector('.form-group.has-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function clearFieldError(field: string) {
+  fieldErrors[field] = false
 }
 
 // ── Helper Functions ─────────────────────────────────────────────────────────
@@ -402,12 +484,6 @@ function getValorRiesgo(id: string | number) {
   return found ? (found.valor || 0) : 0
 }
 
-function getRiesgoNivel(id: string | number) {
-  if (!id) return ''
-  const found = props.catalogData.valRiesgos.find((r: CatalogoItem) => r.id === Number(id))
-  return found ? (found.nivel || '') : ''
-}
-
 function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilidadRiesgoId: string | number) {
   const impacto = ciaAverage.value
   const amenaza = getValorRiesgo(amenazaRiesgoId)
@@ -417,37 +493,17 @@ function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilid
 }
 
 function calcularNivelRiesgo(evaluacion: number) {
-  if (evaluacion >= 18) return 'Crítico'
-  if (evaluacion >= 9) return 'Alto'
-  if (evaluacion >= 3) return 'Medio'
-  return 'Bajo'
+  if (evaluacion <= 3) return 'BAJO'
+  if (evaluacion <= 8) return 'MEDIO'
+  if (evaluacion <= 27) return 'ALTO'
+  return 'ALTO'
 }
 
 function getNivelStyle(nivel: string) {
   const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return {label: 'Crítico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)'}
   if (n.includes('alto')) return {label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)'}
   if (n.includes('medio')) return {label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)'}
   return {label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)'}
-}
-
-function getCatalogoLabel(tipo: string, catalogoId: number) {
-  if (tipo === 'amenaza') {
-    const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === catalogoId)
-    return a ? `${a.categoria} — ${a.nombre}` : `A#${catalogoId}`
-  }
-  const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === catalogoId)
-  return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
-}
-
-function getAmenazaLabelNum(id: number) {
-  const a = props.catalogData.valAmenazas.find((x: CatalogoItem) => x.id === id)
-  return a ? `${a.categoria} — ${a.nombre}` : `A#${id}`
-}
-
-function getVulnerabilidadLabelNum(id: number) {
-  const v = props.catalogData.valVulnerabilidades.find((x: CatalogoItem) => x.id === id)
-  return v ? `${v.categoria}- — ${v.descripcion}` : `V#${id}`
 }
 
 // ── Pure risk calculation (mirrors backend calculo-riesgo.service.ts) ────────
@@ -460,6 +516,11 @@ function deriveNivelRiesgo(evaluacion: number): string {
   if (evaluacion <= 3) return 'BAJO'
   if (evaluacion <= 8) return 'MEDIO'
   if (evaluacion <= 27) return 'ALTO'
+  return '-'
+}
+
+function deriveMetodoTratamiento(evaluacion: number): string {
+  return evaluacion <= 3 ? 'RETENER / ACEPTAR' : 'MODIFICAR / PREVENIR / COMPARTIR'
 }
 
 function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number): PreviewRiesgo {
@@ -470,8 +531,8 @@ function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabili
 
 function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
   const va = ciaAverage.value
-  const nivelA = getValorRiesgo(d.riesgoId)
-  const nivelV = getValorRiesgo(d.vulnerabilidadRiesgoId)
+  const nivelA = getValorRiesgo(d.riesgoId as string)
+  const nivelV = getValorRiesgo(d.vulnerabilidadRiesgoId as number)
   if (va === 0 || !nivelA || !nivelV) {
     return {evaluacionRiesgo: 0, nivelRiesgo: ''}
   }
@@ -481,10 +542,6 @@ function getRowPreview(d: DetalleRiesgo): PreviewRiesgo {
 function findMatchedDetalle(row: RiskRow): DetalleRiesgo | undefined {
   if (!row.amenazaIds.length && !row.vulnerabilidadIds.length) return undefined
   return props.detallesRiesgo.find(d =>
-      // Match by amenaza if present
-      (row.amenazaIds[0]
-          ? d.tipo === 'amenaza' && d.catalogoId === Number(row.amenazaIds[0])
-          : d.tipo === 'vulnerabilidad' && d.catalogoId === Number(row.vulnerabilidadIds[0])) &&
       JSON.stringify(d.amenazaIds) === JSON.stringify(row.amenazaIds) &&
       JSON.stringify(d.vulnerabilidadIds) === JSON.stringify(row.vulnerabilidadIds)
   )
@@ -496,65 +553,27 @@ function getCiaLevel(avg: number) {
   return 'Bajo'
 }
 
-function getTipoControlName(id: number | string) {
-  if (!id) return '—'
-  const found = props.catalogData.valTiposControl.find((tc: CatalogoItem) => tc.id === Number(id))
-  return found ? found.nombre : `TC#${id}`
-}
-
-function agregarAmenaza() {
-  const id = Number(amenazaSeleccionada.value)
-  if (!id) return
-  if (!props.analisisForm.amenazas.includes(id)) {
-    props.analisisForm.amenazas.push(id)
-  }
-  amenazaSeleccionada.value = ''
-  emit('reset-form')
-}
-
-function quitarAmenaza(id: number) {
-  const idx = props.analisisForm.amenazas.indexOf(id)
-  if (idx >= 0) props.analisisForm.amenazas.splice(idx, 1)
-  emit('reset-form')
-}
-
-function agregarVulnerabilidad() {
-  const id = Number(vulnerabilidadSeleccionada.value)
-  if (!id) return
-  if (!props.analisisForm.vulnerabilidades.includes(id)) {
-    props.analisisForm.vulnerabilidades.push(id)
-  }
-  vulnerabilidadSeleccionada.value = ''
-  emit('reset-form')
-}
-
-function quitarVulnerabilidad(id: number) {
-  const idx = props.analisisForm.vulnerabilidades.indexOf(id)
-  if (idx >= 0) props.analisisForm.vulnerabilidades.splice(idx, 1)
-  emit('reset-form')
-}
-
 function updateEvaluacionDetalle(_d?: DetalleRiesgo) {
-  // No longer emit reset-form — Tab 2 manages its own riskRows which syncs to detallesRiesgo
-  // Tab 3 riesgo changes are tracked directly in detallesRiesgo entries
-}
-
-/** @deprecated Use updateControlDetalleRow instead — dead code, no template call-sites */
-function updateControlDetalle(_d: DetalleRiesgo) {
-  // no-op: removed global evaluacionForm.vulnerabilidadRiesgoId dependency
+  if (!_d) return
+  const preview = getRowPreview(_d)
+  _d.evaluacionRiesgo = preview.evaluacionRiesgo
+  _d.nivelRiesgo = preview.nivelRiesgo
+  _d.metodoTratamiento = preview.evaluacionRiesgo > 0
+    ? deriveMetodoTratamiento(preview.evaluacionRiesgo)
+    : ''
 }
 
 function updateControlDetalleRow(row: RiskRow) {
   const d = findMatchedDetalle(row)
   if (!d) return
-  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId, d.vulnerabilidadControlId)
+  d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId as number, d.vulnerabilidadControlId as number)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
-  d.riesgoResidual = (d.evaluacionRiesgoControl > 0 && d.evaluacionRiesgoControl <= 3) ? 'ACEPTABLE' : 'INACEPTABLE'
+  d.riesgoResidual = (d.evaluacionRiesgoControl > 0 && d.evaluacionRiesgoControl < 3) ? 'ACEPTABLE' : 'INACEPTABLE'
 }
 
 function calcularRiesgoResidual(evaluacion: number | undefined | null): 'ACEPTABLE' | 'INACEPTABLE' | null {
   if (evaluacion === undefined || evaluacion === null || evaluacion <= 0) return null
-  return evaluacion <= 3 ? 'ACEPTABLE' : 'INACEPTABLE'
+  return evaluacion < 3 ? 'ACEPTABLE' : 'INACEPTABLE'
 }
 
 const tabs = [
@@ -564,7 +583,7 @@ const tabs = [
   {label: 'Tratamiento de Riesgo'},
 ]
 
-// ── Tab 4: Controles a Implementar grouped by category ───────────────────────
+// ── Tab 4: Controles an Implementar grouped by category ───────────────────────
 const controlesImplementarGrupos = computed(() => {
   const map = new Map<number, { categoriaId: number; categoriaNombre: string; items: ControlesImplementarItem[] }>()
   props.catalogData.valControlesImplementar.forEach(c => {
@@ -573,8 +592,39 @@ const controlesImplementarGrupos = computed(() => {
     }
     map.get(c.categoriaId)!.items.push(c)
   })
-  return Array.from(map.values())
+
+  return Array.from(map.values()).map((cat) => {
+    cat.items = cat.items.sort((a, b) => Number(a.id) - Number(b.id))
+    return cat
+  })
 })
+
+function getAreaLabel(id: string) {
+  const matchedArea = props.catalogData.valAreas.find(d => d.id === Number(id))
+  console.log(matchedArea);
+  return matchedArea?.nombre ?? ''
+}
+
+function getCustodioLabel(id: number) {
+  const matchedFuncionario = props.catalogData.valFuncionarios.find((a: CatalogoItem) => a.id === id)
+  return matchedFuncionario?.nombre ?? `Funcionario ${id}`
+}
+
+function removeCustodio(id: number) {
+  props.valForm.custodio = props.valForm.custodio.filter((c) => c !== id)
+}
+
+function handleChangeOnCustodio (event: Event) {
+  const target = event.target as HTMLInputElement
+  const id = Number(target.value)
+  const matchedFuncionario = props.catalogData.valFuncionarios.find((a: CatalogoItem) => a.id === id)
+
+  if (matchedFuncionario) {
+    props.valForm.custodio.push(matchedFuncionario.id)
+  }
+
+  target.value = ''
+}
 </script>
 
 <template>
@@ -606,76 +656,156 @@ const controlesImplementarGrupos = computed(() => {
             <div class="val-grid">
               <div class="val-card" style="border:none; padding:0; background:transparent;">
                 <h3 class="val-card-title">Identificación del Activo</h3>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.nombreActivo }">
                   <label>Nombre del Activo</label>
                   <input v-model="valForm.nombreActivo" placeholder="Nombre del activo de información" required
-                         type="text"/>
+                         type="text" @input="clearFieldError('nombreActivo')"/>
+                  <span v-if="fieldErrors.nombreActivo" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.tipoActivo }">
                   <label>Tipo de Activo</label>
-                  <select v-model="valForm.tipoActivo" required>
+                  <select v-model="valForm.tipoActivo" required @change="clearFieldError('tipoActivo')">
                     <option value="">Seleccionar...</option>
                     <option v-for="t in catalogData.valTipoActivo" :key="t.id" :value="t.id">{{ t.nombre }} —
                       {{ t.detalle }}
                     </option>
                   </select>
+                  <span v-if="fieldErrors.tipoActivo" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Formato</label>
-                  <select v-model="valForm.formato" required>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.formato }">
+                  <label>Formato <span class="required-asterisk">*</span></label>
+                  <select v-model="valForm.formato" required @change="clearFieldError('formato')">
                     <option value="">Seleccionar...</option>
                     <option v-for="f in catalogData.valFormatos" :key="f.id" :value="f.id">{{ f.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.formato" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Macro Proceso</label>
-                  <select v-model="valForm.macroProceso" required>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.macroProceso }">
+                  <label>Macro Proceso <span class="required-asterisk">*</span></label>
+                  <select v-model="valForm.macroProceso" required @change="clearFieldError('macroProceso')">
                     <option value="">Seleccionar...</option>
                     <option v-for="m in catalogData.valMacroprocesos" :key="m.id" :value="m.id">{{ m.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.macroProceso" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" v-if="subprocesosFiltrados" :class="{ 'has-error': fieldErrors.subProceso }">
                   <label>Sub Proceso</label>
-                  <select v-model="valForm.subProceso" required>
+                  <select v-model="valForm.subProceso" required @change="clearFieldError('subProceso')">
                     <option value="">Seleccionar...</option>
-                    <option v-for="s in subprocesosFiltrados" :key="s.id" :value="s.id">{{ s.nombre }}</option>
+                    <option
+                        v-for="s in subprocesosFiltrados"
+                        :key="s.id"
+                        :value="s.id"
+                        :selected="Number(valForm.subProceso) === s.id"
+                    >{{ s.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.subProceso" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Propietario del Activo</label>
-                  <select v-model="valForm.propietario" required>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.propietario }">
+                  <label>Propietario del Activo <span class="required-asterisk">*</span></label>
+                  <select v-model="valForm.propietario" required @change="clearFieldError('propietario')">
                     <option value="">Seleccionar...</option>
                     <option v-for="a in catalogData.valAreas" :key="a.id" :value="a.id">{{ a.nombre }}</option>
                   </select>
+                  <span v-if="fieldErrors.propietario" class="field-error">Este campo es obligatorio</span>
                 </div>
                 <div class="form-group">
-                  <label>Custodio del Activo</label>
-                  <select v-model="valForm.custodio" required>
-                    <option value="">Seleccionar...</option>
-                    <option v-for="f in catalogData.valFuncionarios" :key="f.id" :value="f.id">{{ f.nombre }}</option>
-                  </select>
+                  <label>Custodio del Activo <span class="required-asterisk">*</span></label>
+                  <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="form-group" style="flex: 1" :class="{ 'has-error': fieldErrors.custodio }">
+                      <label for="">Área</label>
+                      <select v-model="custodioArea" required @change="clearFieldError('custodio')">
+                        <option :value="null">Seleccionar...</option>
+                        <option v-for="a in catalogData.valAreas" :key="a.id" :value="a.id">{{ a.nombre }}</option>
+                      </select>
+                      <span v-if="fieldErrors.propietario" class="field-error">Este campo es obligatorio</span>
+                    </div>
+                    <div class="form-group" style="flex: 1" :class="{ 'has-error': fieldErrors.custodio }">
+                      <label for="funcionario">Funcionario</label>
+                      <select id="funcionario" required @change="handleChangeOnCustodio">
+                        <option value="">Agregar custodio</option>
+                        <option
+                            v-for="f in funcionariosFiltrados"
+                            :key="f.id"
+                            :value="f.id"
+                            :disabled="valForm.custodio.includes(f.id)"
+                        >{{ f.nombre }}</option>
+                      </select>
+                      <span v-if="fieldErrors.custodio" class="field-error">Este campo es obligatorio</span>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 1rem; flex-direction: column">
+                    <div
+                        v-for="(responsables, areaId) in custodioGroupByArea"
+                        style="border: 1px solid var(--border); padding: 0.5rem; border-radius: 10px"
+                    >
+                      <div
+                          style="font-size: small; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -25px; padding: 0.5rem; z-index: 9999; max-width: 100%;"
+                      >{{ getAreaLabel(areaId) }}</div>
+                      <div class="chip-list" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
+                      <span
+                          v-for="responsable in responsables"
+                          :key="responsable.id"
+                          class="chip selected"
+                          style="display:flex; align-items:center; gap:0.3rem; cursor:default;"
+                      >
+                      {{ getCustodioLabel(responsable.id) }}
+                      <button
+                          style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;"
+                          type="button"
+                          @click="removeCustodio(responsable.id)"
+                      >
+                        <svg
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="3"
+                            style="width:10px; height:10px;"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                    </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label>Descripción del Activo</label>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.descripcion }">
+                  <label>Descripción del Activo <span class="required-asterisk">*</span></label>
                   <textarea v-model="valForm.descripcion" placeholder="Describa el activo de información" required
-                            rows="2"></textarea>
+                            rows="2" @input="clearFieldError('descripcion')"></textarea>
+                  <span v-if="fieldErrors.descripcion" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.controlSeguridad }">
                   <label>Control de Seguridad Implementado</label>
                   <textarea v-model="valForm.controlSeguridad" placeholder="Controles de seguridad existentes" required
-                            rows="2"></textarea>
+                            rows="2" @input="clearFieldError('controlSeguridad')"></textarea>
+                  <span v-if="fieldErrors.controlSeguridad" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
-                  <label>Ubicación</label>
+                <div class="form-group" :class="{ 'has-error': fieldErrors.ubicacion }">
+                  <label>Ubicación <span class="required-asterisk">*</span></label>
                   <input v-model="valForm.ubicacion" placeholder="Ubicación física o lógica del activo" required
-                         type="text"/>
+                         type="text" @input="clearFieldError('ubicacion')"/>
+                  <span v-if="fieldErrors.ubicacion" class="field-error">Este campo es obligatorio</span>
                 </div>
                 <div class="form-group">
                   <label>¿Tiene Datos Personales?</label>
-                  <select v-model="valForm.tieneDatosPersonales" required>
+                  <select
+                      v-model="valForm.tieneDatosPersonales"
+                      required
+                      @change="valForm.tieneDatosPersonales ? valForm.tiposDatosPersonales = [] : null"
+                  >
                     <option :value="false">NO</option>
                     <option :value="true">SÍ</option>
                   </select>
+                </div>
+                <div v-if="valForm.tieneDatosPersonales" class="form-group">
+                  <label>Tipos de Datos Personales</label>
+                  <label class="checkbox" v-for="tipo in catalogData.valTipoDatosPersonales">
+                    <input v-model="valForm.tiposDatosPersonales" type="checkbox" id="" :value="tipo.id">
+                    {{ tipo.nombre }}
+                  </label>
                 </div>
                 <div class="form-group">
                   <label>Observaciones</label>
@@ -685,32 +815,35 @@ const controlesImplementarGrupos = computed(() => {
 
               <div class="val-card" style="border:none; padding:0; background:transparent;">
                 <h3 class="val-card-title">Valoración CIA</h3>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.confidencialidad }">
                   <label>Confidencialidad</label>
-                  <select v-model="valForm.confidencialidad" required>
+                  <select v-model="valForm.confidencialidad" required @change="clearFieldError('confidencialidad')">
                     <option value="">Seleccionar...</option>
                     <option v-for="n in getNivelesImpacto('confidencialidad')" :key="n.id" :value="n.id">{{ n.nivel }}
                       ({{ n.valor }}) — {{ n.criterio }}
                     </option>
                   </select>
+                  <span v-if="fieldErrors.confidencialidad" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.integridad }">
                   <label>Integridad</label>
-                  <select v-model="valForm.integridad" required>
+                  <select v-model="valForm.integridad" required @change="clearFieldError('integridad')">
                     <option value="">Seleccionar...</option>
                     <option v-for="n in getNivelesImpacto('integridad')" :key="n.id" :value="n.id">{{ n.nivel }}
                       ({{ n.valor }}) — {{ n.criterio }}
                     </option>
                   </select>
+                  <span v-if="fieldErrors.integridad" class="field-error">Este campo es obligatorio</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group" :class="{ 'has-error': fieldErrors.disponibilidad }">
                   <label>Disponibilidad</label>
-                  <select v-model="valForm.disponibilidad" required>
+                  <select v-model="valForm.disponibilidad" required @change="clearFieldError('disponibilidad')">
                     <option value="">Seleccionar...</option>
                     <option v-for="n in getNivelesImpacto('disponibilidad')" :key="n.id" :value="n.id">{{ n.nivel }}
                       ({{ n.valor }}) — {{ n.criterio }}
                     </option>
                   </select>
+                  <span v-if="fieldErrors.disponibilidad" class="field-error">Este campo es obligatorio</span>
                 </div>
                 <div v-if="ciaAverage > 0" class="cia-average">
                   <span class="cia-average-label">Promedio CIA</span>
@@ -723,6 +856,14 @@ const controlesImplementarGrupos = computed(() => {
           <!-- TAB 2: Análisis de Riesgos (row-based) -->
           <div v-show="currentStep === 1" class="val-tab-panel">
             <div class="val-card" style="border:none; padding:0; background:transparent;">
+              <div class="form-group">
+                <label>Nombre del activo</label>
+                <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
+              <div class="form-group">
+                <label>Macroproceso</label>
+                <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
                 <h3 class="val-card-title" style="margin:0; border:none; padding:0;">Análisis de Riesgos — Filas de
                   Riesgo</h3>
@@ -738,28 +879,13 @@ const controlesImplementarGrupos = computed(() => {
               <table v-else class="val-table">
                 <thead>
                 <tr>
-                  <th style="min-width:160px;">Nombre del Activo</th>
-                  <th style="min-width:180px;">Macroproceso</th>
                   <th style="min-width:220px;">Amenazas</th>
                   <th style="min-width:220px;">Vulnerabilidades</th>
-                  <th>Controles Implementados</th>
                   <th style="width:48px;"></th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr v-for="(row, index) in riskRows" :key="row.tempId">
-                  <!-- Nombre del Activo (readonly, mismo valor en todas las filas) -->
-                  <td>
-                    <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;"
-                           type="text"/>
-                  </td>
-
-                  <!-- Macroproceso (readonly, resuelto por computed) -->
-                  <td>
-                    <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed; width:100%; padding:0.5rem; border:1px solid var(--border); border-radius:6px; color:var(--text-muted); font-size:0.85rem;"
-                           type="text"/>
-                  </td>
-
                   <!-- Amenaza cell -->
                   <td>
                     <!-- Category + select for adding threats -->
@@ -834,17 +960,6 @@ const controlesImplementarGrupos = computed(() => {
                         </span>
                     </div>
                   </td>
-
-                  <!-- Controles Implementados cell -->
-                  <td>
-                      <textarea
-                          v-model="row.controlesImplementados"
-                          placeholder="Controles implementados para esta combinación..."
-                          rows="3"
-                          style="resize:vertical; min-width:180px;"
-                      ></textarea>
-                  </td>
-
                   <!-- Remove row -->
                   <td>
                     <button style="background:transparent; border:none; color:#dc2626; cursor:pointer; font-size:1.2rem; padding:0.25rem; line-height:1;" title="Eliminar fila"
@@ -867,6 +982,14 @@ const controlesImplementarGrupos = computed(() => {
                 <input :value="ciaAverage > 0 ? ciaAverage.toFixed(2) + ' — ' + getCiaLevel(ciaAverage) : 'Complete Valoración CIA en Pestaña 1'"
                        readonly
                        style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
+              <div class="form-group">
+                <label>Nombre del activo</label>
+                <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
+              <div class="form-group">
+                <label>Macroproceso</label>
+                <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
               </div>
               <div v-if="riskRows.length === 0" class="chip-empty">No hay amenazas ni vulnerabilidades seleccionadas en
                 la Pestaña 2.
@@ -904,7 +1027,7 @@ const controlesImplementarGrupos = computed(() => {
                       <select v-model="findMatchedDetalle(row)!.riesgoId"
                               style="min-width:130px;" @change="updateEvaluacionDetalle(findMatchedDetalle(row))">
                         <option value="">Seleccionar...</option>
-                        <option v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Amenaza')"
+                        <option v-for="r in catalogData.valRiesgos.filter(r => r.tipo === 'Amenaza')"
                                 :key="r.id" :value="r.id">{{ r.nivel }} ({{ r.valor }})
                         </option>
                       </select>
@@ -963,6 +1086,14 @@ const controlesImplementarGrupos = computed(() => {
                        readonly
                        style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
               </div>
+              <div class="form-group">
+                <label>Nombre del activo</label>
+                <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
+              <div class="form-group">
+                <label>Macroproceso</label>
+                <input :value="macroProcesoName" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
               <div v-if="riskRows.length === 0" class="chip-empty">No hay items para tratar. Complete la Pestaña 2 y
                 evalúe en la Pestaña 3.
               </div>
@@ -986,17 +1117,20 @@ const controlesImplementarGrupos = computed(() => {
                           :key="row.tempId ?? (row.amenazaIds[0] + '-' + row.vulnerabilidadIds[0])">
                   <tr v-if="row.amenazaIds.length > 0 || row.vulnerabilidadIds.length > 0">
                     <td>
-                      <span v-for="aId in row.amenazaIds" :key="'a-' + aId" class="chip selected"
-                            style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
-                          getAmenazaLabel(aId)
-                        }}</span>
+                      <span
+                          v-for="aId in row.amenazaIds" :key="'a-' + aId"
+                          class="chip selected"
+                          style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;"
+                      >{{ getAmenazaLabel(aId) }}</span>
                       <span v-if="row.amenazaIds.length === 0" style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
-                      <span v-for="vId in row.vulnerabilidadIds" :key="'v-' + vId" class="chip selected"
-                            style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;">{{
-                          getVulnerabilidadLabel(vId)
-                        }}</span>
+                      <span
+                          v-for="vId in row.vulnerabilidadIds"
+                          :key="'v-' + vId"
+                          class="chip selected"
+                          style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.25rem; cursor:default;"
+                      >{{ getVulnerabilidadLabel(vId) }}</span>
                       <span v-if="row.vulnerabilidadIds.length === 0" style="color:var(--text-muted);">—</span>
                     </td>
                     <td style="text-align:center;">
@@ -1026,43 +1160,71 @@ const controlesImplementarGrupos = computed(() => {
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <input v-model="findMatchedDetalle(row)!.metodoTratamiento" placeholder="Método" style="min-width:100px;"
-                               type="text"/>
+                        <span v-if="getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo > 0">{{
+                            deriveMetodoTratamiento(getRowPreview(findMatchedDetalle(row)!).evaluacionRiesgo)
+                          }}</span>
+                        <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <select v-model="findMatchedDetalle(row)!.tipoControlId" style="min-width:110px;">
-                          <option value="">Seleccionar...</option>
-                          <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{
-                              tc.nombre
-                            }}
-                          </option>
-                        </select>
+                        <div
+                          class="form-group"
+                          :class="{ 'has-error': tipoControlErrors && !findMatchedDetalle(row)?.tipoControlId }"
+                        >
+                          <select v-model="findMatchedDetalle(row)!.tipoControlId" style="min-width:110px;">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="tc in catalogData.valTiposControl" :key="tc.id" :value="tc.id">{{
+                                tc.nombre
+                              }}
+                            </option>
+                          </select>
+                          <span
+                            v-if="tipoControlErrors && !findMatchedDetalle(row)?.tipoControlId"
+                            class="field-error"
+                          >Este campo es obligatorio</span>
+                        </div>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <select v-model.number="findMatchedDetalle(row)!.controlesImplementarId"
-                                style="min-width:200px;">
-                          <option :value="null">— Ninguno —</option>
+                        <select
+                            style="min-width:200px;"
+                            @change="(e) => { const s = (e.target as HTMLSelectElement).value; if (s) { toggleControlesImplementar(row, s); (e.target as HTMLSelectElement).value = '' } }"
+                            aria-placeholder="Seleccionar..."
+                        >
+                          <option value="" selected>+ Agregar</option>
                           <optgroup v-for="grupo in controlesImplementarGrupos" :key="grupo.categoriaId"
                                     :label="grupo.categoriaNombre">
-                            <option v-for="ctrl in grupo.items" :key="ctrl.id" :value="ctrl.id">
+                            <option v-for="ctrl in grupo.items" :key="ctrl.id" :value="String(ctrl.id)">
                               {{ ctrl.seccion }} — {{ ctrl.descripcion }}
                             </option>
                           </optgroup>
                         </select>
+                        <!-- Selected amenaza chips -->
+                        <div class="chip-list" style="max-height:140px;">
+                        <span v-for="aId in row.controlesImplementarId" :key="aId" class="chip selected"
+                              style="display:flex; align-items:center; gap:0.3rem; cursor:default;">
+                          {{ getControlesImplementarLabel(aId) }}
+                          <button style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;" type="button"
+                                  @click="removeControlesImplementar(row, aId)">
+                            <svg fill="none" stroke="currentColor" stroke-width="3" style="width:10px; height:10px;"
+                                 viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12"
+                                                                                              stroke-linecap="round"
+                                                                                              stroke-linejoin="round"/></svg>
+                          </button>
+                        </span>
+                        </div>
                       </template>
                       <span v-else style="color:var(--text-muted);">—</span>
                     </td>
                     <td>
                       <template v-if="findMatchedDetalle(row)">
-                        <span v-if="findMatchedDetalle(row)!.evaluacionRiesgoControl > 0">{{
-                            findMatchedDetalle(row)!.evaluacionRiesgoControl.toFixed(2)
-                          }}</span>
+                        <span v-if="findMatchedDetalle(row)!.evaluacionRiesgoControl! > 0">
+                          {{ findMatchedDetalle(row)!.evaluacionRiesgoControl!.toFixed(2) }}
+                        </span>
                         <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
                       </template>
                       <span v-else style="color:var(--text-muted); font-size:0.85rem;">—</span>
@@ -1102,7 +1264,7 @@ const controlesImplementarGrupos = computed(() => {
         <button v-if="currentStep > 0" class="btn-secondary" type="button" @click="prevStep">Atrás</button>
         <button v-if="currentStep < TOTAL_STEPS - 1" class="btn-primary" type="button" @click="nextStep">Siguiente
         </button>
-        <button v-else :disabled="valSaving" class="btn-primary" type="button" @click="emit('submit')">
+        <button v-else :disabled="valSaving" class="btn-primary" type="button" @click="submitModal">
           {{ valSaving ? 'Guardando...' : editId ? 'Actualizar' : 'Guardar' }}
         </button>
       </div>
@@ -1190,39 +1352,9 @@ const controlesImplementarGrupos = computed(() => {
   color: var(--primary);
 }
 
-.val-card select {
-  width: 100%;
-  padding: 0.75rem;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: white;
-  font-family: inherit;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1rem;
-}
-
-.val-card select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-}
-
-.val-card select option {
-  background: #1e293b;
-  color: white;
-}
-
 .row-select {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  background: rgba(15, 23, 42, 0.6);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: white;
@@ -1230,9 +1362,7 @@ const controlesImplementarGrupos = computed(() => {
   font-size: 0.8rem;
   box-sizing: border-box;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
+  background: rgba(15, 23, 42, 0.6) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat right 0.5rem center;
   background-size: 1rem;
   cursor: pointer;
 }
@@ -1294,53 +1424,6 @@ const controlesImplementarGrupos = computed(() => {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--primary);
-}
-
-.cia-average-level {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 0.25rem 0.6rem;
-  border-radius: 6px;
-  background: rgba(99, 102, 241, 0.15);
-  color: var(--primary);
-}
-
-.chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.chip {
-  padding: 0.5rem 0.85rem;
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.chip:hover {
-  border-color: var(--primary);
-  color: var(--text);
-}
-
-.chip.selected {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: var(--primary);
-  color: white;
-}
-
-.chip-empty {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  padding: 1rem 0;
 }
 
 .val-actions {
@@ -1457,5 +1540,26 @@ const controlesImplementarGrupos = computed(() => {
 
 .val-tab-panel {
   min-height: 200px;
+}
+
+/* ── Required Field Validation Indicators ────────────────────────────────── */
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.2);
+}
+
+.required-asterisk {
+  color: #dc2626;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
 }
 </style>

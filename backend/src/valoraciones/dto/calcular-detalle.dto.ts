@@ -1,8 +1,32 @@
-import { IsNumber, IsOptional } from 'class-validator';
+import { IsNumber, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class ConfiguracionRiesgoDto {
+  @IsNumber()
+  riesgoBajoMax: number;
+
+  @IsNumber()
+  riesgoMedioMax: number;
+
+  @IsNumber()
+  riesgoAltoMax: number;
+
+  @IsNumber()
+  controlBajoMax: number;
+
+  @IsNumber()
+  controlMedioMax: number;
+
+  @IsNumber()
+  controlAltoMax: number;
+
+  @IsNumber()
+  residualAceptableMax: number;
+}
 
 /**
  * DTO for the PATCH /valoraciones/:id/detalles-riesgo/:detalleId/calcular preview endpoint.
- * Allows callers to override VA and optionally provide control levels.
+ * Allows callers to override VA, control levels, and optionally submit custom thresholds.
  */
 export class CalcularDetalleDto {
   @IsNumber()
@@ -22,4 +46,9 @@ export class CalcularDetalleDto {
   @IsOptional()
   @IsNumber()
   nivelVulnerabilidadControl?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ConfiguracionRiesgoDto)
+  config?: ConfiguracionRiesgoDto;
 }

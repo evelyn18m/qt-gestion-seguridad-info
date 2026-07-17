@@ -16,6 +16,7 @@ const TIPO_MAP: Record<string, string> = {
   subprocesos: 'subproceso',
   macroprocesos: 'macroProceso',
   'tipos-activo': 'tipoActivo',
+  'tipos-datos-personales': 'tipoDatosPersonales',
   valoraciones: 'valoracion',
   funcionarios: 'funcionario',
   areas: 'area',
@@ -24,6 +25,9 @@ const TIPO_MAP: Record<string, string> = {
   probabilidades: 'probabilidad',
   'categorias-controles-implementar': 'categoriaControlesImplementar',
   'controles-implementar': 'controlesImplementar',
+  'opciones-tratamiento': 'opcionTratamiento',
+  'estados-plan-tratamiento': 'estadoPlanTratamiento',
+  'plazos-implementacion': 'plazoImplementacion',
 };
 
 const FIELD_MAP: Record<string, readonly string[]> = {
@@ -34,14 +38,18 @@ const FIELD_MAP: Record<string, readonly string[]> = {
   subproceso: ['nombre', 'macroProcesoId'],
   macroProceso: ['nombre', 'codigo'],
   tipoActivo: ['nombre', 'detalle'],
+  tipoDatosPersonales: ['nombre'],
   valoracion: ['nombre'],
-  funcionario: ['nombre'],
+  funcionario: ['nombre', 'correo', 'areaId'],
   area: ['nombre'],
   tipoControl: ['nombre'],
   riesgo: ['tipo', 'nivel', 'valor'],
   probabilidad: ['nombre'],
   categoriaControlesImplementar: ['nombre'],
   controlesImplementar: ['seccion', 'descripcion', 'categoriaId'],
+  opcionTratamiento: ['nombre'],
+  estadoPlanTratamiento: ['nombre'],
+  plazoImplementacion: ['codigo', 'nombre'],
 };
 
 @Injectable()

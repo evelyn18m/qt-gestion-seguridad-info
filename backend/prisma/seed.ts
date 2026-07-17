@@ -4,11 +4,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
 import { seedControlCatalogFromSql } from '../src/catalogos/control-catalog-seed';
 import { parseRiesgoRows } from '../src/catalogos/riesgo-parser';
+import {
+  seedEstadosPlanTratamiento,
+  seedOpcionesTratamiento,
+  seedPlazosImplementacion,
+} from './seed-plan-tratamiento';
 
 const connectionString = process.env.DATABASE_URL as string;
 const adapter = new PrismaMariaDb(connectionString);
@@ -247,23 +253,37 @@ async function main() {
 
   // --- Funcionarios & Areas (from Excel) ---
   console.log('Seeding Funcionarios & Areas from Excel...');
-  const wb = XLSX.readFile(process.argv[2] || './documentos/funcionarios.xlsx');
-  const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets['Hoja1']);
+  const wb = XLSX.readFile(process.argv[2] || './documentos/Empleado.xlsx');
+  const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets['Sheet1'], {
+    raw: false,
+    header: ['nombre', 'correo', 'area'],
+    defval: '',
+  });
 
   const seenFunc = new Set();
   const seenArea = new Set();
 
   for (const row of rows) {
-    const func = (row['__EMPTY_1'] || '').trim();
-    const area = (row['__EMPTY_2'] || '').trim();
+    const func = row.nombre?.trim();
+    const area = row.area?.trim();
+    let areaDB;
 
-    if (func && func !== 'FUNCIONARIO' && !seenFunc.has(func)) {
-      await prisma.funcionario.create({ data: { nombre: func } });
-      seenFunc.add(func);
-    }
-    if (area && area !== 'ÁREA' && !seenArea.has(area)) {
-      await prisma.area.create({ data: { nombre: area } });
+    if (area && area !== 'Direccion' && !seenArea.has(area)) {
+      areaDB = await prisma.area.create({ data: { nombre: area } });
       seenArea.add(area);
+    } else {
+      areaDB = await prisma.area.findFirst({ where: { nombre: area } });
+    }
+
+    if (func && func !== 'Nombre del empleado' && !seenFunc.has(func)) {
+      await prisma.funcionario.create({
+        data: {
+          nombre: func,
+          correo: row.correo?.trim() || null,
+          areaId: areaDB?.id || null,
+        },
+      });
+      seenFunc.add(func);
     }
   }
 
@@ -273,9 +293,52 @@ async function main() {
 
   // --- Probabilidades ---
   console.log('Seeding Probabilidades...');
-  const probabilidades = ['Bajo', 'Medio', 'Alto'];
+  const probabilidades = [
+    { nombre: 'Bajo', valor: 1 },
+    { nombre: 'Medio', valor: 2 },
+    { nombre: 'Alto', valor: 3 },
+  ];
   for (const p of probabilidades) {
-    await prisma.probabilidad.create({ data: { nombre: p } });
+    await prisma.probabilidad.create({ data: p });
+  }
+
+  // --- Plan de Tratamiento reference catalogs ---
+  console.log('Seeding OpcionTratamiento...');
+  await seedOpcionesTratamiento(prisma);
+  console.log('Seeding EstadoPlanTratamiento...');
+  await seedEstadosPlanTratamiento(prisma);
+  console.log('Seeding PlazoImplementacion...');
+  await seedPlazosImplementacion(prisma);
+
+  // --- Usuario admin local ---
+  console.log('Seeding local admin user...');
+  const passwordHash = await bcrypt.hash('admin123', 10);
+  const admin = await prisma.usuario.upsert({
+    where: { username: 'admin' },
+    create: {
+      username: 'admin',
+      email: 'admin@example.com',
+      passwordHash,
+      roles: JSON.stringify(['administrador']),
+      primerInicio: false,
+      habilitado: true,
+    },
+    update: {
+      passwordHash,
+      roles: JSON.stringify(['administrador']),
+      primerInicio: false,
+      habilitado: true,
+    },
+  });
+  console.log(`Admin user seeded: ${admin.username} (id: ${admin.id})`);
+  // Seed tipos de datos personales
+  const tiposDatosPersonales = [
+    { nombre: 'Publica' },
+    { nombre: 'Uso interno' },
+    { nombre: 'Confidencial' },
+  ];
+  for (const tipoDatosPersonal of tiposDatosPersonales) {
+    await prisma.tipoDatosPersonales.create({ data: tipoDatosPersonal });
   }
 
   console.log('Seeding completed!');

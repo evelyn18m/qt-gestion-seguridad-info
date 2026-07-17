@@ -15,7 +15,7 @@ const loadCatalogoTipos = async () => {
   try {
     // fetchCatalog with comma-separated would hit /catalogos/tipos-activo,formatos,... which is wrong
     // Load tipos individually in parallel
-    const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'categorias-controles-implementar', 'controles-implementar']
+    const tipos = ['tipos-activo', 'tipos-datos-personales', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'categorias-controles-implementar', 'controles-implementar', 'opciones-tratamiento', 'estados-plan-tratamiento', 'plazos-implementacion']
     await Promise.all(tipos.map(t => fetchCatalog(t)))
     // Also load the tipo list itself
     const {apiFetch} = useApi()
@@ -47,14 +47,17 @@ const FIELD_MAP: Record<string, string[]> = {
   subprocesos: ['nombre', 'macroProcesoId'],
   macroprocesos: ['nombre', 'codigo'],
   'tipos-activo': ['nombre', 'detalle'],
+  'tipos-datos-personales': ['nombre'],
   valoraciones: ['nombre'],
-  funcionarios: ['nombre'],
+  funcionarios: ['nombre', 'correo', 'areaId'],
   areas: ['nombre'],
   'tipos-control': ['nombre'],
   riesgos: ['tipo', 'nivel', 'valor'],
   probabilidades: ['nombre'],
   'controles-implementar': ['seccion', 'descripcion', 'categoriaId'],
   'categorias-controles-implementar': ['nombre'],
+  'opciones-tratamiento': ['nombre'],
+  'estados-plan-tratamiento': ['nombre'],
 }
 
 const catalogoFormVisible = ref(false)
@@ -63,6 +66,7 @@ const catalogoEditingItem = ref<CatalogoItem | null>(null)
 const catalogoSaving = ref(false)
 const catalogoConfirmDelete = ref<CatalogoItem | null>(null)
 const macroprocesos = ref<CatalogoItem[]>([])
+const areas = ref<CatalogoItem[]>([])
 const categoriasControlesImplementar = ref<CatalogoItem[]>([])
 
 function getFormFields() {
@@ -85,6 +89,10 @@ function openCreateForm() {
   if ((selectedCatalogo.value as any)?.tipo === 'subprocesos') {
     loadMacroprocesos()
   }
+  // Load macroprocesos for subprocess dropdown
+  if ((selectedCatalogo.value as any)?.tipo === 'funcionarios') {
+    loadAreas()
+  }
   // Load categorias for controles-implementar dropdown
   if ((selectedCatalogo.value as any)?.tipo === 'controles-implementar') {
     loadCategoriasControlesImplementar()
@@ -102,6 +110,10 @@ function openEditForm(item: CatalogoItem) {
   if ((selectedCatalogo.value as any)?.tipo === 'subprocesos') {
     loadMacroprocesos()
   }
+  // Load macroprocesos for subprocess dropdown
+  if ((selectedCatalogo.value as any)?.tipo === 'funcionarios') {
+    loadAreas()
+  }
   // Load categorias for controles-implementar dropdown
   if ((selectedCatalogo.value as any)?.tipo === 'controles-implementar') {
     loadCategoriasControlesImplementar()
@@ -109,12 +121,14 @@ function openEditForm(item: CatalogoItem) {
 }
 
 async function loadMacroprocesos() {
-  const {fetchCatalog} = useCatalog()
   macroprocesos.value = await fetchCatalog('macroprocesos')
 }
 
+async function loadAreas() {
+  areas.value = await fetchCatalog('areas')
+}
+
 async function loadCategoriasControlesImplementar() {
-  const {fetchCatalog} = useCatalog()
   categoriasControlesImplementar.value = await fetchCatalog('categorias-controles-implementar')
 }
 
@@ -268,7 +282,18 @@ function displayCellValue(col: string, item: CatalogoItem): string {
           <div v-for="field in getFormFields()" :key="field" class="form-group">
             <label :for="'f-' + field">{{ field }}</label>
             <select
-                v-if="field === 'macroProcesoId'"
+                v-if="field === 'areaId'"
+                :id="'f-' + field"
+                v-model="catalogoFormData[field]"
+                required
+            >
+              <option value="">Seleccionar área...</option>
+              <option v-for="area in areas" :key="area.id" :value="area.id">
+                {{ area.nombre }}
+              </option>
+            </select>
+            <select
+                v-else-if="field === 'macroProcesoId'"
                 :id="'f-' + field"
                 v-model="catalogoFormData[field]"
                 required

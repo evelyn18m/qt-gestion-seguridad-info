@@ -1,9 +1,12 @@
 <script lang="ts" setup>
 import type {CatalogoItem, ControlesImplementarItem, DetalleRiesgo, ValoracionActivo} from '~/types/api'
+import {SessionExpiredError} from '~/composables/useApi'
+import SessionWarning from '~/components/SessionWarning.vue'
 import ValoracionModal from '~/components/ValoracionModal.vue'
 import ValoracionViewModal from '~/components/ValoracionViewModal.vue'
 
 const valTipoActivo = ref<CatalogoItem[]>([])
+const valTipoDatosPersonales = ref<CatalogoItem[]>([])
 const valFormatos = ref<CatalogoItem[]>([])
 const valMacroprocesos = ref<CatalogoItem[]>([])
 const valSubprocesos = ref<CatalogoItem[]>([])
@@ -25,7 +28,7 @@ const valForm = ref({
   macroProceso: '',
   subProceso: '',
   propietario: '',
-  custodio: '',
+  custodio: [] as number[],
   descripcion: '',
   controlSeguridad: '',
   ubicacion: '',
@@ -36,6 +39,7 @@ const valForm = ref({
   integridad: '',
   disponibilidad: '',
   tieneDatosPersonales: false,
+  tiposDatosPersonales: null as number[] | null,
 })
 const analisisForm = ref({
   macroProceso: '',
@@ -53,7 +57,7 @@ const evaluacionForm = ref({
 const tratamientoForm = ref({
   metodoTratamiento: '',
   tipoControl: '',
-  controlesImplementar: '',
+  controlesImplementar: [],
   nivelAmenazaControl: '',
   nivelVulnerabilidadControl: '',
 })
@@ -73,27 +77,25 @@ const ciaAverage = computed(() => {
 })
 
 const {fetchCatalog} = useCatalog()
+const {login} = useAuth()
+const {secondsRemaining, isWarning, isExpired, isRefreshing, refreshSession} = useSession()
+const showSessionExpired = ref(false)
+
+async function handleRefreshSession() {
+    try {
+        await refreshSession()
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'No se pudo refrescar la sesión'
+        alert(message)
+        showSessionExpired.value = true
+    }
+}
 
 // Sincronizar Pestaña 1 → Pestaña 2 (macroproceso y nombre activo)
 watch([() => valForm.value.macroProceso, () => valForm.value.nombreActivo], ([macro, nombre]) => {
   analisisForm.value.macroProceso = macro
   analisisForm.value.nombreActivo = nombre
 }, {immediate: true})
-
-
-// Limpiar subprocess cuando cambia macroproceso
-watch(() => valForm.value.macroProceso, () => {
-  valForm.value.subProceso = ''
-})
-
-function getCatalogoLabel(tipo: string, catalogoId: number) {
-  if (tipo === 'amenaza') {
-    const a = valAmenazas.value.find((x: CatalogoItem) => x.id === catalogoId)
-    return a ? `${a.categoria} — ${a.nombre}` : `A#${catalogoId}`
-  }
-  const v = valVulnerabilidades.value.find((x: CatalogoItem) => x.id === catalogoId)
-  return v ? `${v.categoria} — ${v.descripcion}` : `V#${catalogoId}`
-}
 
 function rebuildDetalles() {
   const existing = detallesRiesgo.value
@@ -105,6 +107,7 @@ function rebuildDetalles() {
       nuevos.push(prev)
     } else {
       nuevos.push({
+        controlesImplementarId: [],
         tipo: 'amenaza',
         catalogoId,
         riesgoId: '',
@@ -117,7 +120,7 @@ function rebuildDetalles() {
         nivelRiesgoControl: '',
         amenazaIds: [String(catalogoId)],
         vulnerabilidadIds: [],
-        controlesImplementados: '',
+        controlesImplementados: ''
       })
     }
   })
@@ -129,6 +132,7 @@ function rebuildDetalles() {
     } else {
       nuevos.push({
         tipo: 'vulnerabilidad',
+        controlesImplementarId: [],
         catalogoId,
         riesgoId: '',
         evaluacionRiesgo: 0,
@@ -150,7 +154,7 @@ function rebuildDetalles() {
 
 const loadValoracionData = async () => {
   valLoading.value = true
-  const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control']
+  const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'tipos-datos-personales']
   try {
     const {apiFetch} = useApi()
     const [results, controlesItems] = await Promise.all([
@@ -169,9 +173,14 @@ const loadValoracionData = async () => {
     valRiesgos.value = results[9] as CatalogoItem[]
     valProbabilidades.value = results[10] as CatalogoItem[]
     valTiposControl.value = results[11] as CatalogoItem[]
+    valTipoDatosPersonales.value = results[12] as CatalogoItem[]
     valControlesImplementar.value = controlesItems
   } catch (e) {
-    console.error('Error cargando datos de valoración', e)
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+    } else {
+      console.error('Error cargando datos de valoración', e)
+    }
   } finally {
     valLoading.value = false
   }
@@ -192,12 +201,6 @@ function calculateRowCiaAverage(v: ValoracionActivo) {
   return Math.round((selected.reduce((a, b) => a + b, 0) / selected.length) * 100) / 100
 }
 
-function getCiaLevel(avg: number) {
-  if (avg >= 2.5) return 'Alto'
-  if (avg >= 1.5) return 'Medio'
-  return 'Bajo'
-}
-
 const valSaved = ref<ValoracionActivo[]>([])
 const valSaving = ref(false)
 const valSuccess = ref('')
@@ -210,6 +213,7 @@ const activeTab = ref(0)
 // ── CatalogData bundle for ValoracionModal ────────────────────────────────────
 const catalogData = computed(() => ({
   valTipoActivo: valTipoActivo.value,
+  valTipoDatosPersonales: valTipoDatosPersonales.value,
   valFormatos: valFormatos.value,
   valMacroprocesos: valMacroprocesos.value,
   valSubprocesos: valSubprocesos.value,
@@ -228,7 +232,10 @@ async function loadValoraciones() {
   try {
     const {apiFetch} = useApi()
     valSaved.value = await apiFetch<ValoracionActivo[]>('/valoraciones')
-  } catch { /* ignore */
+  } catch (e) {
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+    }
   }
 }
 
@@ -255,7 +262,7 @@ async function submitValoracion() {
       evaluacionRiesgo: (d.evaluacionRiesgo || 0) > 0 ? d.evaluacionRiesgo : null,
       nivelRiesgo: d.nivelRiesgo || null,
       metodoTratamiento: d.metodoTratamiento || null,
-      tipoControlId: d.tipoControlId ? Number(d.tipoControlId) : null,
+      tipoControlId: Number(d.tipoControlId),
       riesgoControlId: d.riesgoControlId ? Number(d.riesgoControlId) : null,
       vulnerabilidadControlId: d.vulnerabilidadControlId ? Number(d.vulnerabilidadControlId) : null,
       evaluacionRiesgoControl: (d.evaluacionRiesgoControl || 0) > 0 ? d.evaluacionRiesgoControl : null,
@@ -267,7 +274,7 @@ async function submitValoracion() {
       controlesImplementados: d.controlesImplementados || null,
       controlesArea: d.controlesArea || null,
       // Tab 4 FK: selected catalog control
-      controlesImplementarId: d.controlesImplementarId ?? null,
+      controlesImplementarId: d.controlesImplementarId && d.controlesImplementarId.length > 0 ? JSON.stringify(d.controlesImplementarId) : '',
     }))
 
     // ── Propagation: copy treatment fields from first-matched entry to all row siblings ──
@@ -302,7 +309,7 @@ async function submitValoracion() {
     // ── Phase 3: Fetch server-computed risk fields via calculate endpoint ──
     const {apiFetch} = useApi()
     for (let i = 0; i < detallesPayload.length; i++) {
-      const d = detallesPayload[i]
+      const d = detallesPayload[i] as unknown as DetalleRiesgo
       // Resolve per-row nivel values from valRiesgos catalog via d.riesgoId / d.vulnerabilidadRiesgoId
       const nivelAmenaza = (() => {
         if (!d.riesgoId) return 1
@@ -339,15 +346,13 @@ async function submitValoracion() {
             `/valoraciones/${valEditId.value}/detalles-riesgo/${d.id}/calcular`,
             {
               method: 'PATCH',
-              body: JSON.stringify({ nivelAmenaza, nivelVulnerabilidad, nivelAmenazaControl, nivelVulnerabilidadControl }),
+              body: JSON.stringify({ nivelAmenaza, nivelVulnerabilidad, nivelAmenazaControl, nivelVulnerabilidadControl, VA: ciaAverage.value }),
             },
         )
         Object.assign(d, {
           evaluacionRiesgo: calculado.evaluacionRiesgo,
           nivelRiesgo: calculado.nivelRiesgo,
           metodoTratamiento: calculado.metodoTratamiento,
-          tipoControlId: null,
-          riesgoControlId: null,
           evaluacionRiesgoControl: calculado.evaluacionRiesgoControl,
           nivelRiesgoControl: calculado.nivelRiesgoControl,
           riesgoResidual: calculado.riesgoResidual,
@@ -362,7 +367,7 @@ async function submitValoracion() {
       macroProcesoId: Number(f.macroProceso),
       subProcesoId: Number(f.subProceso),
       propietarioId: Number(f.propietario),
-      custodioId: Number(f.custodio),
+      custodioId: f.custodio.length > 0 ? JSON.stringify(f.custodio) : "[]",
       descripcion: f.descripcion,
       controlSeguridad: f.controlSeguridad,
       ubicacion: f.ubicacion,
@@ -371,6 +376,7 @@ async function submitValoracion() {
       integridadId: Number(f.integridad),
       disponibilidadId: Number(f.disponibilidad),
       tieneDatosPersonales: Boolean(f.tieneDatosPersonales),
+      tiposDatosPersonales: (f.tiposDatosPersonales?.length ?? 0) > 0 ? JSON.stringify(f.tiposDatosPersonales) : null,
       amenazas: a.amenazas.length > 0 ? JSON.stringify(a.amenazas) : null,
       vulnerabilidades: a.vulnerabilidades.length > 0 ? JSON.stringify(a.vulnerabilidades) : null,
       controlesImplementacion: a.controlesImplementacion || null,
@@ -380,7 +386,7 @@ async function submitValoracion() {
       vulnerabilidadRiesgoId: e.vulnerabilidadRiesgoId ? Number(e.vulnerabilidadRiesgoId) : null,
       metodoTratamiento: t.metodoTratamiento || null,
       tipoControl: t.tipoControl ? Number(t.tipoControl) : null,
-      controlesImplementar: t.controlesImplementar || null,
+      controlesImplementar: t.controlesImplementar.length > 0 ? JSON.stringify(t.controlesImplementar) : null,
       detallesRiesgo: detallesPayload,
     }
 
@@ -395,6 +401,10 @@ async function submitValoracion() {
     resetForm()
     await loadValoraciones()
   } catch (e: unknown) {
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+      return
+    }
     alert('Error: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
     valSaving.value = false
@@ -407,22 +417,23 @@ function editValoracion(item: ValoracionActivo) {
   valEditId.value = item.id
   valForm.value = {
     nombreActivo: item.nombreActivo,
-    tipoActivo: item.tipoActivoId,
-    formato: item.formatoId,
-    macroProceso: item.macroProcesoId,
-    subProceso: item.subProcesoId,
-    propietario: item.propietarioId,
-    custodio: item.custodioId,
+    tipoActivo: String(item.tipoActivoId),
+    formato: String(item.formatoId),
+    macroProceso: String(item.macroProcesoId),
+    subProceso: String(item.subProcesoId),
+    propietario: String(item.propietarioId),
+    custodio: safeJsonParse(item.custodioId, []),
     descripcion: item.descripcion,
     controlSeguridad: item.controlSeguridad,
     ubicacion: item.ubicacion,
     observaciones: item.observaciones || '',
     amenazas: [],
     vulnerabilidades: [],
-    confidencialidad: item.confidencialidadId,
-    integridad: item.integridadId,
-    disponibilidad: item.disponibilidadId,
+    confidencialidad: String(item.confidencialidadId),
+    integridad: String(item.integridadId),
+    disponibilidad: String(item.disponibilidadId),
     tieneDatosPersonales: item.tieneDatosPersonales || false,
+    tiposDatosPersonales: item.tiposDatosPersonales ? safeJsonParse(item.tiposDatosPersonales, []) : [],
   }
 
   // Cargar datos de Análisis de Riesgo (pestañas 2-4) si existen
@@ -430,8 +441,8 @@ function editValoracion(item: ValoracionActivo) {
     analisisForm.value = {
       macroProceso: String(item.macroProcesoId || ''),
       nombreActivo: item.nombreActivo || '',
-      amenazas: safeJsonParse(item.amenazas),
-      vulnerabilidades: safeJsonParse(item.vulnerabilidades),
+      amenazas: safeJsonParse(item.amenazas as string),
+      vulnerabilidades: safeJsonParse(item.vulnerabilidades as string),
       controlesImplementacion: item.controlesImplementacion || '',
     }
     evaluacionForm.value = {
@@ -461,6 +472,7 @@ function editValoracion(item: ValoracionActivo) {
       vulnerabilidadIds: safeJsonParse((d.vulnerabilidadIds as unknown as string), []),
       controlesImplementados: d.controlesImplementados || '',
       controlesArea: d.controlesArea || '',
+      controlesImplementarId: safeJsonParse(d.controlesImplementarId as unknown as string, []),
     }))
   } else {
     detallesRiesgo.value = []
@@ -468,10 +480,15 @@ function editValoracion(item: ValoracionActivo) {
 }
 
 async function viewValoracion(item: ValoracionActivo) {
-  const {apiFetch} = useApi()
-  const enriched = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
-  viewItem.value = enriched
-  showViewModal.value = true
+  try {
+    const {apiFetch} = useApi()
+    viewItem.value = await apiFetch<ValoracionActivo>(`/valoraciones/${item.id}`)
+    showViewModal.value = true
+  } catch (e) {
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+    }
+  }
 }
 
 async function deleteValoracion(id: number) {
@@ -480,7 +497,10 @@ async function deleteValoracion(id: number) {
     const {apiFetch} = useApi()
     await apiFetch(`/valoraciones/${id}`, {method: 'DELETE'})
     await loadValoraciones()
-  } catch { /* ignore */
+  } catch (e) {
+    if (e instanceof SessionExpiredError) {
+      showSessionExpired.value = true
+    }
   }
 }
 
@@ -493,15 +513,31 @@ function openNewValoracion() {
 function resetForm() {
   valEditId.value = null
   valForm.value = {
-    nombreActivo: '', tipoActivo: '', formato: '', macroProceso: '', subProceso: '',
-    propietario: '', custodio: '',
-    descripcion: '', controlSeguridad: '', ubicacion: '', observaciones: '',
-    amenazas: [], vulnerabilidades: [],
-    confidencialidad: '', integridad: '', disponibilidad: '',
+    nombreActivo: '',
+    tipoActivo: '',
+    formato: '',
+    macroProceso: '',
+    subProceso: '',
+    propietario: '',
+    custodio: [],
+    descripcion: '',
+    controlSeguridad: '',
+    ubicacion: '',
+    observaciones: '',
+    amenazas: [],
+    vulnerabilidades: [],
+    confidencialidad: '',
+    integridad: '',
+    disponibilidad: '',
     tieneDatosPersonales: false,
+    tiposDatosPersonales: null,
   }
   analisisForm.value = {
-    macroProceso: '', nombreActivo: '', amenazas: [], vulnerabilidades: [], controlesImplementacion: '',
+    macroProceso: '',
+    nombreActivo: '',
+    amenazas: [],
+    vulnerabilidades: [],
+    controlesImplementacion: '',
   }
   evaluacionForm.value = {
     probabilidadId: '',
@@ -513,7 +549,7 @@ function resetForm() {
   tratamientoForm.value = {
     metodoTratamiento: '',
     tipoControl: '',
-    controlesImplementar: '',
+    controlesImplementar: [],
     nivelAmenazaControl: '',
     nivelVulnerabilidadControl: '',
   }
@@ -532,65 +568,8 @@ function safeJsonParse(str: string | null, fallback: any[] = []): any[] {
   }
 }
 
-function getTipoControlName(id: number | string) {
-  if (!id) return '—'
-  const found = valTiposControl.value.find((tc: CatalogoItem) => tc.id === Number(id))
-  return found ? found.nombre : `TC#${id}`
-}
-
-function getNivelStyle(nivel: string) {
-  const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return {label: 'Critico', color: '#dc2626', bg: 'rgba(220,38,38,0.15)'}
-  if (n.includes('alto')) return {label: 'Alto', color: '#ea580c', bg: 'rgba(234,88,12,0.15)'}
-  if (n.includes('medio')) return {label: 'Medio', color: '#ca8a04', bg: 'rgba(202,138,4,0.15)'}
-  return {label: 'Bajo', color: '#16a34a', bg: 'rgba(22,163,74,0.15)'}
-}
-
-function getMaxNivelIndex(nivel: string) {
-  const n = (nivel || '').toLowerCase()
-  if (n.includes('critico')) return 4
-  if (n.includes('alto')) return 3
-  if (n.includes('medio')) return 2
-  return 1
-}
-
-function getNivelFromIndex(idx: number) {
-  if (idx >= 4) return 'Crítico'
-  if (idx >= 3) return 'Alto'
-  if (idx >= 2) return 'Medio'
-  return 'Bajo'
-}
-
-function resumenEvaluacionRiesgo(v: ValoracionActivo) {
-  const detalles = v.detallesRiesgo || []
-  if (detalles.length === 0) {
-    return {evaluacion: v.evaluacionRiesgo || 0, nivel: v.nivelRiesgo || ''}
-  }
-  const conEval = detalles.filter((d: Record<string, unknown>) => d.evaluacionRiesgo > 0)
-  const avg = conEval.length > 0
-      ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgo as number), 0) / conEval.length) * 100) / 100
-      : 0
-  const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgo as string)), 0)
-  return {evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : ''}
-}
-
-function resumenControl(v: ValoracionActivo) {
-  const detalles = v.detallesRiesgo || []
-  if (detalles.length === 0) {
-    return {
-      tipoControl: v.tipoControl?.nombre || (v.tipoControl ? getTipoControlName(v.tipoControl) : '—'),
-      evaluacion: v.evaluacionRiesgoControl || 0,
-      nivel: v.nivelRiesgoControl || '',
-    }
-  }
-  const conEval = detalles.filter((d: Record<string, unknown>) => d.evaluacionRiesgoControl > 0)
-  const avg = conEval.length > 0
-      ? Math.round((conEval.reduce((sum: number, d: Record<string, unknown>) => sum + (d.evaluacionRiesgoControl as number), 0) / conEval.length) * 100) / 100
-      : 0
-  const maxNivel = conEval.reduce((max: number, d: Record<string, unknown>) => Math.max(max, getMaxNivelIndex(d.nivelRiesgoControl as string)), 0)
-  const tipos = new Set(detalles.filter((d: Record<string, unknown>) => d.tipoControlId).map((d: Record<string, unknown>) => getTipoControlName(d.tipoControlId as string)))
-  const tipoControl = tipos.size > 1 ? 'Múltiple' : (Array.from(tipos)[0] || '—')
-  return {tipoControl, evaluacion: avg, nivel: maxNivel > 0 ? getNivelFromIndex(maxNivel) : ''}
+function handleLoginRedirect() {
+  login()
 }
 
 onMounted(() => {
@@ -601,6 +580,14 @@ onMounted(() => {
 
 <template>
   <div class="valoracion-section">
+    <SessionWarning
+        :is-expired="isExpired"
+        :is-warning="isWarning"
+        :is-refreshing="isRefreshing"
+        :seconds-remaining="secondsRemaining"
+        @refresh="handleRefreshSession"
+    />
+
     <div class="welcome-banner"
          style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
       <div>
@@ -691,6 +678,17 @@ onMounted(() => {
           :catalog-data="catalogData"
           :view-item="viewItem"
       />
+
+      <!-- SESSION EXPIRED MODAL -->
+      <div v-if="showSessionExpired" class="session-expired-overlay" @click.self="showSessionExpired = false">
+        <div class="session-expired-modal">
+          <h3>Session Expired</h3>
+          <p>Your session has expired. Please log in again to continue.</p>
+          <div class="session-expired-actions">
+            <button class="btn-primary" type="button" @click="handleLoginRedirect">Log In Again</button>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -908,5 +906,45 @@ onMounted(() => {
 .btn-view:hover {
   background: rgba(56, 189, 248, 0.1);
   color: #7dd3fc;
+}
+
+.session-expired-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.session-expired-modal {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.session-expired-modal h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+  color: #ef4444;
+}
+
+.session-expired-modal p {
+  color: var(--text-muted);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.session-expired-actions {
+  display: flex;
+  justify-content: center;
 }
 </style>

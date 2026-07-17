@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CatalogosService } from './catalogos.service';
 import { CreateCatalogoDto } from './dto/create-catalogo.dto';
 import { UpdateCatalogoDto } from './dto/update-catalogo.dto';
@@ -31,11 +32,13 @@ export class CatalogosController {
   // and @Delete(':tipo/:id') wildcard routes so they shadow them.
 
   @Post('controles-implementar')
+  @Roles('administrador')
   createControlesImplementar(@Body() dto: CreateCatalogoDto) {
     return this.catalogosService.createControlesImplementar(dto);
   }
 
   @Patch('controles-implementar/:id')
+  @Roles('administrador')
   updateControlesImplementar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCatalogoDto,
@@ -44,6 +47,7 @@ export class CatalogosController {
   }
 
   @Delete('controles-implementar/:id')
+  @Roles('administrador')
   removeControlesImplementar(@Param('id', ParseIntPipe) id: number) {
     return this.catalogosService.removeControlesImplementar(id);
   }
@@ -61,11 +65,13 @@ export class CatalogosController {
   }
 
   @Post(':tipo')
+  @Roles('administrador')
   create(@Param('tipo') tipo: string, @Body() dto: CreateCatalogoDto) {
     return this.catalogosService.create(tipo, dto);
   }
 
   @Patch(':tipo/:id')
+  @Roles('administrador')
   update(
     @Param('tipo') tipo: string,
     @Param('id', ParseIntPipe) id: number,
@@ -75,6 +81,7 @@ export class CatalogosController {
   }
 
   @Delete(':tipo/:id')
+  @Roles('administrador')
   remove(@Param('tipo') tipo: string, @Param('id', ParseIntPipe) id: number) {
     return this.catalogosService.remove(tipo, id);
   }
