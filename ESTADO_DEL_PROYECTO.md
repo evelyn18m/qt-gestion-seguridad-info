@@ -1,7 +1,7 @@
 # Estado del Proyecto — SGSI Platform (Quito Turismo)
 
-> **Última actualización:** 2026-05-22  
-> **Sesión actual:** En progreso
+> **Última actualización:** 2026-07-17  
+> **Sesión actual:** Actualización de esquema BD y configuración autenticación
 
 ---
 
@@ -95,8 +95,8 @@ qt-gestionseguridadinformacion/
 | `Vulnerabilidad` | Categoría + descripción |
 | `Impacto` | Tipo (CIA) + nivel + valor + criterio |
 | `Formato` | Nombre del formato |
-| `Subproceso` | Nombre |
-| `MacroProceso` | Nombre |
+| `Subproceso` | Nombre + relación a MacroProceso |
+| `MacroProceso` | Nombre + código de identificación |
 | `TipoActivo` | Nombre + detalle |
 | `Valoracion` | Catálogo de valoraciones |
 | `Funcionario` | Nombre |
@@ -104,13 +104,31 @@ qt-gestionseguridadinformacion/
 | `TipoControl` | Nombre |
 | `Probabilidad` | Nombre |
 | `Riesgo` | Evaluación + valor |
-| `ValoracionActivo` | Activo evaluado con CIA + análisis/evaluación/tratamiento de riesgo |
+| `ValoracionActivo` | Activo evaluado con CIA + análisis/evaluación/tratamiento de riesgo + campos extendidos para amenazas, vulnerabilidades, controles |
+| `DetalleRiesgo` | Detalles de riesgos identificados por activo (amenazas, vulnerabilidades, controles) |
+| `FuncionarioArea` | Asociación de funcionarios con áreas |
 
 ---
 
 ## 6. Registro de Cambios (Changelog)
 
-### 2026-05-22 — Sesión actual
+### 2026-07-17 — Actualización de esquema y autenticación
+- **Migraciones de BD aplicadas (4 nuevas)**:
+  - `20260609201500`: Agrega campo `codigo` a `MacroProceso` para identificación única
+  - `20260609201600`: 
+    - Agrega relación `macroProcesoId` a `Subproceso`
+    - Extiende `ValoracionActivo` con campos para amenazas, vulnerabilidades, controles e impacto
+    - Recrea tabla `DetalleRiesgo` con estructura mejorada para detalles de riesgos
+  - `20260609201700`: Crea tablas `Riesgo` (definiciones de niveles de riesgo) y `FuncionarioArea` (asociación usuarios-áreas)
+  - `20260609201800`: Agrega campo `vulnerabilidadControlId` a `DetalleRiesgo`
+- **Configuración Docker actualizada**: Backend ahora ejecuta `prisma generate` y `npm run build` en el startup
+- **Configuración Keycloak mejorada**:
+  - Cambio de autenticación: `client-jwt` → `client-secret-basic`
+  - Habilita `directAccessGrants` para flujo de credenciales directo
+  - Agregado PKCE (`pkce.code.challenge.method: S256`) para mayor seguridad
+  - Agregado `localhost:3001` a webOrigins para soportar backend
+
+### 2026-05-22
 - **Tabla Valoración de Activos**: reducida a 3 columnas (Nombre de Activo, Macroproceso, Valoración CIA) + Acciones.
 - **Campo Método de Tratamiento**: cambiado de `<select>` fijo a `<input>` de texto libre en pestaña 4.
 - **Módulo Análisis de Riesgo ELIMINADO**: se quitó la página `analisis-riesgo.vue`, el módulo backend `analisis-riesgo/`, el modelo Prisma `AnalisisRiesgo` y el enlace del sidebar.
@@ -135,22 +153,42 @@ qt-gestionseguridadinformacion/
 
 ## 8. Cómo levantar el proyecto
 
-### Requisitos
-- Node.js 20+
-- MySQL/MariaDB corriendo en `localhost:3306`
-- Base de datos `sgsi_db` con usuario `sgsi_user` / `sgsi_password`
+### Opción 1: Docker (Recomendado)
 
-### Backend
+**Requisitos**
+- Docker & Docker Compose
+
+**Levantar todo en un comando**
+```bash
+docker-compose up
+# Espera a que todos los servicios estén listos:
+# - MySQL: localhost:3307
+# - Keycloak: http://localhost:8080 (admin/admin)
+# - Backend: http://localhost:3001
+# - Frontend: http://localhost:3000
+# - Adminer: http://localhost:8082
+```
+
+Las migraciones de Prisma se aplican automáticamente al startup del backend.
+
+### Opción 2: Local (desarrollo)
+
+**Requisitos**
+- Node.js 20+
+- MySQL/MariaDB en `localhost:3306` con BD `sgsi_db` (usuario: `sgsi_user` / `sgsi_password`)
+- Keycloak ejecutándose (puedes usar Docker para Keycloak solo)
+
+**Backend**
 ```bash
 cd backend
 npm install
 npx prisma generate
-npx prisma migrate dev
-npx prisma db seed   # o: ts-node prisma/seed.ts
+npx prisma migrate deploy   # o: npx prisma migrate dev
+npx prisma db seed
 npm run start:dev    # http://localhost:3001
 ```
 
-### Frontend
+**Frontend**
 ```bash
 cd frontend
 npm install
