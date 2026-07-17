@@ -94,9 +94,21 @@ export class ReportesService {
     }
   }
 
-  async getRiesgosPorActivo(): Promise<RiesgoPorActivoDto[]> {
+  async getRiesgosPorActivo(
+    filters: Record<string, string | undefined> = {},
+  ): Promise<RiesgoPorActivoDto[]> {
     try {
-      const vas = await this.prisma.valoracionActivo.findMany();
+      const { nivelRiesgo } = filters;
+
+      const where: Prisma.ValoracionActivoWhereInput = nivelRiesgo
+        ? {
+            nivelRiesgo: {
+              equals: nivelRiesgo,
+            },
+          }
+        : {};
+
+      const vas = await this.prisma.valoracionActivo.findMany({ where });
       const detalles = await this.prisma.detalleRiesgo.findMany();
 
       // Build a map of VA id -> first detalle's riesgoResidual
@@ -438,7 +450,8 @@ export class ReportesService {
     filters: Record<string, string | undefined>,
   ): Promise<ValoracionActivoReporteDto[]> {
     try {
-      const { q, macroProcesoId, formatoId } = filters;
+      const { q, macroProcesoId, formatoId, custodioId, dimension, nivel } =
+        filters;
 
       const andConditions: Prisma.ValoracionActivoWhereInput[] = [];
 
@@ -448,9 +461,31 @@ export class ReportesService {
       if (formatoId) {
         andConditions.push({ formatoId: Number(formatoId) });
       }
-      /*if (custodioId) {
-        andConditions.push({ custodioId: Number(custodioId) });
-      }*/
+      if (custodioId) {
+        andConditions.push({ custodioId });
+      }
+
+      if (dimension && nivel) {
+        const fieldMap: Record<string, string> = {
+          confidencialidad: 'confidencialidadId',
+          integridad: 'integridadId',
+          disponibilidad: 'disponibilidadId',
+        };
+        const field = fieldMap[dimension];
+        const allImpactos = await this.prisma.impacto.findMany();
+        const impactos = allImpactos.filter(
+          (i) =>
+            i.tipo.toLowerCase() === dimension.toLowerCase() &&
+            i.nivel.toLowerCase() === nivel.toLowerCase(),
+        );
+        const impactoIds = impactos.map((i) => i.id);
+        if (impactoIds.length > 0) {
+          andConditions.push({ [field]: { in: impactoIds } });
+        } else {
+          // No matching impactos means no assets should match
+          andConditions.push({ [field]: { in: [-1] } });
+        }
+      }
 
       if (q) {
         const escapedQ = q.replace(/%/g, '\\%').replace(/_/g, '\\_');
