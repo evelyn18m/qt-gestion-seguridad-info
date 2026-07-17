@@ -493,7 +493,7 @@ function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilid
 }
 
 function calcularNivelRiesgo(evaluacion: number) {
-  if (evaluacion <= 3) return 'BAJO'
+  if (evaluacion < 4) return 'BAJO'
   if (evaluacion <= 8) return 'MEDIO'
   if (evaluacion <= 27) return 'ALTO'
   return 'ALTO'
@@ -513,14 +513,14 @@ interface PreviewRiesgo {
 }
 
 function deriveNivelRiesgo(evaluacion: number): string {
-  if (evaluacion <= 3) return 'BAJO'
+  if (evaluacion < 4) return 'BAJO'
   if (evaluacion <= 8) return 'MEDIO'
   if (evaluacion <= 27) return 'ALTO'
   return '-'
 }
 
 function deriveMetodoTratamiento(evaluacion: number): string {
-  return evaluacion <= 3 ? 'RETENER / ACEPTAR' : 'MODIFICAR / PREVENIR / COMPARTIR'
+  return evaluacion < 4 ? 'RETENER / ACEPTAR' : 'MODIFICAR / PREVENIR / COMPARTIR'
 }
 
 function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number): PreviewRiesgo {
