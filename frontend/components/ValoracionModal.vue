@@ -146,6 +146,23 @@ const currentStep = ref(0)
 const custodioArea = ref(null)
 const TOTAL_STEPS = 4
 
+const custodioGroupByArea = computed(() => {
+  const groups: Record<number, CatalogoItem[]> = {};
+
+  props.valForm.custodio.forEach((id) => {
+    const funcionario = props.catalogData.valFuncionarios.find((m: CatalogoItem) => m.id === Number(id))
+    if (!funcionario) return
+
+    if (!(funcionario.areaId in groups)) {
+      groups[funcionario.areaId] = []
+    }
+
+    groups[funcionario.areaId]!.push(funcionario)
+  })
+
+  return groups
+});
+
 const fieldErrors = reactive<Record<string, boolean>>({
   nombreActivo: false,
   tipoActivo: false,
@@ -582,6 +599,12 @@ const controlesImplementarGrupos = computed(() => {
   })
 })
 
+function getAreaLabel(id: string) {
+  const matchedArea = props.catalogData.valAreas.find(d => d.id === Number(id))
+  console.log(matchedArea);
+  return matchedArea?.nombre ?? ''
+}
+
 function getCustodioLabel(id: number) {
   const matchedFuncionario = props.catalogData.valFuncionarios.find((a: CatalogoItem) => a.id === id)
   return matchedFuncionario?.nombre ?? `Funcionario ${id}`
@@ -701,36 +724,51 @@ function handleChangeOnCustodio (event: Event) {
                       <label for="funcionario">Funcionario</label>
                       <select id="funcionario" required @change="handleChangeOnCustodio">
                         <option value="">Agregar custodio</option>
-                        <option v-for="f in funcionariosFiltrados" :key="f.id" :value="f.id">{{ f.nombre }}</option>
+                        <option
+                            v-for="f in funcionariosFiltrados"
+                            :key="f.id"
+                            :value="f.id"
+                            :disabled="valForm.custodio.includes(f.id)"
+                        >{{ f.nombre }}</option>
                       </select>
                       <span v-if="fieldErrors.custodio" class="field-error">Este campo es obligatorio</span>
                     </div>
                   </div>
-                  <div class="chip-list" style="max-height:160px;">
-              <span
-                  v-for="responsable in valForm.custodio"
-                  :key="responsable"
-                  class="chip selected"
-                  style="display:flex; align-items:center; gap:0.3rem; cursor:default;"
-              >
-                {{ getCustodioLabel(responsable) }}
-                <button
-                    style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;"
-                    type="button"
-                    @click="removeCustodio(responsable)"
-                >
-                  <svg
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="3"
-                      style="width:10px; height:10px;"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </button>
-              </span>
+                  <div style="display: flex; gap: 1rem; flex-direction: column">
+                    <div
+                        v-for="(responsables, areaId) in custodioGroupByArea"
+                        style="border: 1px solid var(--border); padding: 0.5rem; border-radius: 10px"
+                    >
+                      <div
+                          style="font-size: small; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -25px; padding: 0.5rem; z-index: 9999; max-width: 100%;"
+                      >{{ getAreaLabel(areaId) }}</div>
+                      <div class="chip-list" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
+                      <span
+                          v-for="responsable in responsables"
+                          :key="responsable.id"
+                          class="chip selected"
+                          style="display:flex; align-items:center; gap:0.3rem; cursor:default;"
+                      >
+                      {{ getCustodioLabel(responsable.id) }}
+                      <button
+                          style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;"
+                          type="button"
+                          @click="removeCustodio(responsable.id)"
+                      >
+                        <svg
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="3"
+                            style="width:10px; height:10px;"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                    </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="form-group" :class="{ 'has-error': fieldErrors.descripcion }">
