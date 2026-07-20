@@ -459,6 +459,7 @@ function editValoracion(item: ValoracionActivo) {
       tipo: d.tipo,
       catalogoId: Number(d.catalogoId),
       riesgoId: d.riesgoId ? String(d.riesgoId) : '',
+      vulnerabilidadRiesgoId: d.vulnerabilidadRiesgoId ? String(d.vulnerabilidadRiesgoId) : '',
       evaluacionRiesgo: d.evaluacionRiesgo || 0,
       nivelRiesgo: d.nivelRiesgo || '',
       metodoTratamiento: d.metodoTratamiento || '',

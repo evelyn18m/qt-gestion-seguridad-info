@@ -1036,8 +1036,8 @@ function handleChangeOnCustodio (event: Event) {
                   </td>
                   <td>
                     <template v-if="row.vulnerabilidadIds.length > 0 && findMatchedDetalle(row)">
-                      <select v-model="findMatchedDetalle(row)!.vulnerabilidadRiesgoId"
-                              style="min-width:130px;" @change="updateEvaluacionDetalle(findMatchedDetalle(row))">
+                      <select :value="String(findMatchedDetalle(row)!.vulnerabilidadRiesgoId || '')"
+                              style="min-width:130px;" @change="(e) => { const d = findMatchedDetalle(row); if (d) { d.vulnerabilidadRiesgoId = (e.target as HTMLSelectElement).value ? Number((e.target as HTMLSelectElement).value) : null; updateEvaluacionDetalle(d); } }">
                         <option value="">Seleccionar...</option>
                         <option
                             v-for="r in catalogData.valRiesgos.filter((r: CatalogoItem) => r.tipo === 'Vulnerabilidad')"
