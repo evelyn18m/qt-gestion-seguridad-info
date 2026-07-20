@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type {CatalogoItem, ControlesImplementarItem, DetalleRiesgo, ValoracionActivo} from '~/types/api'
+import type {CatalogoItem, ConfiguracionRiesgo, ControlesImplementarItem, DetalleRiesgo, ValoracionActivo} from '~/types/api'
 import {SessionExpiredError} from '~/composables/useApi'
 import SessionWarning from '~/components/SessionWarning.vue'
 import ValoracionModal from '~/components/ValoracionModal.vue'
@@ -19,6 +19,7 @@ const valRiesgos = ref<CatalogoItem[]>([])
 const valProbabilidades = ref<CatalogoItem[]>([])
 const valTiposControl = ref<CatalogoItem[]>([])
 const valControlesImplementar = ref<ControlesImplementarItem[]>([])
+const configRiesgo = ref<ConfiguracionRiesgo | null>(null)
 const valLoading = ref(false)
 
 const valForm = ref({
@@ -157,10 +158,12 @@ const loadValoracionData = async () => {
   const tipos = ['tipos-activo', 'formatos', 'macroprocesos', 'subprocesos', 'amenazas', 'vulnerabilidades', 'impactos', 'funcionarios', 'areas', 'riesgos', 'probabilidades', 'tipos-control', 'tipos-datos-personales']
   try {
     const {apiFetch} = useApi()
-    const [results, controlesItems] = await Promise.all([
+    const [results, controlesItems, config] = await Promise.all([
       Promise.all(tipos.map(t => fetchCatalog(t))),
       apiFetch<ControlesImplementarItem[]>('/catalogos/controles-implementar').catch(() => [] as ControlesImplementarItem[]),
+      apiFetch<ConfiguracionRiesgo>('/parametros').catch(() => null as ConfiguracionRiesgo | null),
     ])
+    configRiesgo.value = config
     valTipoActivo.value = results[0] as CatalogoItem[]
     valFormatos.value = results[1] as CatalogoItem[]
     valMacroprocesos.value = results[2] as CatalogoItem[]
@@ -662,6 +665,7 @@ onMounted(() => {
           v-model="showModalVal"
           :analisis-form="analisisForm"
           :catalog-data="catalogData"
+          :config-riesgo="configRiesgo"
           :detalles-riesgo="detallesRiesgo"
           :edit-id="valEditId"
           :evaluacion-form="evaluacionForm"

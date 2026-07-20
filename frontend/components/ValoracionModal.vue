@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type {CatalogoItem, ControlesImplementarItem, DetalleRiesgo} from '~/types/api'
+import type {CatalogoItem, ConfiguracionRiesgo, ControlesImplementarItem, DetalleRiesgo} from '~/types/api'
 
 // ── Catalog Data ──────────────────────────────────────────────────────────────
 interface CatalogData {
@@ -69,6 +69,7 @@ const props = defineProps<{
   modelValue: boolean
   editId: number | null
   catalogData: CatalogData
+  configRiesgo?: ConfiguracionRiesgo | null
   valForm: ValFormData
   analisisForm: AnalisisFormData
   evaluacionForm: EvaluacionFormData
@@ -76,6 +77,28 @@ const props = defineProps<{
   detallesRiesgo: DetalleRiesgo[]
   valSaving: boolean
 }>()
+
+const DEFAULT_CONFIG: ConfiguracionRiesgo = {
+  id: 0,
+  riesgoBajoMax: 3,
+  riesgoBajoDesde: 1,
+  riesgoMedioMax: 9,
+  riesgoMedioDesde: 4,
+  riesgoAltoMax: 27,
+  riesgoAltoDesde: 10,
+  controlBajoMax: 3,
+  controlBajoDesde: 1,
+  controlMedioMax: 9,
+  controlMedioDesde: 4,
+  controlAltoMax: 27,
+  controlAltoDesde: 10,
+  residualAceptableMax: 3,
+  residualAceptableDesde: 1,
+  residualInaceptableDesde: 4,
+  residualInaceptableMax: 27,
+}
+
+const cfg = computed<ConfiguracionRiesgo>(() => props.configRiesgo ?? DEFAULT_CONFIG)
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
@@ -493,9 +516,8 @@ function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilid
 }
 
 function calcularNivelRiesgo(evaluacion: number) {
-  if (evaluacion < 4) return 'BAJO'
-  if (evaluacion <= 8) return 'MEDIO'
-  if (evaluacion <= 27) return 'ALTO'
+  if (evaluacion <= cfg.value.riesgoBajoMax) return 'BAJO'
+  if (evaluacion <= cfg.value.riesgoMedioMax) return 'MEDIO'
   return 'ALTO'
 }
 
@@ -513,14 +535,20 @@ interface PreviewRiesgo {
 }
 
 function deriveNivelRiesgo(evaluacion: number): string {
-  if (evaluacion < 4) return 'BAJO'
-  if (evaluacion <= 8) return 'MEDIO'
-  if (evaluacion <= 27) return 'ALTO'
+  if (evaluacion <= cfg.value.riesgoBajoMax) return 'BAJO'
+  if (evaluacion <= cfg.value.riesgoMedioMax) return 'MEDIO'
+  if (evaluacion <= cfg.value.riesgoAltoMax) return 'ALTO'
   return '-'
 }
 
 function deriveMetodoTratamiento(evaluacion: number): string {
-  return evaluacion < 4 ? 'RETENER / ACEPTAR' : 'MODIFICAR / PREVENIR / COMPARTIR'
+  return evaluacion <= cfg.value.riesgoBajoMax ? 'RETENER / ACEPTAR' : 'MODIFICAR / PREVENIR / COMPARTIR'
+}
+
+function deriveTipoControl(evaluacion: number): string {
+  if (evaluacion <= cfg.value.controlBajoMax) return 'Monitoreo'
+  if (evaluacion <= cfg.value.controlMedioMax) return 'Preventivo'
+  return 'Correctivo'
 }
 
 function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number): PreviewRiesgo {
@@ -568,12 +596,12 @@ function updateControlDetalleRow(row: RiskRow) {
   if (!d) return
   d.evaluacionRiesgoControl = calcularEvaluacionRiesgo(d.riesgoControlId as number, d.vulnerabilidadControlId as number)
   d.nivelRiesgoControl = calcularNivelRiesgo(d.evaluacionRiesgoControl)
-  d.riesgoResidual = (d.evaluacionRiesgoControl > 0 && d.evaluacionRiesgoControl < 3) ? 'ACEPTABLE' : 'INACEPTABLE'
+  d.riesgoResidual = calcularRiesgoResidual(d.evaluacionRiesgoControl)
 }
 
 function calcularRiesgoResidual(evaluacion: number | undefined | null): 'ACEPTABLE' | 'INACEPTABLE' | null {
   if (evaluacion === undefined || evaluacion === null || evaluacion <= 0) return null
-  return evaluacion < 3 ? 'ACEPTABLE' : 'INACEPTABLE'
+  return evaluacion <= cfg.value.residualAceptableMax ? 'ACEPTABLE' : 'INACEPTABLE'
 }
 
 const tabs = [

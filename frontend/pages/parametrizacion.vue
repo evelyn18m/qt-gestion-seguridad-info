@@ -271,6 +271,7 @@ onMounted(() => {
               <td>
                 <input
                   type="number"
+                  step="any"
                   class="umbral-input"
                   :class="{ 'input-error': hasInputError(ri, 'desde') }"
                   :min="1"
@@ -282,6 +283,7 @@ onMounted(() => {
               <td>
                 <input
                   type="number"
+                  step="any"
                   class="umbral-input"
                   :class="{ 'input-error': hasInputError(ri, 'hasta') }"
                   :min="1"

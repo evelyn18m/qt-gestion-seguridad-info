@@ -1,4 +1,4 @@
-import { IsInt, Min, Max } from 'class-validator';
+import { IsNumber, Min, Max } from 'class-validator';
 import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -27,82 +27,82 @@ export class IsRangoConsistenteConstraint implements ValidatorConstraintInterfac
 }
 
 export class UpdateParametroDto {
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   riesgoBajoMax: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   riesgoBajoDesde: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   riesgoMedioMax: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   riesgoMedioDesde: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   riesgoAltoMax: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   riesgoAltoDesde: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   controlBajoMax: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   controlBajoDesde: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   controlMedioMax: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   controlMedioDesde: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   controlAltoMax: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   controlAltoDesde: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   residualAceptableMax: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   residualAceptableDesde: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   residualInaceptableDesde: number;
 
-  @IsInt()
+  @IsNumber()
   @Min(1)
   @Max(27)
   residualInaceptableMax: number;
