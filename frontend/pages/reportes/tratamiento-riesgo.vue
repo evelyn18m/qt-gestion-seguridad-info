@@ -252,8 +252,6 @@ onMounted(() => {
                   <th>Macroproceso</th>
                   <th>Amenaza</th>
                   <th>Vulnerabilidad</th>
-                  <th>Nivel Amenaza</th>
-                  <th>Nivel Vulnerabilidad</th>
                   <th>Impacto</th>
                   <th>Método Tratamiento</th>
                   <th>Eval. Riesgo Control</th>
@@ -269,18 +267,6 @@ onMounted(() => {
                   <td>{{ r.macroProceso || '—' }}</td>
                   <td>{{ r.amenaza || '—' }}</td>
                   <td>{{ r.vulnerabilidad || '—' }}</td>
-                  <td>
-                    <span v-if="r.nivelAmenaza" :class="['nivel-badge', nivelClass(r.nivelAmenaza)]">
-                      {{ r.nivelAmenaza }}
-                    </span>
-                    <span v-else>—</span>
-                  </td>
-                  <td>
-                    <span v-if="r.nivelVulnerabilidad" :class="['nivel-badge', nivelClass(r.nivelVulnerabilidad)]">
-                      {{ r.nivelVulnerabilidad }}
-                    </span>
-                    <span v-else>—</span>
-                  </td>
                   <td>{{ r.impacto != null ? r.impacto.toFixed(2) : '—' }}</td>
                   <td>
                     <span v-if="r.metodoTratamiento" :class="['nivel-badge', metodoClass(r.metodoTratamiento)]">
