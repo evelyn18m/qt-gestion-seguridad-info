@@ -16,6 +16,7 @@ async function fetchCatalogs() {
   const {fetchCatalog} = useCatalog()
   const types = [
     'tipos-activo',
+    'activos',
     'riesgos',
     'opciones-tratamiento',
     'estados-plan-tratamiento',
@@ -61,6 +62,7 @@ const editingId = ref<number | null>(null)
 const form = ref<{
   id: number | undefined,
   tipoActivoId: number | null,
+  activoId: number | null,
   nivelRiesgoId: number | null,
   opcionTratamientoId: number | null,
   controlesImplementarId: number[],
@@ -99,6 +101,7 @@ function openCreateModal() {
   form.value = {
     id: undefined,
     tipoActivoId: null,
+    activoId: null,
     nivelRiesgoId: null,
     opcionTratamientoId: null,
     controlesImplementarId: [],
@@ -122,6 +125,7 @@ function openEditModal(plan: PlanTratamiento) {
   form.value = {
     id: plan.id,
     tipoActivoId: plan.tipoActivoId,
+    activoId: plan.activoId ?? null,
     nivelRiesgoId: plan.nivelRiesgoId,
     opcionTratamientoId: plan.opcionTratamientoId,
     controlesImplementarId: JSON.parse(plan.controlesImplementarId) ?? [],
@@ -168,6 +172,7 @@ const formValid = computed(() => {
   return (
       form.value.controlesImplementarId.length > 0 &&
       form.value.tipoActivoId !== null &&
+      form.value.activoId !== null &&
       form.value.nivelRiesgoId !== null &&
       form.value.opcionTratamientoId !== null &&
       form.value.descripcionActividades.trim() !== '' &&
@@ -184,6 +189,7 @@ async function savePlan() {
   const body: Record<string, unknown> = {
     id: form.value.id,
     tipoActivoId: form.value.tipoActivoId,
+    activoId: form.value.activoId,
     nivelRiesgoId: form.value.nivelRiesgoId,
     opcionTratamientoId: form.value.opcionTratamientoId,
     descripcionActividades: form.value.descripcionActividades,
@@ -369,6 +375,7 @@ onMounted(() => {
                 <th class="th-actions">Acciones</th>
                 <th>ID Riesgo</th>
                 <th>Tipo Activo</th>
+                <th>Nombre Activo</th>
                 <th>Nivel Riesgo</th>
                 <th>Opción Tratamiento</th>
                 <th>Plazo</th>
@@ -401,6 +408,7 @@ onMounted(() => {
                 </td>
                 <td>{{ plan.id }}</td>
                 <td>{{ plan.tipoActivo?.nombre || '—' }}</td>
+                <td>{{ plan.activo?.nombre || '—' }}</td>
                 <td>{{ plan.nivelRiesgo?.nivel || '—' }}</td>
                 <td>{{ plan.opcionTratamiento?.nombre || '—' }}</td>
                 <td>{{ plan.plazoImplementacion ? formatPlazoLabel(plan.plazoImplementacion) : '—' }}</td>
@@ -435,6 +443,15 @@ onMounted(() => {
               <select id="pt-tipo-activo" v-model="form.tipoActivoId">
                 <option :value="null">Seleccionar...</option>
                 <option v-for="item in catalogos['tipos-activo']" :key="item.id" :value="item.id">
+                  {{ item.nombre }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="pt-activo">Nombre Activo <span class="required">*</span></label>
+              <select id="pt-activo" v-model="form.activoId">
+                <option :value="null">Seleccionar...</option>
+                <option v-for="item in catalogos['activos']" :key="item.id" :value="item.id">
                   {{ item.nombre }}
                 </option>
               </select>

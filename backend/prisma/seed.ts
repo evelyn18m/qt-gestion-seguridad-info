@@ -343,12 +343,12 @@ async function main() {
 
   // Backfill Activo catalog from existing ValoracionActivo records
   console.log('Backfilling Activo catalog from existing ValoracionActivo records...');
-  const valoraciones = await prisma.valoracionActivo.findMany({
+  const valoracionesActivos = await prisma.valoracionActivo.findMany({
     select: { nombreActivo: true },
     distinct: ['nombreActivo'],
   });
   let activosCreados = 0;
-  for (const v of valoraciones) {
+  for (const v of valoracionesActivos) {
     const nombre = v.nombreActivo?.trim();
     if (!nombre) continue;
     const existing = await prisma.activo.findUnique({ where: { nombre } });
