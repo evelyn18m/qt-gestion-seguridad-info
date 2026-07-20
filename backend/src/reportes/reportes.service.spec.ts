@@ -265,6 +265,25 @@ describe('ReportesService', () => {
       expect(result).toEqual([]);
     });
 
+    it('debe retornar array vacío cuando nivelRiesgo no coincide', async () => {
+      prisma.valoracionActivo.findMany.mockResolvedValue([]);
+
+      const result = await service.getRiesgosPorActivo({
+        nivelRiesgo: 'Medio',
+      });
+
+      expect(result).toEqual([]);
+      expect(prisma.valoracionActivo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            nivelRiesgo: {
+              equals: 'Medio',
+            },
+          }),
+        }),
+      );
+    });
+
     it('debe lanzar HttpException 500 si Prisma falla', async () => {
       prisma.valoracionActivo.findMany.mockRejectedValue(
         new Error('Connection lost'),
@@ -505,7 +524,7 @@ describe('ReportesService', () => {
             AND: expect.arrayContaining([
               expect.objectContaining({ macroProcesoId: 1 }),
               expect.objectContaining({ formatoId: 2 }),
-              expect.objectContaining({ custodioId: 3 }),
+              expect.objectContaining({ custodioId: '3' }),
             ]),
           }),
         }),
@@ -571,7 +590,7 @@ describe('ReportesService', () => {
           tipoActivoId: 1,
           formatoId: 2,
           macroProcesoId: 3,
-          custodioId: 4,
+          custodioId: '[4]',
           confidencialidadId: 5,
           integridadId: 6,
           disponibilidadId: 7,
@@ -638,6 +657,39 @@ describe('ReportesService', () => {
       const result = await service.getValoracionActivos({});
 
       expect(result).toEqual([]);
+    });
+
+    it('debe filtrar por dimension y nivel CIA', async () => {
+      prisma.impacto.findMany.mockResolvedValue([
+        makeImpacto(1, 'Confidencialidad', 'Alto', 3),
+      ]);
+      prisma.valoracionActivo.findMany.mockResolvedValue([
+        makeVa({
+          id: 1,
+          nombreActivo: 'Servidor A',
+          confidencialidadId: 1,
+          integridadId: 2,
+          disponibilidadId: 3,
+        }),
+      ]);
+
+      const result = await service.getValoracionActivos({
+        dimension: 'confidencialidad',
+        nivel: 'Alto',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
+      expect(result[0].nombreActivo).toBe('Servidor A');
+      expect(prisma.valoracionActivo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({ confidencialidadId: { in: [1] } }),
+            ]),
+          }),
+        }),
+      );
     });
 
     it('debe lanzar HttpException 500 si Prisma falla', async () => {

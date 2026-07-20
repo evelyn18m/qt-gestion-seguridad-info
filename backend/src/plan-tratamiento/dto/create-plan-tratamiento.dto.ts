@@ -10,6 +10,10 @@ export class CreatePlanTratamientoDto {
   @IsInt()
   tipoActivoId: number;
 
+  @IsOptional()
+  @IsInt()
+  activoId?: number;
+
   @IsInt()
   nivelRiesgoId: number;
 

@@ -243,6 +243,12 @@ describe('ReportesController', () => {
       expect(service.getRiesgosPorActivo).toHaveBeenCalled();
       expect(result).toEqual(mockRiesgosPorActivo);
     });
+
+    it('debe reenviar nivelRiesgo al servicio', async () => {
+      const query = { nivelRiesgo: 'Medio' };
+      await controller.getRiesgosPorActivo(query);
+      expect(service.getRiesgosPorActivo).toHaveBeenCalledWith(query);
+    });
   });
 
   describe('GET /reportes/riesgos-por-macroproceso', () => {
@@ -280,6 +286,17 @@ describe('ReportesController', () => {
       const query = { q: 'oficina', macroProcesoId: '1', formatoId: '2' };
       await controller.getValoracionActivos(query);
       expect(service.getValoracionActivos).toHaveBeenCalledWith(query);
+    });
+
+    it('debe retornar 400 para dimension invalida', async () => {
+      const query = { dimension: 'invalid', nivel: 'Alto' };
+      try {
+        await controller.getValoracionActivos(query);
+        expect(false).toBe(true);
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect((error as HttpException).getStatus()).toBe(400);
+      }
     });
 
     it('debe exportar a Excel con filtros aplicados', async () => {

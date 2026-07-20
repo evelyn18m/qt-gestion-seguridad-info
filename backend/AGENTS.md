@@ -32,7 +32,7 @@ src/                     # NestJS app source
   app.controller.ts
   app.service.ts
 prisma/
-  schema.prisma         # 7 catalog tables (Amenaza, Vulnerabilidad, Impacto, Formato, Subproceso, MacroProceso, TipoActivo, Valoracion)
+  schema.prisma         # Catalog tables: Amenaza, Vulnerabilidad, Impacto, Formato, Subproceso, MacroProceso, TipoActivo, Activo, Valoracion
   seed.ts               # Reads catalogos.json, uses PrismaMariaDb adapter
   migrations/           # Prisma migration history
 test/

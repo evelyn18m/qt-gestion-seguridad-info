@@ -105,6 +105,15 @@ model Area {
   funcionarios      Funcionario[]
 }
 
+model Activo {
+  id              Int              @id @default(autoincrement())
+  codigo          String?
+  nombre          String           @unique @db.VarChar(255)
+  planesTratamiento PlanTratamiento[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
 model ValoracionActivo {
   id                   Int     @id @default(autoincrement())
   nombreActivo         String  @db.Text
@@ -284,6 +293,7 @@ model PlazoImplementacion {
 model PlanTratamiento {
   id                          Int       @id @default(autoincrement())
   tipoActivoId                Int
+  activoId                    Int?
   nivelRiesgoId               Int
   opcionTratamientoId         Int
   controlesImplementarId      String    @db.Text // json array of controles
@@ -299,6 +309,7 @@ model PlanTratamiento {
   observaciones               String?   @db.Text
 
   tipoActivo          TipoActivo            @relation(fields: [tipoActivoId], references: [id], onDelete: Restrict)
+  activo              Activo?               @relation(fields: [activoId], references: [id], onDelete: SetNull)
   nivelRiesgo         Riesgo                @relation(fields: [nivelRiesgoId], references: [id], onDelete: Restrict)
   opcionTratamiento   OpcionTratamiento     @relation(fields: [opcionTratamientoId], references: [id], onDelete: Restrict)
   area                Area?                 @relation(fields: [areaFuncionalId], references: [id], onDelete: SetNull)

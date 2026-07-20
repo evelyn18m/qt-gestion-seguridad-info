@@ -23,6 +23,7 @@ const mockPrisma = {
     delete: jest.fn(),
   },
   tipoActivo: { findUnique: jest.fn() },
+  activo: { findUnique: jest.fn(), create: jest.fn() },
   formato: { findUnique: jest.fn() },
   macroProceso: { findUnique: jest.fn() },
   subproceso: { findUnique: jest.fn() },
@@ -1816,5 +1817,169 @@ describe('recalcular() recalculates with real VA', () => {
         }),
       }),
     );
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Activo catalog sync — populated from valuation asset names
+// ──────────────────────────────────────────────────────────────────────────────
+describe('create() / update() sync Activo catalog from nombreActivo', () => {
+  let service: ValoracionesService;
+
+  const baseDto: CreateValoracionDto = {
+    nombreActivo: 'Nuevo Activo',
+    tipoActivoId: 1,
+    formatoId: 1,
+    macroProcesoId: 1,
+    subProcesoId: 1,
+    propietarioId: 1,
+    custodioId: 1,
+    descripcion: 'Test desc',
+    controlSeguridad: 'Test ctrl',
+    ubicacion: 'Test loc',
+    confidencialidadId: 1,
+    integridadId: 1,
+    disponibilidadId: 1,
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ValoracionesService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ParametrosService, useValue: mockParametrosService },
+        { provide: AuditService, useValue: mockAuditService },
+      ],
+    }).compile();
+    service = module.get<ValoracionesService>(ValoracionesService);
+  });
+
+  it('should create Activo when nombreActivo is new', async () => {
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+    mockPrisma.activo.findUnique.mockResolvedValue(null);
+    mockPrisma.activo.create.mockResolvedValue({ id: 1, nombre: 'Nuevo Activo' });
+
+    await service.create(baseDto);
+
+    expect(mockPrisma.activo.findUnique).toHaveBeenCalledWith({
+      where: { nombre: 'Nuevo Activo' },
+    });
+    expect(mockPrisma.activo.create).toHaveBeenCalledWith({
+      data: { nombre: 'Nuevo Activo' },
+    });
+  });
+
+  it('should not create Activo when nombreActivo already exists', async () => {
+    mockPrisma.valoracionActivo.create.mockResolvedValue({
+      id: 1,
+      ...baseDto,
+      tipoControl: null,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+    mockPrisma.activo.findUnique.mockResolvedValue({
+      id: 1,
+      nombre: 'Nuevo Activo',
+    });
+
+    await service.create(baseDto);
+
+    expect(mockPrisma.activo.create).not.toHaveBeenCalled();
+  });
+
+  it('should sync Activo when update changes nombreActivo', async () => {
+    mockPrisma.valoracionActivo.findUnique.mockResolvedValue({
+      id: 1,
+      nombreActivo: 'Old Name',
+      tipoActivoId: 1,
+      formatoId: 1,
+      macroProcesoId: 1,
+      subProcesoId: 1,
+      propietarioId: 1,
+      custodioId: 1,
+      descripcion: 'Test',
+      controlSeguridad: 'Test',
+      ubicacion: 'Test',
+      observaciones: null,
+      confidencialidadId: 1,
+      integridadId: 1,
+      disponibilidadId: 1,
+      tieneDatosPersonales: false,
+      amenazas: null,
+      vulnerabilidades: null,
+      controlesImplementacion: null,
+      impacto: null,
+      probabilidadId: null,
+      amenazaRiesgoId: null,
+      vulnerabilidadRiesgoId: null,
+      controlesArea: null,
+      evaluacionRiesgo: null,
+      nivelRiesgo: null,
+      metodoTratamiento: null,
+      tipoControl: null,
+      controlesImplementar: null,
+      nivelAmenazaControl: null,
+      nivelVulnerabilidadControl: null,
+      evaluacionRiesgoControl: null,
+      nivelRiesgoControl: null,
+      createdBy: null,
+      updatedBy: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrisma.valoracionActivo.update.mockResolvedValue({
+      id: 1,
+      nombreActivo: 'Renamed Activo',
+    });
+    mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
+    mockPrisma.activo.findUnique.mockResolvedValue(null);
+    mockPrisma.activo.create.mockResolvedValue({ id: 2, nombre: 'Renamed Activo' });
+
+    await service.update(1, { nombreActivo: 'Renamed Activo' });
+
+    expect(mockPrisma.activo.create).toHaveBeenCalledWith({
+      data: { nombre: 'Renamed Activo' },
+    });
   });
 });

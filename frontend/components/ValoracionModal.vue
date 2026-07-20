@@ -493,7 +493,7 @@ function calcularEvaluacionRiesgo(amenazaRiesgoId: string | number, vulnerabilid
 }
 
 function calcularNivelRiesgo(evaluacion: number) {
-  if (evaluacion <= 3) return 'BAJO'
+  if (evaluacion < 4) return 'BAJO'
   if (evaluacion <= 8) return 'MEDIO'
   if (evaluacion <= 27) return 'ALTO'
   return 'ALTO'
@@ -513,14 +513,14 @@ interface PreviewRiesgo {
 }
 
 function deriveNivelRiesgo(evaluacion: number): string {
-  if (evaluacion <= 3) return 'BAJO'
+  if (evaluacion < 4) return 'BAJO'
   if (evaluacion <= 8) return 'MEDIO'
   if (evaluacion <= 27) return 'ALTO'
   return '-'
 }
 
 function deriveMetodoTratamiento(evaluacion: number): string {
-  return evaluacion <= 3 ? 'RETENER / ACEPTAR' : 'MODIFICAR / PREVENIR / COMPARTIR'
+  return evaluacion < 4 ? 'RETENER / ACEPTAR' : 'MODIFICAR / PREVENIR / COMPARTIR'
 }
 
 function localCalculateRiesgo(va: number, nivelAmenaza: number, nivelVulnerabilidad: number): PreviewRiesgo {
@@ -858,6 +858,12 @@ function handleChangeOnCustodio (event: Event) {
             <div class="val-card" style="border:none; padding:0; background:transparent;">
               <div class="form-group">
                 <label>Nombre del activo</label>
+                <div class="form-group">
+                <label>Impacto (Extraído de Valoración CIA - Pestaña 1)</label>
+                <input :value="ciaAverage > 0 ? ciaAverage.toFixed(2) + ' — ' + getCiaLevel(ciaAverage) : 'Complete Valoración CIA en Pestaña 1'"
+                       readonly
+                       style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
                 <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
               </div>
               <div class="form-group">

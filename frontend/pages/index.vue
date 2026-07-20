@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { ReporteResumen, AnalisisRiesgoActivoReporte, ActivosCriticosPorArea, ReporteCIA, NivelCount } from '~/types/api'
+import type { ReporteResumen, AnalisisRiesgoActivoReporte, ActivosCriticosPorArea, ReporteCIA, NivelCount, ValoracionActivoReporte, RiesgoPorActivo } from '~/types/api'
 
 definePageMeta({ layout: 'default' })
 
@@ -20,6 +20,101 @@ const nivelColors = ['#E74C3C', '#F1C40F', '#2ECC71']
 const ciaLabels = ['Alto', 'Medio', 'Bajo']
 const ciaColors = ['#E74C3C', '#F1C40F', '#2ECC71']
 
+type DrillDownRow =
+  | { type: 'cia' | 'risk'; id: number; nombreActivo: string; macroProceso?: string; nivel?: string | null }
+  | { type: 'bar'; nombreActivo: string; amenaza: string; vulnerabilidad: string; controlesImplementados: string | null }
+
+const drillDown = ref<{
+  open: boolean
+  type: 'cia' | 'risk' | 'bar' | null
+  title: string
+  rows: DrillDownRow[]
+  loading: boolean
+  error: string
+}>({
+  open: false,
+  type: null,
+  title: '',
+  rows: [],
+  loading: false,
+  error: '',
+})
+
+function closeDrillDown() {
+  drillDown.value.open = false
+  drillDown.value.type = null
+  drillDown.value.title = ''
+  drillDown.value.rows = []
+  drillDown.value.loading = false
+  drillDown.value.error = ''
+}
+
+async function openCiaDrillDown(dimension: string, nivel: string) {
+  const { apiFetch } = useApi()
+  closeDrillDown()
+  drillDown.value.open = true
+  drillDown.value.type = 'cia'
+  drillDown.value.title = `${dimension} - ${nivel}`
+  drillDown.value.loading = true
+  try {
+    const rows = await apiFetch<ValoracionActivoReporte[]>(
+      `/reportes/valoracion-activos?dimension=${encodeURIComponent(dimension)}&nivel=${encodeURIComponent(nivel)}`,
+    )
+    drillDown.value.rows = rows.map((r) => ({
+      type: 'cia' as const,
+      id: r.id,
+      nombreActivo: r.nombreActivo,
+      macroProceso: r.macroProceso,
+      nivel: r[dimension as 'confidencialidad' | 'integridad' | 'disponibilidad'],
+    }))
+  } catch (e: unknown) {
+    drillDown.value.error = e instanceof Error ? e.message : 'Error al cargar detalle'
+  } finally {
+    drillDown.value.loading = false
+  }
+}
+
+async function openRiskDrillDown(nivelRiesgo: string) {
+  const { apiFetch } = useApi()
+  closeDrillDown()
+  drillDown.value.open = true
+  drillDown.value.type = 'risk'
+  drillDown.value.title = `Nivel de Riesgo - ${nivelRiesgo}`
+  drillDown.value.loading = true
+  try {
+    const rows = await apiFetch<RiesgoPorActivo[]>(
+      `/reportes/riesgos-por-activo?nivelRiesgo=${encodeURIComponent(nivelRiesgo)}`,
+    )
+    drillDown.value.rows = rows.map((r) => ({
+      type: 'risk' as const,
+      id: r.activoId,
+      nombreActivo: r.nombre,
+      macroProceso: r.macroproceso,
+      nivel: r.nivelRiesgo,
+    }))
+  } catch (e: unknown) {
+    drillDown.value.error = e instanceof Error ? e.message : 'Error al cargar detalle'
+  } finally {
+    drillDown.value.loading = false
+  }
+}
+
+function openBarDrillDown(nombreActivo: string) {
+  closeDrillDown()
+  drillDown.value.open = true
+  drillDown.value.type = 'bar'
+  drillDown.value.title = `Amenazas y Vulnerabilidades - ${nombreActivo}`
+  drillDown.value.rows = analisisRiesgo.value
+    .filter((r) => r.nombreActivo === nombreActivo)
+    .map((r) => ({
+      type: 'bar' as const,
+      nombreActivo: r.nombreActivo,
+      amenaza: r.amenaza,
+      vulnerabilidad: r.vulnerabilidad,
+      controlesImplementados: r.controlesImplementados,
+    }))
+}
+
 const riesgoSeries = computed(() => {
   const dist = resumen.value?.distribucionRiesgos
   if (!dist) return []
@@ -35,6 +130,13 @@ function buildNivelDonutOptions(title: string) {
       type: 'donut' as const,
       toolbar: { show: false },
       background: 'transparent',
+      events: {
+        dataPointSelection(_event: unknown, _chartContext: unknown, config: { dataPointIndex: number }) {
+          const nivel = nivelLabels[config.dataPointIndex]
+          if (!nivel) return
+          void openRiskDrillDown(nivel)
+        },
+      },
     },
     labels: nivelLabels,
     colors: nivelColors,
@@ -75,17 +177,31 @@ function buildCiaSeries(counts: NivelCount | undefined): number[] {
   return [counts.Alto ?? 0, counts.Medio ?? 0, counts.Bajo ?? 0]
 }
 
+function getBadgeStyle(nivel: string | null | undefined) {
+  const n = (nivel || '').toLowerCase()
+  if (n === 'bajo') return { bg: 'rgba(46,204,113,0.15)', color: '#2ECC71', label: 'Bajo' }
+  if (n === 'medio') return { bg: 'rgba(241,196,15,0.15)', color: '#F1C40F', label: 'Medio' }
+  return { bg: 'rgba(231,76,60,0.15)', color: '#E74C3C', label: 'Alto' }
+}
+
 function isCiaEmpty(counts: NivelCount | undefined): boolean {
   const series = buildCiaSeries(counts)
   return series.length === 0 || series.every((v) => v === 0)
 }
 
-function buildCiaDonutOptions() {
+function buildCiaDonutOptions(dimension: string) {
   return {
     chart: {
       type: 'donut' as const,
       toolbar: { show: false },
       background: 'transparent',
+      events: {
+        dataPointSelection(_event: unknown, _chartContext: unknown, config: { dataPointIndex: number }) {
+          const nivel = ciaLabels[config.dataPointIndex]
+          if (!nivel) return
+          void openCiaDrillDown(dimension, nivel)
+        },
+      },
     },
     labels: ciaLabels,
     colors: ciaColors,
@@ -224,6 +340,13 @@ const barOptions = computed(() => ({
     type: 'bar' as const,
     toolbar: { show: false },
     background: 'transparent',
+    events: {
+      dataPointSelection(_event: unknown, _chartContext: unknown, config: { dataPointIndex: number }) {
+        const nombreActivo = activoCategories.value[config.dataPointIndex]
+        if (!nombreActivo) return
+        openBarDrillDown(nombreActivo)
+      },
+    },
   },
   plotOptions: {
     bar: {
@@ -362,7 +485,7 @@ onMounted(() => {
               <h4 class="cia-chart-title">Confidencialidad</h4>
               <apexchart
                 type="donut"
-                :options="buildCiaDonutOptions()"
+                :options="buildCiaDonutOptions('confidencialidad')"
                 :series="confidencialidadSeries"
                 height="260"
               />
@@ -371,7 +494,7 @@ onMounted(() => {
               <h4 class="cia-chart-title">Integridad</h4>
               <apexchart
                 type="donut"
-                :options="buildCiaDonutOptions()"
+                :options="buildCiaDonutOptions('integridad')"
                 :series="integridadSeries"
                 height="260"
               />
@@ -380,7 +503,7 @@ onMounted(() => {
               <h4 class="cia-chart-title">Disponibilidad</h4>
               <apexchart
                 type="donut"
-                :options="buildCiaDonutOptions()"
+                :options="buildCiaDonutOptions('disponibilidad')"
                 :series="disponibilidadSeries"
                 height="260"
               />
@@ -414,6 +537,59 @@ onMounted(() => {
             :series="activoSeries"
             height="320"
           />
+        </div>
+      </div>
+
+      <!-- Drill-down Panel -->
+      <div v-if="drillDown.open" class="drill-down-panel">
+        <div class="drill-down-header">
+          <h3>{{ drillDown.title }}</h3>
+          <button class="drill-down-close" @click="closeDrillDown" title="Cerrar">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div v-if="drillDown.loading" class="drill-down-loading">
+          <div class="spinner"></div>
+          <p>Cargando detalle...</p>
+        </div>
+
+        <div v-else-if="drillDown.error" class="drill-down-error">
+          <p>{{ drillDown.error }}</p>
+        </div>
+
+        <div v-else-if="drillDown.rows.length === 0" class="drill-down-empty">
+          No hay registros para esta selección.
+        </div>
+
+        <div v-else class="drill-down-list">
+          <div
+            v-for="(row, index) in drillDown.rows"
+            :key="index"
+            class="drill-down-row"
+          >
+            <div class="drill-down-info">
+              <span class="drill-down-name">{{ row.nombreActivo }}</span>
+              <span v-if="row.type === 'cia' || row.type === 'risk'" class="drill-down-macro">{{ row.macroProceso }}</span>
+              <template v-if="row.type === 'bar'">
+                <span class="drill-down-detail">Amenaza: {{ row.amenaza }}</span>
+                <span class="drill-down-detail">Vulnerabilidad: {{ row.vulnerabilidad }}</span>
+                <span v-if="row.controlesImplementados" class="drill-down-detail">Controles: {{ row.controlesImplementados }}</span>
+              </template>
+            </div>
+            <span
+              v-if="row.type === 'cia' || row.type === 'risk'"
+              class="drill-down-badge"
+              :style="{
+                background: getBadgeStyle(row.nivel).bg,
+                color: getBadgeStyle(row.nivel).color,
+              }"
+            >
+              {{ getBadgeStyle(row.nivel).label }}
+            </span>
+          </div>
         </div>
       </div>
     </template>
@@ -683,6 +859,132 @@ onMounted(() => {
 .btn-retry:hover {
   background: rgba(239, 68, 68, 0.2);
   color: #fecaca;
+}
+
+/* Drill-down Panel */
+.drill-down-panel {
+  margin-top: 1.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.drill-down-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.drill-down-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.drill-down-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drill-down-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.drill-down-close:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.drill-down-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 0.75rem;
+  color: var(--text-muted);
+}
+
+.drill-down-error {
+  padding: 2rem;
+  text-align: center;
+  color: #fca5a5;
+}
+
+.drill-down-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.drill-down-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.drill-down-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  transition: background 0.15s ease;
+}
+
+.drill-down-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.drill-down-row + .drill-down-row {
+  border-top: 1px solid var(--border);
+}
+
+.drill-down-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.drill-down-name {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.drill-down-macro {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.drill-down-detail {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  word-break: break-word;
+}
+
+.drill-down-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Responsive */

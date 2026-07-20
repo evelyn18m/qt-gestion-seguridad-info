@@ -33,6 +33,7 @@ const catalogos = [
   {path: '/catalogos?tipo=subprocesos', label: 'Subprocesos'},
   {path: '/catalogos?tipo=macroprocesos', label: 'Macroprocesos'},
   {path: '/catalogos?tipo=tipos-activo', label: 'Tipos de Activo'},
+  {path: '/catalogos?tipo=activos', label: 'Activos'},
   {path: '/catalogos?tipo=tipos-datos-personales', label: 'Tipos de Datos Personales'},
   {path: '/catalogos?tipo=valoraciones', label: 'Valoraciones'},
   {path: '/catalogos?tipo=funcionarios', label: 'Funcionarios'},

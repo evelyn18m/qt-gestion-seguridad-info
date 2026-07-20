@@ -113,8 +113,17 @@ export class ReportesController {
   }
 
   @Get('riesgos-por-activo')
-  getRiesgosPorActivo(): Promise<RiesgoPorActivoDto[]> {
-    return this.reportesService.getRiesgosPorActivo();
+  getRiesgosPorActivo(
+    @Query() query: Record<string, string | undefined> = {},
+  ): Promise<RiesgoPorActivoDto[]> {
+    const { nivelRiesgo } = query;
+    if (nivelRiesgo !== undefined && nivelRiesgo.trim() === '') {
+      throw new HttpException(
+        'nivelRiesgo no puede estar vacío',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return this.reportesService.getRiesgosPorActivo(query);
   }
 
   @Get('riesgos-por-macroproceso')
@@ -141,6 +150,27 @@ export class ReportesController {
   getValoracionActivos(
     @Query() query: Record<string, string | undefined>,
   ): Promise<ValoracionActivoReporteDto[]> {
+    const { dimension, nivel } = query;
+    const validDimensions = [
+      'confidencialidad',
+      'integridad',
+      'disponibilidad',
+    ];
+
+    if (dimension && !validDimensions.includes(dimension)) {
+      throw new HttpException(
+        'dimension debe ser confidencialidad, integridad o disponibilidad',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (dimension && !nivel) {
+      throw new HttpException(
+        'nivel es requerido cuando dimension está presente',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     return this.reportesService.getValoracionActivos(query);
   }
 
