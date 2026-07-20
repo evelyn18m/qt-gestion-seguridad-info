@@ -740,6 +740,23 @@ export class ValoracionesService {
           })
         : null,
     ]);
+
+    const custodioIds = this.parseJsonIds(item.custodioId);
+    const custodio =
+      custodioIds.length > 0
+        ? await this.prisma.funcionario.findMany({
+            where: { id: { in: custodioIds } },
+          })
+        : [];
+
+    const tiposDatosIds = this.parseJsonIds(item.tiposDatosPersonales);
+    const tiposDatosPersonales =
+      tiposDatosIds.length > 0
+        ? await this.prisma.tipoDatosPersonales.findMany({
+            where: { id: { in: tiposDatosIds } },
+          })
+        : [];
+
     const detallesRiesgo = await this.prisma.detalleRiesgo.findMany({
       where: { valoracionActivoId: item.id },
       orderBy: { id: 'asc' },
@@ -767,6 +784,60 @@ export class ValoracionesService {
         updatedAt: true,
       },
     });
+
+    const detallesEnriquecidos = await Promise.all(
+      detallesRiesgo.map(async (d) => {
+        const [
+          riesgo,
+          vulnerabilidadRiesgo,
+          riesgoControl,
+          vulnerabilidadControl,
+          tipoControlDetalle,
+          controlesImplementar,
+        ] = await Promise.all([
+          d.riesgoId != null
+            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoId } })
+            : null,
+          d.vulnerabilidadRiesgoId != null
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.vulnerabilidadRiesgoId },
+              })
+            : null,
+          d.riesgoControlId != null
+            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoControlId } })
+            : null,
+          d.vulnerabilidadControlId != null
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.vulnerabilidadControlId },
+              })
+            : null,
+          d.tipoControlId != null
+            ? this.prisma.tipoControl.findUnique({
+                where: { id: d.tipoControlId },
+              })
+            : null,
+          d.controlesImplementarId != null
+            ? this.prisma.controlesImplementar.findMany({
+                where: {
+                  id: {
+                    in: this.parseJsonIds(d.controlesImplementarId),
+                  },
+                },
+              })
+            : null,
+        ]);
+        return {
+          ...d,
+          riesgo,
+          vulnerabilidadRiesgo,
+          riesgoControl,
+          vulnerabilidadControl,
+          tipoControl: tipoControlDetalle,
+          controlesImplementar: controlesImplementar || [],
+        };
+      }),
+    );
+
     return {
       ...item,
       tipoActivo,
@@ -778,7 +849,21 @@ export class ValoracionesService {
       integridad,
       disponibilidad,
       tipoControl,
-      detallesRiesgo,
+      custodio,
+      tiposDatosPersonales,
+      detallesRiesgo: detallesEnriquecidos,
     };
+  }
+
+  private parseJsonIds(value: string | null | undefined): number[] {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed)
+        ? parsed.map((v) => Number(v)).filter((v) => !Number.isNaN(v))
+        : [];
+    } catch {
+      return [];
+    }
   }
 }

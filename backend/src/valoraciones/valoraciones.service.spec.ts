@@ -28,12 +28,14 @@ const mockPrisma = {
   macroProceso: { findUnique: jest.fn() },
   subproceso: { findUnique: jest.fn() },
   area: { findUnique: jest.fn() },
-  funcionario: { findUnique: jest.fn() },
+  funcionario: { findUnique: jest.fn(), findMany: jest.fn() },
+  tipoDatosPersonales: { findMany: jest.fn() },
   impacto: { findUnique: jest.fn() },
   tipoControl: { findUnique: jest.fn() },
   riesgo: {
     findUnique: jest.fn(),
   },
+  controlesImplementar: { findMany: jest.fn() },
   detalleRiesgo: {
     findMany: jest.fn(),
     findFirst: jest.fn(),
@@ -1153,6 +1155,7 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
     expect(mockPrisma.detalleRiesgo.findMany).toHaveBeenCalledWith({
       where: { valoracionActivoId: 1 },
       orderBy: { id: 'asc' },
+      select: expect.any(Object),
     });
   });
 
@@ -1196,31 +1199,33 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
       updatedAt: new Date(),
     };
 
+    const controlImplementar = {
+      id: 5,
+      seccion: 'A.1',
+      descripcion: 'Politica de acceso',
+      categoriaId: 1,
+      categoria: { id: 1, nombre: 'Control de Acceso' },
+    };
+
     const enrichedDetalle = {
       id: 10,
       valoracionActivoId: 2,
       tipo: 'amenaza',
       catalogoId: 1,
       controlesImplementarId: 5,
-      controlesImplementar: {
-        id: 5,
-        seccion: 'A.1',
-        descripcion: 'Politica de acceso',
-        categoriaId: 1,
-        categoria: { id: 1, nombre: 'Control de Acceso' },
-      },
     };
 
     mockPrisma.valoracionActivo.findUnique.mockResolvedValue(item);
     mockPrisma.detalleRiesgo.findMany.mockResolvedValue([enrichedDetalle]);
+    mockPrisma.controlesImplementar.findMany.mockResolvedValue([controlImplementar]);
 
     const result = await service.findOne(2);
 
     expect(result.detallesRiesgo).toHaveLength(1);
-    const detalle = result.detallesRiesgo[0] as typeof enrichedDetalle;
-    expect(detalle.controlesImplementar).not.toBeNull();
-    expect(detalle.controlesImplementar.descripcion).toBe('Politica de acceso');
-    expect(detalle.controlesImplementar.categoria.nombre).toBe(
+    const detalle = result.detallesRiesgo[0];
+    expect(detalle.controlesImplementar).toEqual([controlImplementar]);
+    expect(detalle.controlesImplementar[0].descripcion).toBe('Politica de acceso');
+    expect(detalle.controlesImplementar[0].categoria.nombre).toBe(
       'Control de Acceso',
     );
   });

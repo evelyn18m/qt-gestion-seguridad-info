@@ -58,6 +58,8 @@ export interface ValoracionActivo {
     detallesRiesgo?: DetalleRiesgo[]
     // Joined relations (from API)
     macroProceso?: { id: number; nombre: string }
+    custodio?: { id: number; nombre: string }[]
+    tiposDatosPersonales?: { id: number; nombre: string }[]
 
     [key: string]: any
 }
@@ -93,8 +95,15 @@ export interface DetalleRiesgo {
     vulnerabilidadIds?: string[]
     controlesImplementados?: string
     controlesArea?: string
-    // Tab 4 FK: selected catalog control to implement
-    controlesImplementarId: string[]
+    // Tab 4 FK: selected catalog control to implement (JSON string of IDs or array)
+    controlesImplementarId?: string[] | string
+    // Enriched relations from backend
+    riesgo?: { id: number; nivel: string; valor: number; tipo: string }
+    vulnerabilidadRiesgo?: { id: number; nivel: string; valor: number; tipo: string }
+    riesgoControl?: { id: number; nivel: string; valor: number; tipo: string }
+    vulnerabilidadControl?: { id: number; nivel: string; valor: number; tipo: string }
+    tipoControl?: { id: number; nombre: string }
+    controlesImplementar?: ControlesImplementarItem[]
 }
 
 export interface ApiError {
