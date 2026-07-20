@@ -270,6 +270,12 @@ export class ReportesService {
     }
   }
 
+  private deriveNivelFromValor(valor: number): string {
+    if (valor >= 3) return 'Alto';
+    if (valor >= 2) return 'Medio';
+    return 'Bajo';
+  }
+
   async getCia(): Promise<CiaReporteDto> {
     try {
       const impactoMap = await this.fetchImpactoMap();
@@ -278,6 +284,7 @@ export class ReportesService {
       const confidencialidad = this.nvlCero();
       const integridad = this.nvlCero();
       const disponibilidad = this.nvlCero();
+      const impacto = this.nvlCero();
 
       for (const va of vas) {
         const c = impactoMap.get(va.confidencialidadId);
@@ -299,9 +306,17 @@ export class ReportesService {
           else if (d.nivel === 'Medio') disponibilidad.Medio++;
           else if (d.nivel === 'Bajo') disponibilidad.Bajo++;
         }
+
+        const maxValor = Math.max(c?.valor ?? 0, i?.valor ?? 0, d?.valor ?? 0);
+        if (maxValor > 0) {
+          const nivel = this.deriveNivelFromValor(maxValor);
+          if (nivel === 'Alto') impacto.Alto++;
+          else if (nivel === 'Medio') impacto.Medio++;
+          else if (nivel === 'Bajo') impacto.Bajo++;
+        }
       }
 
-      return { confidencialidad, integridad, disponibilidad };
+      return { confidencialidad, integridad, disponibilidad, impacto };
     } catch (error) {
       throw new HttpException(
         `Error al obtener reporte CIA: ${(error as Error).message}`,

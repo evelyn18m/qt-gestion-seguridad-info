@@ -477,6 +477,12 @@ describe('ReportesService', () => {
         Medio: 1,
         Bajo: 1,
       });
+      // impacto = max(c, i, d) por activo
+      expect(result.impacto).toEqual({
+        Alto: 2,
+        Medio: 1,
+        Bajo: 0,
+      });
     });
 
     it('debe retornar ceros sin datos', async () => {
@@ -494,6 +500,11 @@ describe('ReportesService', () => {
         Bajo: 0,
       });
       expect(result.disponibilidad).toEqual({
+        Alto: 0,
+        Medio: 0,
+        Bajo: 0,
+      });
+      expect(result.impacto).toEqual({
         Alto: 0,
         Medio: 0,
         Bajo: 0,

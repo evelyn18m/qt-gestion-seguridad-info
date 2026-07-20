@@ -42,6 +42,7 @@ export class CiaReporteDto {
   confidencialidad: NivelCount;
   integridad: NivelCount;
   disponibilidad: NivelCount;
+  impacto: NivelCount;
 }
 
 export class ValoracionActivoReporteDto {

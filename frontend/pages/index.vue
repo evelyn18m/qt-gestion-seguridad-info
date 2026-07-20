@@ -74,6 +74,46 @@ async function openCiaDrillDown(dimension: string, nivel: string) {
   }
 }
 
+async function openImpactoCiaDrillDown(nivel: string) {
+  const { apiFetch } = useApi()
+  closeDrillDown()
+  drillDown.value.open = true
+  drillDown.value.type = 'cia'
+  drillDown.value.title = `IMPACTO CIA - ${nivel}`
+  drillDown.value.loading = true
+  const dimensions = ['confidencialidad', 'integridad', 'disponibilidad']
+  try {
+    const results = await Promise.all(
+      dimensions.map((dimension) =>
+        apiFetch<ValoracionActivoReporte[]>(
+          `/reportes/valoracion-activos?dimension=${encodeURIComponent(dimension)}&nivel=${encodeURIComponent(nivel)}`,
+        ).catch(() => []),
+      ),
+    )
+    const seen = new Set<number>()
+    const merged: DrillDownRow[] = []
+    dimensions.forEach((dimension, index) => {
+      for (const r of results[index] ?? []) {
+        if (!seen.has(r.id)) {
+          seen.add(r.id)
+          merged.push({
+            type: 'cia' as const,
+            id: r.id,
+            nombreActivo: r.nombreActivo,
+            macroProceso: r.macroProceso,
+            nivel: r[dimension as 'confidencialidad' | 'integridad' | 'disponibilidad'],
+          })
+        }
+      }
+    })
+    drillDown.value.rows = merged
+  } catch (e: unknown) {
+    drillDown.value.error = e instanceof Error ? e.message : 'Error al cargar detalle'
+  } finally {
+    drillDown.value.loading = false
+  }
+}
+
 async function openRiskDrillDown(nivelRiesgo: string) {
   const { apiFetch } = useApi()
   closeDrillDown()
@@ -124,7 +164,7 @@ const riesgoEmpty = computed(() =>
   riesgoSeries.value.length === 0 || riesgoSeries.value.every((v) => v === 0),
 )
 
-function buildNivelDonutOptions(title: string) {
+function buildNivelDonutOptions() {
   return {
     chart: {
       type: 'donut' as const,
@@ -140,11 +180,6 @@ function buildNivelDonutOptions(title: string) {
     },
     labels: nivelLabels,
     colors: nivelColors,
-    title: {
-      text: title,
-      align: 'center' as const,
-      style: { color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 },
-    },
     plotOptions: {
       pie: {
         donut: {
@@ -232,13 +267,61 @@ function buildCiaDonutOptions(dimension: string) {
   }
 }
 
+function buildImpactoCiaDonutOptions() {
+  return {
+    chart: {
+      type: 'donut' as const,
+      toolbar: { show: false },
+      background: 'transparent',
+      events: {
+        dataPointSelection(_event: unknown, _chartContext: unknown, config: { dataPointIndex: number }) {
+          const nivel = ciaLabels[config.dataPointIndex]
+          if (!nivel) return
+          void openImpactoCiaDrillDown(nivel)
+        },
+      },
+    },
+    labels: ciaLabels,
+    colors: ciaColors,
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '62%',
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: 'Activos',
+              color: '#94a3b8',
+              fontSize: '0.7rem',
+            },
+          },
+        },
+      },
+    },
+    theme: { mode: 'dark' as const },
+    legend: {
+      position: 'bottom' as const,
+      fontSize: '0.7rem',
+      itemMargin: { horizontal: 4, vertical: 2 },
+      offsetY: 2,
+    },
+    dataLabels: { enabled: false },
+  }
+}
+
 const confidencialidadSeries = computed(() => buildCiaSeries(cia.value?.confidencialidad))
 const integridadSeries = computed(() => buildCiaSeries(cia.value?.integridad))
 const disponibilidadSeries = computed(() => buildCiaSeries(cia.value?.disponibilidad))
+
+const impactoCiaSeries = computed(() => buildCiaSeries(cia.value?.impacto))
+const impactoCiaEmpty = computed(() => isCiaEmpty(cia.value?.impacto))
+
 const ciaEmpty = computed(() =>
   isCiaEmpty(cia.value?.confidencialidad) &&
   isCiaEmpty(cia.value?.integridad) &&
-  isCiaEmpty(cia.value?.disponibilidad),
+  isCiaEmpty(cia.value?.disponibilidad) &&
+  impactoCiaEmpty.value,
 )
 
 const activosCriticosEmpty = computed(() =>
@@ -466,7 +549,7 @@ onMounted(() => {
           <apexchart
             v-else
             type="donut"
-            :options="buildNivelDonutOptions('Nivel de Riesgo')"
+            :options="buildNivelDonutOptions()"
             :series="riesgoSeries"
             height="180"
           />
@@ -511,6 +594,20 @@ onMounted(() => {
           </div>
         </div>
 
+        <div class="chart-card">
+          <h3>IMPACTO CIA</h3>
+          <div v-if="impactoCiaEmpty" class="chart-empty">
+            No hay datos de impacto CIA.
+          </div>
+          <apexchart
+            v-else
+            type="donut"
+            :options="buildImpactoCiaDonutOptions()"
+            :series="impactoCiaSeries"
+            height="260"
+          />
+        </div>
+
         <div class="chart-card ring-card">
           <h3>Activos Críticos por Área</h3>
           <div v-if="activosCriticosEmpty" class="chart-empty">
@@ -525,19 +622,21 @@ onMounted(() => {
           />
         </div>
 
-        <div class="chart-card">
-          <h3>Amenazas y Vulnerabilidades por Activo</h3>
-          <div v-if="analisisEmpty" class="chart-empty">
-            No hay amenazas ni vulnerabilidades asociadas a activos.
-          </div>
-          <apexchart
-            v-else
-            type="bar"
-            :options="barOptions"
-            :series="activoSeries"
-            height="320"
-          />
+      </div>
+
+      <!-- Bar chart: half width below the donuts -->
+      <div class="chart-card bar-chart-half">
+        <h3>Amenazas y Vulnerabilidades por Activo</h3>
+        <div v-if="analisisEmpty" class="chart-empty">
+          No hay amenazas ni vulnerabilidades asociadas a activos.
         </div>
+        <apexchart
+          v-else
+          type="bar"
+          :options="barOptions"
+          :series="activoSeries"
+          height="320"
+        />
       </div>
 
       <!-- Drill-down Panel -->
@@ -724,6 +823,11 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 1.5rem;
+}
+
+.chart-card.bar-chart-half {
+  width: 50%;
+  margin: 0 auto;
 }
 
 .chart-card h3 {

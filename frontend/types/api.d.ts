@@ -157,6 +157,7 @@ export interface ReporteCIA {
     confidencialidad: NivelCount
     integridad: NivelCount
     disponibilidad: NivelCount
+    impacto: NivelCount
 }
 
 export interface ValoracionActivoReporte {
