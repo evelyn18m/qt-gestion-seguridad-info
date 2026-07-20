@@ -858,6 +858,12 @@ function handleChangeOnCustodio (event: Event) {
             <div class="val-card" style="border:none; padding:0; background:transparent;">
               <div class="form-group">
                 <label>Nombre del activo</label>
+                <div class="form-group">
+                <label>Impacto (Extraído de Valoración CIA - Pestaña 1)</label>
+                <input :value="ciaAverage > 0 ? ciaAverage.toFixed(2) + ' — ' + getCiaLevel(ciaAverage) : 'Complete Valoración CIA en Pestaña 1'"
+                       readonly
+                       style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
+              </div>
                 <input :value="analisisForm.nombreActivo" readonly style="background:rgba(15,23,42,0.3); cursor:not-allowed;" type="text"/>
               </div>
               <div class="form-group">
