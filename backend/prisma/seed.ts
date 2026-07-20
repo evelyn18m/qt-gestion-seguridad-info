@@ -341,6 +341,23 @@ async function main() {
     await prisma.tipoDatosPersonales.create({ data: tipoDatosPersonal });
   }
 
+  // Backfill Activo catalog from existing ValoracionActivo records
+  console.log('Backfilling Activo catalog from existing ValoracionActivo records...');
+  const valoraciones = await prisma.valoracionActivo.findMany({
+    select: { nombreActivo: true },
+    distinct: ['nombreActivo'],
+  });
+  let activosCreados = 0;
+  for (const v of valoraciones) {
+    const nombre = v.nombreActivo?.trim();
+    if (!nombre) continue;
+    const existing = await prisma.activo.findUnique({ where: { nombre } });
+    if (existing) continue;
+    await prisma.activo.create({ data: { nombre } });
+    activosCreados++;
+  }
+  console.log(`Activo catalog backfilled: ${activosCreados} created.`);
+
   console.log('Seeding completed!');
 }
 

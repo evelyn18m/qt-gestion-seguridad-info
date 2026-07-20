@@ -17,6 +17,7 @@ const mockPrisma = {
     delete: jest.fn(),
   },
   tipoActivo: { findUnique: jest.fn() },
+  activo: { findUnique: jest.fn(), create: jest.fn() },
   formato: { findUnique: jest.fn() },
   macroProceso: { findUnique: jest.fn() },
   subproceso: { findUnique: jest.fn() },

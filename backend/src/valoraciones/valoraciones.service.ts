@@ -54,6 +54,11 @@ export class ValoracionesService {
       data: createData,
     });
 
+    // Sync Activo catalog from the asset name used in this valuation
+    if (dto.nombreActivo) {
+      await this.upsertActivoFromNombre(dto.nombreActivo);
+    }
+
     // Read config once per request
     let config: Thresholds = DEFAULT_THRESHOLDS;
     try {
@@ -206,6 +211,11 @@ export class ValoracionesService {
       where: { id },
       data: updateData,
     });
+
+    // Sync Activo catalog when the asset name changes
+    if (dto.nombreActivo && dto.nombreActivo !== current.nombreActivo) {
+      await this.upsertActivoFromNombre(dto.nombreActivo);
+    }
 
     // Compute field-level diff for audit
     if (user) {
@@ -659,6 +669,22 @@ export class ValoracionesService {
       Math.round(((impConf.valor + impInt.valor + impDisp.valor) / 3) * 100) /
       100
     );
+  }
+
+  /**
+   * Keeps the Activo catalog in sync with asset names used in valuations.
+   * Uses upsert to avoid duplicates and normalizes whitespace.
+   */
+  private async upsertActivoFromNombre(nombreActivo: string) {
+    const nombre = nombreActivo.trim();
+    if (!nombre) return;
+    const existing = await this.prisma.activo.findUnique({
+      where: { nombre },
+    });
+    if (existing) return;
+    await this.prisma.activo.create({
+      data: { nombre },
+    });
   }
 
   /**
