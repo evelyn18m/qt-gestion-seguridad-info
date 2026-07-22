@@ -56,7 +56,7 @@ export class ReportesService {
 
   async getResumen(): Promise<ResumenReporteDto> {
     try {
-      const vas = await this.prisma.valoracionActivo.findMany();
+      const vas = await this.prisma.valoracionActivo.findMany({ where: { eliminado: false } });
       const detalles = await this.prisma.detalleRiesgo.findMany();
 
       const totalActivos = vas.length;
@@ -100,13 +100,16 @@ export class ReportesService {
     try {
       const { nivelRiesgo } = filters;
 
-      const where: Prisma.ValoracionActivoWhereInput = nivelRiesgo
-        ? {
-            nivelRiesgo: {
-              equals: nivelRiesgo,
-            },
-          }
-        : {};
+      const where: Prisma.ValoracionActivoWhereInput = {
+        eliminado: false,
+        ...(nivelRiesgo
+          ? {
+              nivelRiesgo: {
+                equals: nivelRiesgo,
+              },
+            }
+          : {}),
+      };
 
       const vas = await this.prisma.valoracionActivo.findMany({ where });
       const detalles = await this.prisma.detalleRiesgo.findMany();
@@ -163,7 +166,7 @@ export class ReportesService {
 
   async getRiesgosPorMacroproceso(): Promise<RiesgoPorMacroProcesoDto[]> {
     try {
-      const vas = await this.prisma.valoracionActivo.findMany();
+      const vas = await this.prisma.valoracionActivo.findMany({ where: { eliminado: false } });
 
       // Group by macroProcesoId
       const groups = new Map<
@@ -279,7 +282,7 @@ export class ReportesService {
   async getCia(): Promise<CiaReporteDto> {
     try {
       const impactoMap = await this.fetchImpactoMap();
-      const vas = await this.prisma.valoracionActivo.findMany();
+      const vas = await this.prisma.valoracionActivo.findMany({ where: { eliminado: false } });
 
       const confidencialidad = this.nvlCero();
       const integridad = this.nvlCero();
@@ -328,7 +331,7 @@ export class ReportesService {
   async getActivosCriticosPorArea(): Promise<ActivosCriticosPorAreaDto[]> {
     try {
       const [vas, funcionarios] = await Promise.all([
-        this.prisma.valoracionActivo.findMany(),
+        this.prisma.valoracionActivo.findMany({ where: { eliminado: false } }),
         this.prisma.funcionario.findMany({ include: { area: true } }),
       ]);
 
@@ -376,7 +379,7 @@ export class ReportesService {
   async getHeatmap(): Promise<HeatmapSerieDto[]> {
     try {
       const [vas, impactos] = await Promise.all([
-        this.prisma.valoracionActivo.findMany(),
+        this.prisma.valoracionActivo.findMany({ where: { eliminado: false } }),
         this.prisma.impacto.findMany(),
       ]);
 
@@ -426,7 +429,7 @@ export class ReportesService {
   ): Promise<HeatmapCellDetailDto[]> {
     try {
       const [vas, impactos, macroProcesos] = await Promise.all([
-        this.prisma.valoracionActivo.findMany(),
+        this.prisma.valoracionActivo.findMany({ where: { eliminado: false } }),
         this.prisma.impacto.findMany(),
         this.prisma.macroProceso.findMany(),
       ]);
@@ -513,7 +516,9 @@ export class ReportesService {
       }
 
       const where: Prisma.ValoracionActivoWhereInput =
-        andConditions.length > 0 ? { AND: andConditions } : {};
+        andConditions.length > 0
+          ? { AND: andConditions, eliminado: false }
+          : { eliminado: false };
 
       const valuations = await this.prisma.valoracionActivo.findMany({
         where,
@@ -582,7 +587,7 @@ export class ReportesService {
       let vaIds: number[] | undefined;
       if (macroProcesoId) {
         const matchingVas = await this.prisma.valoracionActivo.findMany({
-          where: { macroProcesoId: Number(macroProcesoId) },
+          where: { macroProcesoId: Number(macroProcesoId), eliminado: false },
           select: { id: true },
         });
         vaIds = matchingVas.map((va) => va.id);
@@ -605,7 +610,7 @@ export class ReportesService {
       const [valoracionActivos, amenazas, vulnerabilidades, macroProcesos] =
         await Promise.all([
           this.prisma.valoracionActivo.findMany({
-            where: vaIds ? { id: { in: vaIds } } : {},
+            where: vaIds ? { id: { in: vaIds }, eliminado: false } : { eliminado: false },
           }),
           this.prisma.amenaza.findMany(),
           this.prisma.vulnerabilidad.findMany(),
@@ -752,7 +757,7 @@ export class ReportesService {
       let vaIds: number[] | undefined;
       if (macroProcesoId) {
         const matchingVas = await this.prisma.valoracionActivo.findMany({
-          where: { macroProcesoId: Number(macroProcesoId) },
+          where: { macroProcesoId: Number(macroProcesoId), eliminado: false },
           select: { id: true },
         });
         vaIds = matchingVas.map((va) => va.id);
@@ -780,7 +785,7 @@ export class ReportesService {
         macroProcesos,
       ] = await Promise.all([
         this.prisma.valoracionActivo.findMany({
-          where: vaIds ? { id: { in: vaIds } } : {},
+          where: vaIds ? { id: { in: vaIds }, eliminado: false } : { eliminado: false },
         }),
         this.prisma.riesgo.findMany(),
         this.prisma.amenaza.findMany(),
@@ -916,7 +921,7 @@ export class ReportesService {
       let vaIds: number[] | undefined;
       if (macroProcesoId) {
         const matchingVas = await this.prisma.valoracionActivo.findMany({
-          where: { macroProcesoId: Number(macroProcesoId) },
+          where: { macroProcesoId: Number(macroProcesoId), eliminado: false },
           select: { id: true },
         });
         vaIds = matchingVas.map((va) => va.id);
@@ -946,7 +951,7 @@ export class ReportesService {
         controlesImplementar,
       ] = await Promise.all([
         this.prisma.valoracionActivo.findMany({
-          where: vaIds ? { id: { in: vaIds } } : {},
+          where: vaIds ? { id: { in: vaIds }, eliminado: false } : { eliminado: false },
         }),
         this.prisma.riesgo.findMany(),
         this.prisma.amenaza.findMany(),
@@ -1531,7 +1536,9 @@ export class ReportesService {
       }
 
       const where: Prisma.PlanTratamientoWhereInput =
-        andConditions.length > 0 ? { AND: andConditions } : {};
+        andConditions.length > 0
+          ? { AND: andConditions, eliminado: false }
+          : { eliminado: false };
 
       const planes = await this.prisma.planTratamiento.findMany({
         where,

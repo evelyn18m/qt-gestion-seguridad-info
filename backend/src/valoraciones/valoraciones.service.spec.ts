@@ -17,10 +17,10 @@ type AnyMock = jest.Mock<any, any[]>;
 const mockPrisma = {
   valoracionActivo: {
     findMany: jest.fn(),
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn(),
   },
   tipoActivo: { findUnique: jest.fn() },
   activo: { findUnique: jest.fn(), create: jest.fn() },
@@ -278,7 +278,7 @@ describe('ValoracionesService — Tab 2 new fields', () => {
 
   describe('update() with deleteMany + creates', () => {
     it('GREEN: should $transaction with deleteMany followed by create calls', async () => {
-      mockPrisma.valoracionActivo.findUnique
+      mockPrisma.valoracionActivo.findFirst
         .mockResolvedValueOnce(mockItem)
         .mockResolvedValueOnce(mockEnriched);
       mockPrisma.valoracionActivo.update.mockResolvedValue(mockItem);
@@ -1147,7 +1147,7 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
       updatedAt: new Date(),
     };
 
-    mockPrisma.valoracionActivo.findUnique.mockResolvedValue(item);
+    mockPrisma.valoracionActivo.findFirst.mockResolvedValue(item);
     mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
 
     await service.findOne(1);
@@ -1215,7 +1215,7 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
       controlesImplementarId: 5,
     };
 
-    mockPrisma.valoracionActivo.findUnique.mockResolvedValue(item);
+    mockPrisma.valoracionActivo.findFirst.mockResolvedValue(item);
     mockPrisma.detalleRiesgo.findMany.mockResolvedValue([enrichedDetalle]);
     mockPrisma.controlesImplementar.findMany.mockResolvedValue([
       controlImplementar,
@@ -1469,7 +1469,7 @@ describe('calcularDetalleRiesgo with parent CIA fallback', () => {
     });
 
     // Parent VA has CIA IDs that map to impacto values: 1,2,2 → avg=1.67
-    mockPrisma.valoracionActivo.findUnique.mockResolvedValue({
+    mockPrisma.valoracionActivo.findFirst.mockResolvedValue({
       id: 1,
       confidencialidadId: 10,
       integridadId: 11,
@@ -1762,7 +1762,7 @@ describe('recalcular() recalculates with real VA', () => {
     };
 
     // Mock parent VA exists
-    mockPrisma.valoracionActivo.findUnique.mockResolvedValue(parentVA);
+    mockPrisma.valoracionActivo.findFirst.mockResolvedValue(parentVA);
 
     // Mock existing hijos
     mockPrisma.detalleRiesgo.findMany.mockResolvedValue([oldHijo1]);
@@ -1941,7 +1941,7 @@ describe('create() / update() sync Activo catalog from nombreActivo', () => {
   });
 
   it('should sync Activo when update changes nombreActivo', async () => {
-    mockPrisma.valoracionActivo.findUnique.mockResolvedValue({
+    mockPrisma.valoracionActivo.findFirst.mockResolvedValue({
       id: 1,
       nombreActivo: 'Old Name',
       tipoActivoId: 1,

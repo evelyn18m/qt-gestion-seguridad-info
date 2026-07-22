@@ -22,14 +22,15 @@ export class PlanTratamientoService {
 
   findAll() {
     return this.prisma.planTratamiento.findMany({
+      where: { eliminado: false },
       include: planInclude,
       orderBy: { id: 'desc' },
     });
   }
 
   async findOne(id: number) {
-    const plan = await this.prisma.planTratamiento.findUnique({
-      where: { id },
+    const plan = await this.prisma.planTratamiento.findFirst({
+      where: { id, eliminado: false },
       include: planInclude,
     });
     if (!plan) throw new NotFoundException('Plan de tratamiento no encontrado');
@@ -56,7 +57,11 @@ export class PlanTratamientoService {
 
   async remove(id: number) {
     await this.findOne(id);
-    return this.prisma.planTratamiento.delete({ where: { id } });
+    return this.prisma.planTratamiento.update({
+      where: { id },
+      data: { eliminado: true },
+      include: planInclude,
+    });
   }
 
   private toPrismaData(dto: Partial<CreatePlanTratamientoDto>) {

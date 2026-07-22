@@ -6,10 +6,10 @@ import { PrismaService } from '../prisma/prisma.service';
 const mockPrisma = {
   planTratamiento: {
     findMany: jest.fn(),
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn(),
   },
 };
 
@@ -117,10 +117,23 @@ describe('PlanTratamientoService', () => {
   });
 
   it('throws NotFoundException when updating a non-existent plan', async () => {
-    mockPrisma.planTratamiento.findUnique.mockResolvedValue(null);
+    mockPrisma.planTratamiento.findFirst.mockResolvedValue(null);
 
     await expect(service.update(999, { ...validBase })).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  it('soft-deletes a plan by setting eliminado to true', async () => {
+    mockPrisma.planTratamiento.findFirst.mockResolvedValue({ id: 1 });
+    mockPrisma.planTratamiento.update.mockResolvedValue({ id: 1, eliminado: true });
+
+    await service.remove(1);
+
+    const calls = mockPrisma.planTratamiento.update.mock.calls as unknown as [
+      [{ where: { id: number }; data: { eliminado: boolean } }],
+    ];
+    expect(calls[0][0].where.id).toBe(1);
+    expect(calls[0][0].data.eliminado).toBe(true);
   });
 });

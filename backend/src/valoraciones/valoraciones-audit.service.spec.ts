@@ -11,10 +11,10 @@ type AnyMock = jest.Mock<any, any[]>;
 const mockPrisma = {
   valoracionActivo: {
     findMany: jest.fn(),
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn(),
   },
   tipoActivo: { findUnique: jest.fn() },
   activo: { findUnique: jest.fn(), create: jest.fn() },
@@ -213,7 +213,7 @@ describe('ValoracionesService — Audit Integration', () => {
     };
 
     it('RED: should call AuditService.log with ACTUALIZAR + diff', async () => {
-      mockPrisma.valoracionActivo.findUnique.mockResolvedValue(mockCurrent);
+      mockPrisma.valoracionActivo.findFirst.mockResolvedValue(mockCurrent);
       mockPrisma.valoracionActivo.update.mockResolvedValue(mockCurrent);
       mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
 
@@ -250,7 +250,7 @@ describe('ValoracionesService — Audit Integration', () => {
     });
 
     it('TRIANGULATE: empty diff when no fields changed', async () => {
-      mockPrisma.valoracionActivo.findUnique.mockResolvedValue(mockCurrent);
+      mockPrisma.valoracionActivo.findFirst.mockResolvedValue(mockCurrent);
       mockPrisma.valoracionActivo.update.mockResolvedValue(mockCurrent);
       mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
 
@@ -263,7 +263,7 @@ describe('ValoracionesService — Audit Integration', () => {
     });
 
     it('TRIANGULATE: updatedBy should be set on ValoracionActivo', async () => {
-      mockPrisma.valoracionActivo.findUnique.mockResolvedValue(mockCurrent);
+      mockPrisma.valoracionActivo.findFirst.mockResolvedValue(mockCurrent);
       mockPrisma.valoracionActivo.update.mockImplementation((args: any) => {
         expect(args.data.updatedBy).toBe('jdoe');
         return Promise.resolve(mockCurrent);
@@ -275,7 +275,7 @@ describe('ValoracionesService — Audit Integration', () => {
     });
 
     it('TRIANGULATE: should handle null user gracefully', async () => {
-      mockPrisma.valoracionActivo.findUnique.mockResolvedValue(mockCurrent);
+      mockPrisma.valoracionActivo.findFirst.mockResolvedValue(mockCurrent);
       mockPrisma.valoracionActivo.update.mockResolvedValue(mockCurrent);
       mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
 

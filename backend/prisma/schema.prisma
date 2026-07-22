@@ -131,6 +131,7 @@ model ValoracionActivo {
   disponibilidadId     Int
   tieneDatosPersonales Boolean @default(false)
   tiposDatosPersonales String? @db.Text // JSON array of types
+  eliminado            Boolean @default(false)
 
   // Análisis de Riesgos (pestañas 2-4)
   amenazas                String? @db.Text // JSON array of ids
@@ -306,6 +307,7 @@ model PlanTratamiento {
   montoUSD                    String
   estadoId                    Int
   observaciones               String?   @db.Text
+  eliminado                   Boolean   @default(false)
 
   tipoActivo          TipoActivo            @relation(fields: [tipoActivoId], references: [id], onDelete: Restrict)
   nivelRiesgo         Riesgo                @relation(fields: [nivelRiesgoId], references: [id], onDelete: Restrict)

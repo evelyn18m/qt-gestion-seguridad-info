@@ -27,14 +27,15 @@ export class ValoracionesService {
 
   async findAll() {
     const items = await this.prisma.valoracionActivo.findMany({
+      where: { eliminado: false },
       orderBy: { id: 'desc' },
     });
     return Promise.all(items.map((i) => this.enrich(i)));
   }
 
   async findOne(id: number) {
-    const item = await this.prisma.valoracionActivo.findUnique({
-      where: { id },
+    const item = await this.prisma.valoracionActivo.findFirst({
+      where: { id, eliminado: false },
     });
     if (!item) throw new NotFoundException(`Valoración ${id} no encontrada`);
     return this.enrich(item);
@@ -405,10 +406,10 @@ export class ValoracionesService {
 
   async remove(id: number) {
     await this.findOne(id);
-    await this.prisma.detalleRiesgo.deleteMany({
-      where: { valoracionActivoId: id },
+    return this.prisma.valoracionActivo.update({
+      where: { id },
+      data: { eliminado: true },
     });
-    return this.prisma.valoracionActivo.delete({ where: { id } });
   }
 
   /**
@@ -417,8 +418,8 @@ export class ValoracionesService {
    * No modifica inputs (riesgoId, amenazaIds, etc.), solo recalcula campos derivados.
    */
   async recalcular(id: number) {
-    const va = await this.prisma.valoracionActivo.findUnique({
-      where: { id },
+    const va = await this.prisma.valoracionActivo.findFirst({
+      where: { id, eliminado: false },
     });
     if (!va) throw new NotFoundException(`Valoración ${id} no encontrada`);
 
@@ -641,8 +642,8 @@ export class ValoracionesService {
   private async computeParentCiaAvg(
     valoracionActivoId: number,
   ): Promise<number | null> {
-    const parent = await this.prisma.valoracionActivo.findUnique({
-      where: { id: valoracionActivoId },
+    const parent = await this.prisma.valoracionActivo.findFirst({
+      where: { id: valoracionActivoId, eliminado: false },
       select: {
         confidencialidadId: true,
         integridadId: true,
