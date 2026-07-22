@@ -1217,14 +1217,18 @@ describe('enrich() includes controlesImplementar in detalleRiesgo.findMany', () 
 
     mockPrisma.valoracionActivo.findUnique.mockResolvedValue(item);
     mockPrisma.detalleRiesgo.findMany.mockResolvedValue([enrichedDetalle]);
-    mockPrisma.controlesImplementar.findMany.mockResolvedValue([controlImplementar]);
+    mockPrisma.controlesImplementar.findMany.mockResolvedValue([
+      controlImplementar,
+    ]);
 
     const result = await service.findOne(2);
 
     expect(result.detallesRiesgo).toHaveLength(1);
     const detalle = result.detallesRiesgo[0];
     expect(detalle.controlesImplementar).toEqual([controlImplementar]);
-    expect(detalle.controlesImplementar[0].descripcion).toBe('Politica de acceso');
+    expect(detalle.controlesImplementar[0].descripcion).toBe(
+      'Politica de acceso',
+    );
     expect(detalle.controlesImplementar[0].categoria.nombre).toBe(
       'Control de Acceso',
     );
@@ -1886,7 +1890,10 @@ describe('create() / update() sync Activo catalog from nombreActivo', () => {
     });
     mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
     mockPrisma.activo.findUnique.mockResolvedValue(null);
-    mockPrisma.activo.create.mockResolvedValue({ id: 1, nombre: 'Nuevo Activo' });
+    mockPrisma.activo.create.mockResolvedValue({
+      id: 1,
+      nombre: 'Nuevo Activo',
+    });
 
     await service.create(baseDto);
 
@@ -1979,7 +1986,10 @@ describe('create() / update() sync Activo catalog from nombreActivo', () => {
     });
     mockPrisma.detalleRiesgo.findMany.mockResolvedValue([]);
     mockPrisma.activo.findUnique.mockResolvedValue(null);
-    mockPrisma.activo.create.mockResolvedValue({ id: 2, nombre: 'Renamed Activo' });
+    mockPrisma.activo.create.mockResolvedValue({
+      id: 2,
+      nombre: 'Renamed Activo',
+    });
 
     await service.update(1, { nombreActivo: 'Renamed Activo' });
 

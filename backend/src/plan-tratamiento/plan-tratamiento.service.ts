@@ -9,7 +9,6 @@ import { UpdatePlanTratamientoDto } from './dto/update-plan-tratamiento.dto';
 
 const planInclude = {
   tipoActivo: true,
-  activo: true,
   nivelRiesgo: true,
   opcionTratamiento: true,
   area: true,
@@ -63,7 +62,8 @@ export class PlanTratamientoService {
   private toPrismaData(dto: Partial<CreatePlanTratamientoDto>) {
     const data: Record<string, unknown> = {};
     if (dto.tipoActivoId !== undefined) data['tipoActivoId'] = dto.tipoActivoId;
-    if (dto.activoId !== undefined) data['activoId'] = dto.activoId;
+    data['activoId'] =
+      dto.activoId !== undefined ? JSON.stringify(dto.activoId) : '[]';
     if (dto.nivelRiesgoId !== undefined)
       data['nivelRiesgoId'] = dto.nivelRiesgoId;
     if (dto.opcionTratamientoId !== undefined)

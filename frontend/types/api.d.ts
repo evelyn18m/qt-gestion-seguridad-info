@@ -341,7 +341,7 @@ export interface PlazoImplementacion {
 export interface PlanTratamiento {
     id: number
     tipoActivoId: number
-    activoId?: number | null
+    activoId?: string | null
     nivelRiesgoId: number
     opcionTratamientoId: number
     controlesImplementarId: string
@@ -360,7 +360,6 @@ export interface PlanTratamiento {
     updatedAt?: string
     // Joined relations
     tipoActivo?: { id: number; nombre: string }
-    activo?: { id: number; nombre: string } | null
     nivelRiesgo?: { id: number; nivel: string }
     opcionTratamiento?: { id: number; nombre: string }
     controlesImplementar?: { id: number; seccion: string; descripcion: string }

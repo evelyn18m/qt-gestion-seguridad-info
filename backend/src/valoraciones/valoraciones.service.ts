@@ -804,7 +804,9 @@ export class ValoracionesService {
               })
             : null,
           d.riesgoControlId != null
-            ? this.prisma.riesgo.findUnique({ where: { id: d.riesgoControlId } })
+            ? this.prisma.riesgo.findUnique({
+                where: { id: d.riesgoControlId },
+              })
             : null,
           d.vulnerabilidadControlId != null
             ? this.prisma.riesgo.findUnique({

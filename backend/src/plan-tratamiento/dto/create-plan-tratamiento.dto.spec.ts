@@ -62,4 +62,27 @@ describe('CreatePlanTratamientoDto', () => {
     const propertyNames = errors.map((e) => e.property);
     expect(propertyNames).toContain('plazoImplementacionId');
   });
+
+  it('accepts activoId as an array of integers', async () => {
+    const dto = {
+      ...validBase,
+      activoId: [1, 2],
+    };
+
+    const errors = await transformAndValidate(dto);
+
+    expect(errors).toHaveLength(0);
+  });
+
+  it('rejects activoId with non-integer values', async () => {
+    const dto = {
+      ...validBase,
+      activoId: [1, 'A'],
+    };
+
+    const errors = await transformAndValidate(dto);
+
+    const propertyNames = errors.map((e) => e.property);
+    expect(propertyNames).toContain('activoId');
+  });
 });

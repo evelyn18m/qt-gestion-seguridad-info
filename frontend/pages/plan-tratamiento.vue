@@ -62,7 +62,7 @@ const editingId = ref<number | null>(null)
 const form = ref<{
   id: number | undefined,
   tipoActivoId: number | null,
-  activoId: number | null,
+  activoId: number[],
   nivelRiesgoId: number | null,
   opcionTratamientoId: number | null,
   controlesImplementarId: number[],
@@ -79,6 +79,7 @@ const form = ref<{
 }>({
   id: undefined,
   tipoActivoId: null as number | null,
+  activoId: [],
   nivelRiesgoId: null as number | null,
   opcionTratamientoId: null as number | null,
   controlesImplementarId: [],
@@ -101,7 +102,7 @@ function openCreateModal() {
   form.value = {
     id: undefined,
     tipoActivoId: null,
-    activoId: null,
+    activoId: [],
     nivelRiesgoId: null,
     opcionTratamientoId: null,
     controlesImplementarId: [],
@@ -125,7 +126,7 @@ function openEditModal(plan: PlanTratamiento) {
   form.value = {
     id: plan.id,
     tipoActivoId: plan.tipoActivoId,
-    activoId: plan.activoId ?? null,
+    activoId: plan.activoId ? (JSON.parse(plan.activoId) as number[]) : [],
     nivelRiesgoId: plan.nivelRiesgoId,
     opcionTratamientoId: plan.opcionTratamientoId,
     controlesImplementarId: JSON.parse(plan.controlesImplementarId) ?? [],
@@ -170,9 +171,9 @@ const timeframeValidation = computed(() => {
 
 const formValid = computed(() => {
   return (
+      form.value.activoId.length > 0 &&
       form.value.controlesImplementarId.length > 0 &&
       form.value.tipoActivoId !== null &&
-      form.value.activoId !== null &&
       form.value.nivelRiesgoId !== null &&
       form.value.opcionTratamientoId !== null &&
       form.value.descripcionActividades.trim() !== '' &&
@@ -243,6 +244,30 @@ function cancelDelete() {
   deleteConfirm.value = null
 }
 
+function getActivoLabel(activoId: number) {
+  const activo = catalogos.value['activos']?.find((item) => item.id === activoId)
+  if (!activo) return 'A#' + activoId
+  return activo.nombre
+}
+
+function removeActivo(activoId: number) {
+  form.value.activoId = form.value.activoId.filter((id) => id !== activoId)
+}
+
+function toggleActivoId(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const activoId: number = parseInt(select.value)
+  if (activoId) {
+    if (form.value.activoId.includes(activoId as never)) {
+      removeActivo(activoId)
+    } else {
+      form.value.activoId.push(activoId as never)
+    }
+  }
+
+  select.value = ''
+}
+
 function getControlLabel(controlId: number) {
   const control = controlesImplementar.value.find((item) => item.id === controlId)
   if (!control) return 'C#' + controlId
@@ -306,6 +331,13 @@ async function executeDelete() {
   } finally {
     deleting.value = false
   }
+}
+
+function getActivosLabel(idsStr: string | null | undefined) {
+  if (!idsStr) return ''
+  const ids = JSON.parse(idsStr) as number[]
+  const activos = catalogos.value['activos']?.filter((item) => ids.includes(item.id))
+  return activos?.map((a) => a.nombre).join(',\n') ?? ''
 }
 
 function getResponsablesLabel(idsStr: string) {
@@ -408,7 +440,9 @@ onMounted(() => {
                 </td>
                 <td>{{ plan.id }}</td>
                 <td>{{ plan.tipoActivo?.nombre || '—' }}</td>
-                <td>{{ plan.activo?.nombre || '—' }}</td>
+                <td>
+                  <div style="white-space: pre">{{ getActivosLabel(plan.activoId) || '—' }}</div>
+                </td>
                 <td>{{ plan.nivelRiesgo?.nivel || '—' }}</td>
                 <td>{{ plan.opcionTratamiento?.nombre || '—' }}</td>
                 <td>{{ plan.plazoImplementacion ? formatPlazoLabel(plan.plazoImplementacion) : '—' }}</td>
@@ -449,12 +483,46 @@ onMounted(() => {
             </div>
             <div class="form-group">
               <label for="pt-activo">Nombre Activo <span class="required">*</span></label>
-              <select id="pt-activo" v-model="form.activoId">
-                <option :value="null">Seleccionar...</option>
-                <option v-for="item in catalogos['activos']" :key="item.id" :value="item.id">
+              <select
+                  id="pt-activo"
+                  @change="toggleActivoId"
+              >
+                <option value="">Agregar o quitar activo</option>
+                <option
+                    v-for="item in catalogos['activos']"
+                    :key="item.id"
+                    :value="item.id"
+                    :disabled="form.activoId.includes(item.id as never)"
+                >
                   {{ item.nombre }}
                 </option>
               </select>
+              <div class="chip-list" style="max-height:140px;">
+                <span
+                    v-for="activo in form.activoId"
+                    :key="activo"
+                    class="chip selected"
+                    style="display:flex; align-items:center; gap:0.3rem; cursor:default;"
+                >
+                  {{ getActivoLabel(activo) }}
+                  <button
+                      style="width:16px; height:16px; padding:0; background:transparent; border:none; color:currentColor; cursor:pointer; display:flex; align-items:center;"
+                      type="button"
+                      @click="removeActivo(activo)"
+                  >
+                    <svg
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3"
+                        style="width:10px; height:10px;"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </span>
+              </div>
             </div>
             <div class="form-group">
               <label for="pt-nivel-riesgo">Nivel de Riesgo <span class="required">*</span></label>

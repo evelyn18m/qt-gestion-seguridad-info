@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsDateString,
   IsInt,
   IsNotEmpty,
@@ -11,8 +12,9 @@ export class CreatePlanTratamientoDto {
   tipoActivoId: number;
 
   @IsOptional()
-  @IsInt()
-  activoId?: number;
+  @IsArray()
+  @IsInt({ each: true })
+  activoId?: number[];
 
   @IsInt()
   nivelRiesgoId: number;
