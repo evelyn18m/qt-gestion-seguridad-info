@@ -4655,7 +4655,6 @@ export class ReportesService {
         'Macroproceso',
         'Amenaza',
         'Vulnerabilidad',
-        'Controles Implementados',
       ];
 &nbsp;
       const rows = <span class="cstat-no" title="statement not covered" >data.map(<span class="fstat-no" title="function not covered" >(a</span>r) =&gt; <span class="cstat-no" title="statement not covered" >[</span></span>
@@ -4663,7 +4662,6 @@ export class ReportesService {
         ar.macroProceso,
         ar.amenaza,
         ar.vulnerabilidad,
-        ar.controlesImplementados ?? '',
       ]);
 &nbsp;
       const ws = <span class="cstat-no" title="statement not covered" >XLSX_STYLE.utils.aoa_to_sheet([headers, ...rows]);</span>

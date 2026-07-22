@@ -294,7 +294,6 @@ function getDetalleVulnerabilidadControlLabel(d: DetalleRiesgo) {
               <tr>
                 <th style="min-width: 220px;">Amenazas</th>
                 <th style="min-width: 220px;">Vulnerabilidades</th>
-                <th style="min-width: 180px;">Controles Implementados</th>
               </tr>
               </thead>
               <tbody>
@@ -316,9 +315,6 @@ function getDetalleVulnerabilidadControlLabel(d: DetalleRiesgo) {
                   </div>
                   <span v-else-if="d.tipo === 'vulnerabilidad'" class="view-value">{{ getVulnerabilidadLabel(d.catalogoId) }}</span>
                   <span v-else class="view-value">—</span>
-                </td>
-                <td>
-                  <span class="view-value">{{ d.controlesImplementados || '—' }}</span>
                 </td>
               </tr>
               </tbody>

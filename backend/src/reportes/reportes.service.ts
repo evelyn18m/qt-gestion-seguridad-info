@@ -1406,7 +1406,6 @@ export class ReportesService {
         'Macroproceso',
         'Amenaza',
         'Vulnerabilidad',
-        'Controles Implementados',
       ];
 
       const rows = data.map((ar) => [
