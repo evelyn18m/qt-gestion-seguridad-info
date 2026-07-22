@@ -594,7 +594,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="chart-card">
+        <div class="chart-card chart-card-compact">
           <h3>IMPACTO CIA</h3>
           <div v-if="impactoCiaEmpty" class="chart-empty">
             No hay datos de impacto CIA.
@@ -608,7 +608,7 @@ onMounted(() => {
           />
         </div>
 
-        <div class="chart-card ring-card">
+        <div class="chart-card ring-card chart-card-compact">
           <h3>Activos Críticos por Área</h3>
           <div v-if="activosCriticosEmpty" class="chart-empty">
             No hay activos críticos asociados a áreas.
@@ -622,21 +622,20 @@ onMounted(() => {
           />
         </div>
 
-      </div>
-
-      <!-- Bar chart: half width below the donuts -->
-      <div class="chart-card bar-chart-half">
-        <h3>Amenazas y Vulnerabilidades por Activo</h3>
-        <div v-if="analisisEmpty" class="chart-empty">
-          No hay amenazas ni vulnerabilidades asociadas a activos.
+        <div class="chart-card bar-chart-main">
+          <h3>Amenazas y Vulnerabilidades por Activo</h3>
+          <div v-if="analisisEmpty" class="chart-empty">
+            No hay amenazas ni vulnerabilidades asociadas a activos.
+          </div>
+          <apexchart
+            v-else
+            type="bar"
+            :options="barOptions"
+            :series="activoSeries"
+            height="320"
+          />
         </div>
-        <apexchart
-          v-else
-          type="bar"
-          :options="barOptions"
-          :series="activoSeries"
-          height="320"
-        />
+
       </div>
 
       <!-- Drill-down Panel -->
@@ -814,8 +813,22 @@ onMounted(() => {
 /* Charts */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
+}
+
+.charts-grid > .cia-card {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.charts-grid > .chart-card-compact {
+  grid-column: 2;
+}
+
+.charts-grid > .bar-chart-main {
+  grid-column: 1;
+  grid-row: 2;
 }
 
 .chart-card {
@@ -825,9 +838,12 @@ onMounted(() => {
   padding: 1.5rem;
 }
 
-.chart-card.bar-chart-half {
-  width: 50%;
-  margin: 0 auto;
+.chart-card-compact {
+  padding: 0.5rem;
+}
+
+.chart-card-compact h3 {
+  margin-bottom: 0.5rem;
 }
 
 .chart-card h3 {
@@ -1095,6 +1111,13 @@ onMounted(() => {
 @media (max-width: 768px) {
   .charts-grid {
     grid-template-columns: 1fr;
+  }
+
+  .charts-grid > .cia-card,
+  .charts-grid > .chart-card-compact,
+  .charts-grid > .bar-chart-main {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .dashboard-header h1 {
