@@ -56,21 +56,26 @@ export class ReportesService {
 
   async getResumen(): Promise<ResumenReporteDto> {
     try {
-      const vas = await this.prisma.valoracionActivo.findMany({ where: { eliminado: false } });
-      const detalles = await this.prisma.detalleRiesgo.findMany();
+      const vas = await this.prisma.valoracionActivo.findMany({
+        where: { eliminado: false },
+      });
 
       const totalActivos = vas.length;
       const conRiesgo = vas.filter((v) => v.evaluacionRiesgo != null).length;
       const sinRiesgo = totalActivos - conRiesgo;
 
       const distribucionRiesgos = this.nvlCero();
-      for (const d of detalles) {
-        const nivel = d.nivelRiesgo?.toLowerCase();
+      for (const va of vas) {
+        const nivel = va.nivelRiesgo?.toLowerCase();
         if (nivel === 'alto') distribucionRiesgos.Alto++;
         else if (nivel === 'medio') distribucionRiesgos.Medio++;
         else if (nivel === 'bajo') distribucionRiesgos.Bajo++;
       }
 
+      // Control distribution still counts detail rows, but only for non-deleted valuations
+      const detalles = await this.prisma.detalleRiesgo.findMany({
+        where: { valoracionActivo: { eliminado: false } },
+      });
       const distribucionControles = this.nvlCero();
       for (const d of detalles) {
         const nivel = d.nivelRiesgoControl?.toLowerCase();
@@ -105,7 +110,7 @@ export class ReportesService {
         ...(nivelRiesgo
           ? {
               nivelRiesgo: {
-                equals: nivelRiesgo,
+                equals: nivelRiesgo.toUpperCase(),
               },
             }
           : {}),

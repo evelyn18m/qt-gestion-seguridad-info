@@ -153,14 +153,14 @@ describe('ReportesService', () => {
   describe('getResumen', () => {
     it('debe retornar conteos correctos con datos', async () => {
       prisma.valoracionActivo.findMany.mockResolvedValue([
-        makeVa({ id: 1, evaluacionRiesgo: 4.5 }),
-        makeVa({ id: 2, evaluacionRiesgo: null }),
-        makeVa({ id: 3, evaluacionRiesgo: 2.0 }),
+        makeVa({ id: 1, evaluacionRiesgo: 4.5, nivelRiesgo: 'ALTO' }),
+        makeVa({ id: 2, evaluacionRiesgo: null, nivelRiesgo: null }),
+        makeVa({ id: 3, evaluacionRiesgo: 2.0, nivelRiesgo: 'MEDIO' }),
       ]);
       prisma.detalleRiesgo.findMany.mockResolvedValue([
-        makeDr({ id: 1, nivelRiesgo: 'Medio', nivelRiesgoControl: 'Bajo' }),
-        makeDr({ id: 2, nivelRiesgo: 'Alto', nivelRiesgoControl: 'Medio' }),
-        makeDr({ id: 3, nivelRiesgo: 'Medio', nivelRiesgoControl: 'Bajo' }),
+        makeDr({ id: 1, nivelRiesgoControl: 'Bajo' }),
+        makeDr({ id: 2, nivelRiesgoControl: 'Medio' }),
+        makeDr({ id: 3, nivelRiesgoControl: 'Bajo' }),
       ]);
 
       const result = await service.getResumen();
@@ -170,13 +170,16 @@ describe('ReportesService', () => {
       expect(result.sinRiesgo).toBe(1);
       expect(result.distribucionRiesgos).toEqual({
         Alto: 1,
-        Medio: 2,
+        Medio: 1,
         Bajo: 0,
       });
       expect(result.distribucionControles).toEqual({
         Alto: 0,
         Medio: 1,
         Bajo: 2,
+      });
+      expect(prisma.detalleRiesgo.findMany).toHaveBeenCalledWith({
+        where: { valoracionActivo: { eliminado: false } },
       });
     });
 
@@ -277,7 +280,7 @@ describe('ReportesService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             nivelRiesgo: {
-              equals: 'Medio',
+              equals: 'MEDIO',
             },
           }),
         }),

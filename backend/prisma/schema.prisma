@@ -154,6 +154,8 @@ model ValoracionActivo {
   evaluacionRiesgoControl    Float?
   nivelRiesgoControl         String?
 
+  detallesRiesgo DetalleRiesgo[]
+
   // Audit fields
   createdBy String? // username from JWT (preferred_username)
   updatedBy String? // username from JWT (preferred_username)
@@ -180,7 +182,7 @@ model AuditLog {
 }
 
 model DetalleRiesgo {
-  id                      Int      @id @default(autoincrement())
+  id                      Int              @id @default(autoincrement())
   valoracionActivoId      Int
   tipo                    String // "amenaza" | "vulnerabilidad"
   catalogoId              Int // id de Amenaza o Vulnerabilidad
@@ -188,7 +190,7 @@ model DetalleRiesgo {
   vulnerabilidadRiesgoId  Int? // id del catálogo Riesgo para vulnerabilidad (per-row)
   evaluacionRiesgo        Float?
   nivelRiesgo             String?
-  metodoTratamiento       String?  @db.Text
+  metodoTratamiento       String?          @db.Text
   tipoControlId           Int
   riesgoControlId         Int? // id del catálogo Riesgo para control
   vulnerabilidadControlId Int? // id del catálogo Riesgo para vulnerabilidad en control
@@ -196,14 +198,15 @@ model DetalleRiesgo {
   nivelRiesgoControl      String?
   riesgoResidual          String?
   // Tab 2 new fields (row-based per-row model)
-  amenazaIds              String?  @db.Text // JSON array, e.g. "[3,7]"
-  vulnerabilidadIds       String?  @db.Text // JSON array, e.g. "[5]"
-  controlesImplementados  String?  @db.Text // per-row controls (Tab 2 free-text — keep for backward compat)
-  controlesArea           String?  @db.Text // per-row controls area (Tab 3 only)
+  amenazaIds              String?          @db.Text // JSON array, e.g. "[3,7]"
+  vulnerabilidadIds       String?          @db.Text // JSON array, e.g. "[5]"
+  controlesImplementados  String?          @db.Text // per-row controls (Tab 2 free-text — keep for backward compat)
+  controlesArea           String?          @db.Text // per-row controls area (Tab 3 only)
   // Tab 4 FK: selected catalog control to implement
-  controlesImplementarId  String?  @db.Text
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  controlesImplementarId  String?          @db.Text
+  valoracionActivo        ValoracionActivo @relation(fields: [valoracionActivoId], references: [id], onDelete: Cascade)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
 }
 
 model TipoControl {
